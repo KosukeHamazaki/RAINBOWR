@@ -699,7 +699,7 @@ EMM2.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
 #'  for association studies. Nat Genet. 44(7): 821-824.
 #'
 #'
-#' @example examples/EMM.cpp_example.R
+#' @example R/examples/EMM.cpp_example.R
 #'
 #'
 #'
@@ -794,7 +794,7 @@ EMM.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, n.thres
 #'  for association studies. Nat Genet. 44(7): 821-824.
 #'
 #'
-#' @example examples/EM3.cpp_example.R
+#' @example R/examples/EM3.cpp_example.R
 #'
 #'
 #'
@@ -1112,7 +1112,7 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
 #'  association testing of sets of genetic variants. Bioinformatics. 30(22): 3206-3214.
 #'
 #'
-#' @example examples/EM3.linker.cpp_example.R
+#' @example R/examples/EM3.linker.cpp_example.R
 #'
 #'
 #'

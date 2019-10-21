@@ -214,7 +214,7 @@ str(ZETA)
 ### Perform two-step epistasis GWAS (single-snp GWAS -> Check epistasis for significant markers)
 twostep.epi.res <- RGWAS.twostep.epi(pheno = pheno.GWAS, geno = geno.GWAS, ZETA = ZETA,
                                      n.PC = 4, test.method = "LR", gene.set = NULL,
-                                     window.size.half = 5, window.slide = 11)
+                                     window.size.half = 10, window.slide = 21)
 
 See(twostep.epi.res$epistasis$scores)
 }

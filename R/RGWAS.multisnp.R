@@ -157,7 +157,7 @@
 #'
 #' Lippert, C. et al. (2014) Greater power and computational efficiency for kernel-based association testing of sets of genetic variants. Bioinformatics. 30(22): 3206-3214.
 #'
-#' @example examples/RGWAS.multisnp_example.R
+#' @example R/examples/RGWAS.multisnp_example.R
 #'
 #'
 #'

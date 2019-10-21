@@ -42,8 +42,8 @@ str(ZETA)
 twostep.SNP_set.res <- RGWAS.twostep(pheno = pheno.GWAS, geno = geno.GWAS, ZETA = ZETA,
                                      kernel.percent = 0.2, n.PC = 4, test.method.2 = "LR",
                                      kernel.method = "linear", gene.set = NULL,
-                                     test.effect.2 = "additive", window.size.half = 5,
-                                     window.slide = 1)
+                                     test.effect.2 = "additive", window.size.half = 3,
+                                     window.slide = 2)
 
 See(twostep.SNP_set.res$D)
 ### Column 4 contains -log10(p) values for markers with the first method (single-SNP GWAS)

@@ -96,7 +96,7 @@
 #' Jiang, Y. and Reif, J.C. (2015) Modeling epistasis in genomic selection. Genetics. 201(2): 759-768.
 #'
 #'
-#' @example examples/RGWAS.epistasis_example.R
+#' @example R/examples/RGWAS.epistasis_example.R
 #'
 #'
 #'

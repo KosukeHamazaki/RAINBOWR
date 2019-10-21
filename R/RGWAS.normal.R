@@ -126,7 +126,7 @@
 #'
 #' Zhou, X. and Stephens, M. (2012) Genome-wide efficient mixed-model analysis for association studies. Nat Genet. 44(7): 821-824.
 #'
-#' @example examples/RGWAS.normal_example.R
+#' @example R/examples/RGWAS.normal_example.R
 #'
 #'
 #'

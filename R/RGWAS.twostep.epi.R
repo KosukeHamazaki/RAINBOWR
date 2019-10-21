@@ -134,7 +134,7 @@
 #'
 #'
 #'
-#' @example examples/RGWAS.twostep.epi_example.R
+#' @example R/examples/RGWAS.twostep.epi_example.R
 #'
 #'
 RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.factor = NULL,
