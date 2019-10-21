@@ -4,8 +4,8 @@
 #### Date : 2019/03/25 (Last update: 2019/10/21)
 
 ## NOTE!!!!
-#### The older version of `RAINBOWR` is `RAINBOW`, which is available at https://github.com/KosukeHamazaki/RAINBOW.
-We changed the package name because the original package name `RAINBOW` conflicted with the package `rainbow` (https://cran.r-project.org/web/packages/rainbow/index.html) when we submitted our package to `CRAN` (https://cran.r-project.org/).
+### The older version of `RAINBOWR` is `RAINBOW`, which is available at https://github.com/KosukeHamazaki/RAINBOW.
+##### We changed the package name because the original package name `RAINBOW` conflicted with the package `rainbow` (https://cran.r-project.org/web/packages/rainbow/index.html) when we submitted our package to `CRAN` (https://cran.r-project.org/).
 
 ----------
 
