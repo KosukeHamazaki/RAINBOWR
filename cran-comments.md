@@ -53,6 +53,6 @@ Examples with CPU or elapsed time > 10s
 ##### * checking CRAN incoming feasibility ... NOTE
 - Still we have this NOTE message, but we think it is not a big problem. This is because this message is a remainder to check that the submission comes actually from his maintainer and not anybody else as the CRAN maintainer Dr. Uwe Ligges mentioned in https://mailman.stat.ethz.ch/pipermail/r-devel/2014-March/068497.html.
 
-- We resolved [another NOTE]() by changing options of `Imports` in the `DECRIPTION` file and `import` in the `NAMESPACE` file for the package `RcppEigen`.
+- We resolved [another NOTE](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#-checking-package-dependencies--note) by changing options of `Imports` in the `DECRIPTION` file and `import` in the `NAMESPACE` file for the package `RcppEigen`.
 
-- We also resolved the other NOTEs by reducing the amounts of examples using the `\dontrun` function.
+- We also resolved [the other NOTEs](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#-checking-examples-) by reducing the amounts of examples using the `\dontrun` function.
