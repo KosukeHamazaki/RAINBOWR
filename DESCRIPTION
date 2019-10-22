@@ -1,15 +1,19 @@
 Package: RAINBOWR
 Type: Package
 Title: Perform Genome-Wide Association Study (GWAS) by Kernel-Based Methods
-Version: 0.1.8
-Author: Kosuke Hamazaki and Hiroyoshi Iwata
+Version: 0.1.9
+Authors@R: c(
+  person("Kosuke", "Hamazaki", email = "hamazaki@ut-biomet.org", role = c("aut", "cre")),
+  person("Hiroyoshi", "Iwata", email = "aiwata@mail.ecc.u-tokyo.ac.jp", role = c("aut", "ctb"))
+  )
 Maintainer: Kosuke Hamazaki <hamazaki@ut-biomet.org>
 Description: Users can test multiple SNPs simultaneously by kernel-based (SNP-set) methods. Users can test not only additive effects but also dominance and epistatic effects.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Depends: R (>= 3.5.0), Rcpp, RcppEigen
-Imports: rrBLUP,
+Depends: R (>= 3.5.0)
+Imports: Rcpp,
+         rrBLUP,
          rgl,
          tcltk,
          Matrix,
