@@ -80,6 +80,9 @@ require(RAINBOWR)
 
 ### Load example datasets
 data("Rice_Zhao_etal")
+Rice_geno_score <- Rice_Zhao_etal$genoScore
+Rice_geno_map <- Rice_Zhao_etal$genoMap
+Rice_pheno <- Rice_Zhao_etal$pheno
 
 ### View each dataset
 See(Rice_geno_score)
