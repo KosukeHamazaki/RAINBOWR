@@ -16,14 +16,14 @@ the second and third column is the chromosome amd map position, and the forth co
 
 \item{method.thres}{Method for detemining threshold of significance. "BH" and "Bonferroni are offered.}
 
-\item{plot.col2}{color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+\item{plot.col2}{Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 (so plot.col2 = 1 means color starts from red.)}
 
 \item{plot.type}{This argument determines the type of the manhattan plot. See the help page of "plot".}
 
 \item{plot.pch}{This argument determines the shape of the dot of the manhattan plot. See the help page of "plot".}
 
-\item{cum.pos}{cumulative position (over chromosomes) of each marker}
+\item{cum.pos}{Cumulative position (over chromosomes) of each marker}
 
 \item{lwd.thres}{The line width for the threshold.}
 
@@ -32,7 +32,7 @@ the second and third column is the chromosome amd map position, and the forth co
 \item{cex.axis}{The font size of the axes.}
 }
 \value{
-draw manhttan plot
+Draw manhttan plot
 }
 \description{
 Draw manhattan plot (another method)

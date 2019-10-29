@@ -148,7 +148,7 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
 
 #' Function to remove the minor alleles
 #'
-#' @param x.0 \eqn{n \times m} original marker genotype matrix.
+#' @param x.0 A \eqn{n \times m} original marker genotype matrix.
 #' @param map.0  Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is removed from the original marker genotype data.

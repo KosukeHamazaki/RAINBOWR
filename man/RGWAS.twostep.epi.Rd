@@ -2,7 +2,7 @@
 % Please edit documentation in R/RGWAS.twostep.epi.R
 \name{RGWAS.twostep.epi}
 \alias{RGWAS.twostep.epi}
-\title{Perform normal GWAS first, then check epistatic effects for relatively significant markers}
+\title{Perform normal GWAS (genome-wide association studies) first, then check epistatic effects for relatively significant markers}
 \usage{
 RGWAS.twostep.epi(pheno, geno, ZETA = NULL, covariate = NULL,
   covariate.factor = NULL, structure.matrix = NULL, n.PC = 0,
@@ -17,7 +17,8 @@ RGWAS.twostep.epi(pheno, geno, ZETA = NULL, covariate = NULL,
   plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
   plot.type = "p", plot.pch = 16, saveName = NULL,
   main.qq.1 = NULL, main.man.1 = NULL, main.epi.3d = NULL,
-  main.epi.2d = NULL, verbose = FALSE, count = TRUE, time = TRUE)
+  main.epi.2d = NULL, verbose = TRUE, verbose2 = FALSE,
+  count = TRUE, time = TRUE)
 }
 \arguments{
 \item{pheno}{Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.}
@@ -124,7 +125,7 @@ If this argument = 2, the manhattan plot with axis based on Position (bp) will b
 You should substitute this argument as color vector whose length is 2.
 plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes}
 
-\item{plot.col2}{color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+\item{plot.col2}{Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 (so plot.col2 = 1 means color starts from red.)}
 
 \item{plot.type}{This argument determines the type of the manhattan plot. See the help page of "plot".}
@@ -142,7 +143,9 @@ When saveName = NULL, the plot is not saved.}
 
 \item{main.epi.2d}{The title of 2d plot. If this argument is NULL, trait name is set as the title.}
 
-\item{verbose}{If this argument is TRUE, welcome message will be shown.}
+\item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
+
+\item{verbose2}{If this argument is TRUE, welcome message will be shown.}
 
 \item{count}{When count is TRUE, you can know how far RGWAS has ended with percent display.}
 
@@ -166,10 +169,10 @@ When saveName = NULL, the plot is not saved.}
 }
 }
 \description{
-Perform normal GWAS first, then check epistatic effects for relatively significant markers
+Perform normal GWAS (genome-wide association studies) first, then check epistatic effects for relatively significant markers
 }
 \examples{
-\dontrun{
+\donttest{
   ### Import RAINBOWR
   require(RAINBOWR)
   

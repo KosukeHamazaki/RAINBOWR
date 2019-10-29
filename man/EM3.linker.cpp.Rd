@@ -11,9 +11,9 @@ EM3.linker.cpp(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   n.thres = 450, spectral.method = NULL, REML = TRUE, pred = TRUE)
 }
 \arguments{
-\item{y0}{\eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
+\item{y0}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
-\item{X0}{\eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
+\item{X0}{A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
 
 \item{ZETA}{A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 For example, ZETA = list(A = list(Z = Z, K = K))
@@ -32,7 +32,11 @@ For example, if there is no weighting, Gammas0 = lapply(Ws0, function(x) diag(nc
 
 \item{X.fix}{If you repeat this function and when X0 is fixed during iterations, please set this argument TRUE.}
 
-\item{eigen.SGS}{A list with $values : eigen values and $vectors : eigen vectors.
+\item{eigen.SGS}{A list with
+\describe{
+\item{$values}{Eigen values}
+\item{$vectors}{Eigen vectors}
+}
 The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -40,8 +44,8 @@ We recommend you assign the result of the eigen decomposition beforehand for tim
 
 \item{eigen.G}{A list with
 \describe{
-\item{$values}{eigen values}
-\item{$vectors}{eigen vectors}
+\item{$values}{Eigen values}
+\item{$vectors}{Eigen vectors}
 }
 The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -70,15 +74,15 @@ If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "
 }
 \value{
 \describe{
-\item{$y.pred}{the fitting values of y \eqn{y = X\beta + Zu}}
-\item{$Vu}{estimator for \eqn{\sigma^2_u}, all of the genetic variance}
-\item{$Ve}{estimator for \eqn{\sigma^2_e}}
+\item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
+\item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
+\item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 \item{$beta}{BLUE(\eqn{\beta})}
 \item{$u}{BLUP(\eqn{u})}
-\item{$weights}{the proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
-\item{$LL}{maximized log-likelihood (full or restricted, depending on method)}
-\item{$Vinv}{the inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
-\item{$Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I}}
+\item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
+\item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+\item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
+\item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I}}
 }
 }
 \description{
@@ -86,7 +90,7 @@ This function solves multi-kernel mixed model using fastlmm.snpset approach (Lip
 This function can be used only when the kernels other than genomic relationship matrix are linear kernels.
 }
 \examples{
-\dontrun{
+\donttest{
   ### Import RAINBOWR
   require(RAINBOWR)
   

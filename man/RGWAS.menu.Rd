@@ -7,8 +7,8 @@
 RGWAS.menu()
 }
 \value{
-the R code which you should perform for RAINBOWR GWAS
+The R code which you should perform for RAINBOWR GWAS
 }
 \description{
-Print the R code which you should perform for RAINBOWR GWAS
+Print the R code which you should perform for RAINBOWR (Reliable Association INference By Optimizing Weights with R).
 }

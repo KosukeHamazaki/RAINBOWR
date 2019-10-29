@@ -8,7 +8,7 @@ score.linker.cpp(y, Ws, Gammas, gammas.diag = TRUE, Gu, Ge, P0,
   chi0.mixture = 0.5)
 }
 \arguments{
-\item{y}{\eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
+\item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
 \item{Ws}{A list of low rank matrices (ZW; \eqn{n \times k} matrix). This forms linear kernel \eqn{ZKZ' = ZW \Gamma (ZW)'}.
 For example, Ws = list(A.part = ZW.A, D.part = ZW.D)}
@@ -18,14 +18,14 @@ For example, if there is no weighting, Gammas = lapply(Ws, function(x) diag(ncol
 
 \item{gammas.diag}{If each Gamma is the diagonal matrix, please set this argument TRUE. The calculation time can be saved.}
 
-\item{Gu}{\eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.}
+\item{Gu}{A \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.}
 
-\item{Ge}{\eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).}
+\item{Ge}{A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).}
 
-\item{P0}{\eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
+\item{P0}{A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
 \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.}
 
-\item{chi0.mixture}{RAINBOWR assumes the statistic \eqn{l1' F l1} follows the mixture of \eqn{\chi^2_0} and \eqn{\chi^2_r},
+\item{chi0.mixture}{RAINBOW assumes the statistic \eqn{l1' F l1} follows the mixture of \eqn{\chi^2_0} and \eqn{\chi^2_r},
 where l1 is the first derivative of the log-likelihood and F is the Fisher information. And r is the degree of freedom.
 chi0.mixture determins the proportion of \eqn{\chi^2_0}}
 }

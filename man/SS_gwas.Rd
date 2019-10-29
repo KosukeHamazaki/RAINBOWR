@@ -2,7 +2,7 @@
 % Please edit documentation in R/SS_gwas.R
 \name{SS_gwas}
 \alias{SS_gwas}
-\title{Calculate some summary statistics of GWAS (for simulation study)}
+\title{Calculate some summary statistics of GWAS (genome-wide association studies) for simulation study}
 \usage{
 SS_gwas(res, x, map.x, qtn.candidate, gene.set = NULL,
   n.top.false.block = 10, sig.level = c(0.05, 0.01),
@@ -14,7 +14,7 @@ SS_gwas(res, x, map.x, qtn.candidate, gene.set = NULL,
 \item{res}{Data frame of GWAS results where the first column is the marker names,
 the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.}
 
-\item{x}{N (lines) x M (markers) marker genotype data (matrix), coded as {-1, 0, 1} = {aa, Aa, AA}.}
+\item{x}{A N (lines) x M (markers) marker genotype data (matrix), coded as {-1, 0, 1} = {aa, Aa, AA}.}
 
 \item{map.x}{Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.}
 
@@ -67,9 +67,9 @@ When saveName = NULL, the plot is not saved.}
 \item{$Hm}{Harmonic mean of Recall and Precision.}
 \item{$haplo.name}{The haplotype block name which correspond to causals.}
 \item{$mean.false}{The mean of -log10(p) values of top 'n.top.false.block' blocks.}
-\item{$max.trues}{Max of the -log10(p) values of the region near causals.}
+\item{$max.trues}{Maximum of the -log10(p) values of the region near causals.}
 }
 }
 \description{
-Calculate some summary statistics of GWAS (for simulation study)
+Calculate some summary statistics of GWAS (genome-wide association studies) for simulation study
 }

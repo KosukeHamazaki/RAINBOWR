@@ -25,7 +25,7 @@ plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes.}
 \item{plot.pch}{This argument determines the shape of the dot of the manhattan plot. See the help page of "plot".}
 }
 \value{
-draw manhttan plot
+Draw manhttan plot
 }
 \description{
 Add points of -log10(p) corrected by kernel methods to manhattan plot

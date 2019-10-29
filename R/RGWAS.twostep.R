@@ -1,4 +1,4 @@
-#' Perform normal GWAS first, then perform SNP-set GWAS for relatively significant markers
+#' Perform normal GWAS (genome-wide association studies) first, then perform SNP-set GWAS for relatively significant markers
 #'
 #' @param pheno Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.
 #' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
@@ -73,7 +73,7 @@
 #'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
 #'            which correspond to the marker names of "geno" argument.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If Rainbow = FALSE, weights are not taken into account.
+#'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param sig.level Significance level for the threshold. The default is 0.05.
@@ -88,9 +88,9 @@
 #' @param plot.col1 This argument determines the color of the manhattan plot.
 #'  You should substitute this argument as color vector whose length is 2.
 #'  plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes
-#' @param plot.col2 color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+#' @param plot.col2 Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 #' (so plot.col2 = 1 means color starts from red.)
-#' @param plot.col3 color of the points of manhattan plot which are added after the reestimation by SNP-set method.
+#' @param plot.col3 Color of the points of manhattan plot which are added after the reestimation by SNP-set method.
 #' You should substitute this argument as color vector whose length is 2.
 #' plot.col3[1] for odd chromosomes and plot.col3[2] for even chromosomes.
 #' @param plot.type  This argument determines the type of the manhattan plot. See the help page of "plot".
@@ -107,7 +107,8 @@
 #' @param return.EMM.res When return.EMM.res = TRUE, the results of equation of mixed models are included in the result of RGWAS.
 #' @param thres If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 #' When return.EMM.res or thres is TRUE, the results will be "list" class.
-#' @param verbose If this argument is TRUE, welcome message will be shown.
+#' @param verbose If this argument is TRUE, messages for the current steps will be shown.
+#' @param verbose2 If this argument is TRUE, welcome message will be shown.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
 #' @param time When time is TRUE, you can know how much time it took to perform RGWAS.
 #'
@@ -167,11 +168,13 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
                           plot.pch = 16, saveName = NULL, main.qq.1 = NULL,
                           main.man.1 = NULL, main.qq.2 = NULL, main.man.2 = NULL,
                           plot.add.last = FALSE, return.EMM.res = FALSE, thres = TRUE,
-                          verbose = FALSE, count = TRUE, time = TRUE){
+                          verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE){
 
   start <- Sys.time()
   if(is.null(GWAS.res.first)){
-    print("The 1st step : Performing 1st GWAS (for screening)!")
+    if (verbose) {
+      print("The 1st step: Performing 1st GWAS (for screening)!")
+    }
     if(length(test.effect.1) >= 2){
       stop("Sorry, you can assign only one test effect for the 1st GWAS!!")
     }
@@ -183,7 +186,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
                                      plot.method = plot.method, plot.col1 = plot.col1, plot.col2 = plot.col2,
                                      plot.type = plot.type, plot.pch = plot.pch, saveName = saveName, optimizer = optimizer,
                                      main.qq = main.qq.1, main.man = main.man.1, plot.add.last = FALSE, return.EMM.res = FALSE,
-                                     thres = FALSE, verbose = verbose, count = count, time = time)
+                                     thres = FALSE, verbose = verbose, verbose2 = verbose2, count = count, time = time)
     }else{
       GWAS.res.first <- RGWAS.multisnp(pheno = pheno, geno = geno, ZETA = ZETA, covariate = covariate,
                                        covariate.factor = covariate.factor, structure.matrix = structure.matrix,
@@ -197,10 +200,12 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
                                        plot.type = plot.type, plot.pch = plot.pch, saveName = saveName,
                                        main.qq = main.qq.2, main.man = main.man.2, plot.add.last = FALSE,
                                        return.EMM.res = FALSE, optimizer = optimizer,
-                                       thres = FALSE, verbose = verbose, count = count, time = time)
+                                       thres = FALSE, verbose = verbose, verbose2 = verbose2, count = count, time = time)
     }
   }else{
-    print("The 1st step has already finished because you input 'GWAS.res.first'.")
+    if (verbose) {
+      print("The 1st step has already finished because you input 'GWAS.res.first'.")
+    }
   }
 
   n.pheno <- ncol(GWAS.res.first) - 3
@@ -308,7 +313,9 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
     }
 
 
-    print(paste("The 2nd step : Recalculating -log10(p) of", trait.name, "for", n.checks, check.obj, "by kernel-based (mutisnp) GWAS."))
+    if (verbose) {
+      print(paste("The 2nd step: Recalculating -log10(p) of", trait.name, "for", n.checks, check.obj, "by kernel-based (mutisnp) GWAS."))
+    }
     RGWAS.multisnp.res.0 <- RGWAS.multisnp(pheno = pheno.now, geno = geno.check, ZETA = ZETA, covariate = covariate,
                                          covariate.factor = covariate.factor, structure.matrix = structure.matrix,
                                          n.PC = n.PC, min.MAF = min.MAF, test.method = test.method.2, n.core = n.core,
@@ -349,7 +356,9 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
         pval.correction <- res.correction[, 4]
 
         if (plot.qq.2) {
-          print("Now Plotting (Q-Q plot). Please Wait.")
+          if (verbose) {
+            print("Now Plotting (Q-Q plot). Please Wait.")
+          }
           if(is.null(saveName)){
             if (length(grep("RStudio", names(dev.cur()))) == 0) {
               if (dev.cur() == dev.next()) {
@@ -379,7 +388,9 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
 
 
         if (plot.Manhattan.2) {
-          print("Now Plotting (Manhattan plot). Please Wait.")
+          if (verbose) {
+            print("Now Plotting (Manhattan plot). Please Wait.")
+          }
           if(is.null(saveName)){
             if (length(grep("RStudio", names(dev.cur()))) == 0) {
               if (dev.cur() == dev.next()) {
@@ -472,7 +483,9 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
 
 
       if (plot.qq.2) {
-        print("Now Plotting (Q-Q plot). Please Wait.")
+        if (verbose) {
+          print("Now Plotting (Q-Q plot). Please Wait.")
+        }
         if(is.null(saveName)){
           if (length(grep("RStudio", names(dev.cur()))) == 0) {
             if (dev.cur() == dev.next()) {
@@ -501,7 +514,9 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
 
 
       if (plot.Manhattan.2) {
-        print("Now Plotting (Manhattan plot). Please Wait.")
+        if (verbose) {
+          print("Now Plotting (Manhattan plot). Please Wait.")
+        }
         if(is.null(saveName)){
           if (length(grep("RStudio", names(dev.cur()))) == 0) {
             if (dev.cur() == dev.next()) {

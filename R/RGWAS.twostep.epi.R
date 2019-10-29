@@ -1,4 +1,4 @@
-#'  Perform normal GWAS first, then check epistatic effects for relatively significant markers
+#'  Perform normal GWAS (genome-wide association studies) first, then check epistatic effects for relatively significant markers
 #'
 #' @param pheno Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.
 #' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
@@ -72,7 +72,7 @@
 #' @param plot.col1 This argument determines the color of the manhattan plot.
 #'  You should substitute this argument as color vector whose length is 2.
 #'  plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes
-#' @param plot.col2 color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+#' @param plot.col2 Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 #' (so plot.col2 = 1 means color starts from red.)
 #' @param plot.type  This argument determines the type of the manhattan plot. See the help page of "plot".
 #' @param plot.pch This argument determines the shape of the dot of the manhattan plot. See the help page of "plot".
@@ -82,7 +82,8 @@
 #' @param main.man.1 The title of manhattan plot for normal GWAS. If this argument is NULL, trait name is set as the title.
 #' @param main.epi.3d The title of 3d plot. If this argument is NULL, trait name is set as the title.
 #' @param main.epi.2d The title of 2d plot. If this argument is NULL, trait name is set as the title.
-#' @param verbose If this argument is TRUE, welcome message will be shown.
+#' @param verbose If this argument is TRUE, messages for the current steps will be shown.
+#' @param verbose2 If this argument is TRUE, welcome message will be shown.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
 #' @param time When time is TRUE, you can know how much time it took to perform RGWAS.
 #'
@@ -148,11 +149,13 @@ RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covari
                               plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
                               plot.type = "p", plot.pch = 16, saveName = NULL, main.qq.1 = NULL,
                               main.man.1 = NULL, main.epi.3d = NULL, main.epi.2d = NULL,
-                              verbose = FALSE, count = TRUE, time = TRUE){
+                              verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE){
 
   start <- Sys.time()
   if(is.null(GWAS.res.first)){
-    print("The 1st step : Performing normal GWAS!")
+    if (verbose) {
+      print("The 1st step: Performing normal GWAS!")
+    }
     GWAS.res.first <- RGWAS.normal(pheno = pheno, geno = geno, ZETA = ZETA, covariate = covariate,
                                    covariate.factor = covariate.factor, structure.matrix = structure.matrix,
                                    n.PC = n.PC, min.MAF = min.MAF, P3D = P3D, n.core = n.core,
@@ -160,9 +163,11 @@ RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covari
                                    plot.method = plot.method, plot.col1 = plot.col1, plot.col2 = plot.col2,
                                    plot.type = plot.type, plot.pch = plot.pch, saveName = saveName, optimizer = optimizer,
                                    main.qq = main.qq.1, main.man = main.man.1, plot.add.last = FALSE, return.EMM.res = FALSE,
-                                   thres = FALSE, verbose = verbose, count = count, time = time)
+                                   thres = FALSE, verbose = verbose, verbose2 = verbose2, count = count, time = time)
   }else{
-    print("The 1st step has already finished because you input 'GWAS.res.first'.")
+    if (verbose){
+        print("The 1st step has already finished because you input 'GWAS.res.first'.")
+      }
   }
 
 
@@ -235,7 +240,9 @@ RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covari
     M.check <- geno[checks, -c(1:3)]
     geno.check <- cbind(pseudo.map, M.check)
 
-    print(paste("The 2nd step : Calculating -log10(p) of epistatic effects of", trait.name, "for", n.checks, "x", n.checks,"SNPs."))
+    if (verbose) {
+      print(paste("The 2nd step: Calculating -log10(p) of epistatic effects of", trait.name, "for", n.checks, "x", n.checks,"SNPs."))
+    }
     RGWAS.epistasis.res <- RGWAS.epistasis(pheno = pheno.now, geno = geno.check, ZETA = ZETA, covariate = covariate,
                                            covariate.factor = covariate.factor, structure.matrix = structure.matrix,
                                            n.PC = n.PC, min.MAF = min.MAF, n.core = n.core,
@@ -244,7 +251,7 @@ RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covari
                                            chi0.mixture = chi0.mixture, gene.set = gene.set, optimizer = optimizer,
                                            plot.epi.3d = FALSE, plot.epi.2d = FALSE, main.epi.3d = main.epi.3d,
                                            main.epi.2d = main.epi.2d, saveName = saveName, verbose = verbose,
-                                           count = count, time = time)
+                                           verbose2 = verbose2, count = count, time = time)
 
 
     check.tests <- as.numeric(rownames(RGWAS.epistasis.res$map))
@@ -267,7 +274,9 @@ RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covari
       main.epi.2d <- trait.name
     }
 
-    print("Now Plotting (3d plot for epistasis). Please Wait.")
+    if (verbose) {
+      print("Now Plotting (3d plot for epistasis). Please Wait.")
+    }
     manhattan3(input = epi.res, cum.pos = cum.pos, plot.epi.3d = plot.epi.3d,
                plot.epi.2d = plot.epi.2d, main.epi.3d = main.epi.3d,
                main.epi.2d = main.epi.2d, saveName = saveName)

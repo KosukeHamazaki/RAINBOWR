@@ -1,7 +1,7 @@
-#' Testing multiple SNPs simulataneously for GWAS
+#' Testing multiple SNPs simultaneously for GWAS
 #'
-#' @description This function performs SNP-set GWAS,
-#' which tests multiple SNPs simulataneously. The model of SNP-set GWAS is
+#' @description This function performs SNP-set GWAS (genome-wide association studies),
+#' which tests multiple SNPs (single nucleotide polymorphisms) simultaneously. The model of SNP-set GWAS is
 #'
 #' \deqn{y = X \beta + Q v +  Z _ {c} u _ {c} +  Z _ {r} u _ {r} + \epsilon,}
 #'
@@ -81,7 +81,7 @@
 #'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
 #'            which correspond to the marker names of "geno" argument.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If Rainbow = FALSE, weights are not taken into account.
+#'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param sig.level Significance level for the threshold. The default is 0.05.
@@ -94,7 +94,7 @@
 #' @param plot.col1 This argument determines the color of the manhattan plot.
 #'  You should substitute this argument as color vector whose length is 2.
 #'  plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes
-#' @param plot.col2 color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+#' @param plot.col2 Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 #' (so plot.col2 = 1 means color starts from red.)
 #' @param plot.type  This argument determines the type of the manhattan plot. See the help page of "plot".
 #' @param plot.pch This argument determines the shape of the dot of the manhattan plot. See the help page of "plot".
@@ -108,7 +108,8 @@
 #' @param return.EMM.res When return.EMM.res = TRUE, the results of equation of mixed models are included in the result of RGWAS.
 #' @param thres If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 #' When return.EMM.res or thres is TRUE, the results will be "list" class.
-#' @param verbose If this argument is TRUE, welcome message will be shown.
+#' @param verbose If this argument is TRUE, messages for the current steps will be shown.
+#' @param verbose2 If this argument is TRUE, welcome message will be shown.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
 #' @param time When time is TRUE, you can know how much time it took to perform RGWAS.
 #'
@@ -170,14 +171,14 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
                            plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
                            plot.type = "p", plot.pch = 16, saveName = NULL, main.qq = NULL,
                            main.man = NULL, plot.add.last = FALSE, return.EMM.res = FALSE, optimizer = "nlminb",
-                           thres = TRUE, verbose = FALSE, count = TRUE, time = TRUE){
+                           thres = TRUE, verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE){
 
   #### The start of the RGWAS function ####
   start <- Sys.time()
 
 
   #### Some settings to perform RGWAS ####
-  if(verbose){
+  if(verbose2){
     welcome_to_RGWAS()
   }
 
@@ -333,7 +334,9 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
   ##### START RGWAS for each phenotype #####
   for(pheno.no in 1:n.pheno){
     trait.name <- trait.names[pheno.no]
-    print(paste("GWAS for trait :", trait.name))
+    if (verbose) {
+      print(paste("GWAS for trait:", trait.name))
+    }
     y0 <- pheno.match[, pheno.ix[pheno.no]]
     not.NA <- which(!is.na(y0))
     y <- y0[not.NA]
@@ -446,7 +449,9 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
       window.centers <- as.numeric(rownames(scores))
       map2 <- map[window.centers, ]
     }else{
-      print("Now generating map for gene set. Please wait.")
+      if (verbose) {
+        print("Now generating map for gene set. Please wait.")
+      }
       map20 <- genesetmap(map = map, gene.set = gene.set, cumulative = TRUE)
       map2 <- map20[, 1:3]
       cum.pos.set.mean <- c(map20[, 4])
@@ -455,7 +460,9 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
     if((kernel.method == "linear") & (length(test.effect) >= 2)){
       for(test.effect.no in 1:length(test.effect)){
         if (plot.qq) {
-          print("Now Plotting (Q-Q plot). Please Wait.")
+          if (verbose) {
+            print("Now Plotting (Q-Q plot). Please Wait.")
+          }
           if(is.null(saveName)){
             if (length(grep("RStudio", names(dev.cur()))) == 0) {
               if (dev.cur() == dev.next()) {
@@ -485,7 +492,9 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
 
 
         if (plot.Manhattan) {
-          print("Now Plotting (Manhattan plot). Please Wait.")
+          if (verbose) {
+            print("Now Plotting (Manhattan plot). Please Wait.")
+          }
           if(is.null(saveName)){
             if (length(grep("RStudio", names(dev.cur()))) == 0) {
               if (dev.cur() == dev.next()) {
@@ -536,7 +545,9 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
       }
     }else{
       if (plot.qq) {
-        print("Now Plotting (Q-Q plot). Please Wait.")
+        if (verbose) {
+          print("Now Plotting (Q-Q plot). Please Wait.")
+        }
         if(is.null(saveName)){
           if (length(grep("RStudio", names(dev.cur()))) == 0) {
             if (dev.cur() == dev.next()) {
@@ -566,7 +577,9 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
 
 
       if (plot.Manhattan) {
-        print("Now Plotting (Manhattan plot). Please Wait.")
+        if (verbose) {
+          print("Now Plotting (Manhattan plot). Please Wait.")
+        }
         if(is.null(saveName)){
           if (length(grep("RStudio", names(dev.cur()))) == 0) {
             if (dev.cur() == dev.next()) {

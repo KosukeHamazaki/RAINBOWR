@@ -24,11 +24,11 @@
 #' @return
 #' \describe{
 #' \item{$spectral.G}{The spectral decomposition results of G.}
-#' \item{$U}{eigen vectors of G.}
-#' \item{$delta}{eigen values of G.}
-#' \item{$spectral.SGS}{estimator for \eqn{\sigma^2_e}}
-#' \item{$Q}{eigen vectors of SGS.}
-#' \item{$theta}{eigen values of sGS.}
+#' \item{$U}{Eigen vectors of G.}
+#' \item{$delta}{Eigen values of G.}
+#' \item{$spectral.SGS}{Estimator for \eqn{\sigma^2_e}}
+#' \item{$Q}{Eigen vectors of SGS.}
+#' \item{$theta}{Eigen values of SGS.}
 #' }
 #'
 #'
@@ -58,7 +58,7 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
   m <- m.ZETA + m.ZWs
 
   if((lz + lw) != length(weights)){
-    "Weights should have the same length as ZETA!"
+    stop("Weights should have the same length as ZETA!")
   }
 
   if(is.null(X)){
@@ -224,15 +224,15 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
 #' (genome wide efficient mixed model association; Zhou et al., 2012) approach.
 #'
 #'
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -262,19 +262,19 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
 #'
 #' @return
 #' \describe{
-#' \item{$Vu}{estimator for \eqn{\sigma^2_u}}
-#' \item{$Ve}{estimator for \eqn{\sigma^2_e}}
+#' \item{$Vu}{Estimator for \eqn{\sigma^2_u}}
+#' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 #' \item{$beta}{BLUE(\eqn{\beta})}
 #' \item{$u}{BLUP(\eqn{u})}
-#' \item{$LL}{maximized log-likelihood (full or restricted, depending on method)}
-#' \item{$beta.SE}{standard error for \eqn{\beta} (If SE = TRUE)}
-#' \item{$u.SE}{standard error for \eqn{u^*-u} (If SE = TRUE)}
-#' \item{$Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I} (If return.Hinv = TRUE)}
-#' \item{$Hinv2}{the inverse of \eqn{H2 = ZKZ'/\lambda + I} (If return.Hinv = TRUE)}
-#' \item{$lambda}{estimators for \eqn{\lambda = \sigma^2_e / \sigma^2_u}}
-#' \item{$lambdas}{lambdas for each initial values}
+#' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+#' \item{$beta.SE}{Standard error for \eqn{\beta} (If SE = TRUE)}
+#' \item{$u.SE}{Standard error for \eqn{u^*-u} (If SE = TRUE)}
+#' \item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I} (If return.Hinv = TRUE)}
+#' \item{$Hinv2}{The inverse of \eqn{H2 = ZKZ'/\lambda + I} (If return.Hinv = TRUE)}
+#' \item{$lambda}{Estimators for \eqn{\lambda = \sigma^2_e / \sigma^2_u}}
+#' \item{$lambdas}{Lambdas for each initial values}
 #' \item{$reest}{If parameter estimation may not be accurate, reest = 1, else reest = 0}
-#' \item{$counts}{the number of iterations until convergence for each initial values}
+#' \item{$counts}{The number of iterations until convergence for each initial values}
 #' }
 #'
 #' @references Kang, H.M. et al. (2008) Efficient Control of Population Structure
@@ -405,23 +405,23 @@ EMM1.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, lam.len = 4, init.range 
 #' @description This function solves single-kernel linear mixed model by EMMA
 #'  (efficient mixed model association; Kang et al., 2008) approach.
 #'
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
 #' @param eigen.SGS A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 #' You can use "spectralG.cpp" function in RAINBOWR.
@@ -441,14 +441,14 @@ EMM1.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, lam.len = 4, init.range 
 #'
 #' @return
 #' \describe{
-#' \item{$Vu}{estimator for \eqn{\sigma^2_u}}
-#' \item{$Ve}{estimator for \eqn{\sigma^2_e}}
+#' \item{$Vu}{Estimator for \eqn{\sigma^2_u}}
+#' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 #' \item{$beta}{BLUE(\eqn{\beta})}
 #' \item{$u}{BLUP(\eqn{u})}
-#' \item{$LL}{maximized log-likelihood (full or restricted, depending on method)}
-#' \item{$beta.SE}{standard error for \eqn{\beta} (If SE = TRUE)}
-#' \item{$u.SE}{standard error for \eqn{u^*-u} (If SE = TRUE)}
-#' \item{$Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I} (If return.Hinv = TRUE)}
+#' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+#' \item{$beta.SE}{Standard error for \eqn{\beta} (If SE = TRUE)}
+#' \item{$u.SE}{Standard error for \eqn{u^*-u} (If SE = TRUE)}
+#' \item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I} (If return.Hinv = TRUE)}
 #' }
 #'
 #' @references Kang, H.M. et al. (2008) Efficient Control of Population Structure
@@ -557,7 +557,7 @@ EMM2.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
       lambda.opt <- soln$par
       maxval <- soln$objective
     } else {
-      warnings("We offer 'optim', 'optimx', and 'nlminb' as optimzers. Here we use 'optim' instead.")
+      warning("We offer 'optim', 'optimx', and 'nlminb' as optimzers. Here we use 'optim' instead.")
       soln <- optimize(f.ML, interval = bounds, n, theta,
                        omega.sq, phi)
       lambda.opt <- soln$minimum
@@ -618,30 +618,30 @@ EMM2.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
 
 #' Equation of mixed model for one kernel, a wrapper of two methods
 #'
-#' @description This function estimates maximum-likelihood (ML/REML) solutions for the following mixed model.
+#' @description This function estimates maximum-likelihood (ML/REML; resticted maximum likelihood) solutions for the following mixed model.
 #'
 #' \deqn{y = X \beta + Z u + \epsilon}
 #'
 #' where \eqn{\beta} is a vector of fixed effects and \eqn{u} is a vector of random effects with
-#' \eqn{Var[u] = K \sigma^2_u}.  The residual variance is \eqn{Var[\epsilon] = I \sigma^2_e}.
+#' \eqn{Var[u] = K \sigma^2_u}. The residual variance is \eqn{Var[\epsilon] = I \sigma^2_e}.
 #'
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
 #' @param eigen.SGS A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 #' You can use "spectralG.cpp" function in RAINBOWR.
@@ -676,19 +676,19 @@ EMM2.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
 #'
 #' @return
 #' \describe{
-#' \item{$Vu}{estimator for \eqn{\sigma^2_u}}
-#' \item{$Ve}{estimator for \eqn{\sigma^2_e}}
+#' \item{$Vu}{Estimator for \eqn{\sigma^2_u}}
+#' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 #' \item{$beta}{BLUE(\eqn{\beta})}
 #' \item{$u}{BLUP(\eqn{u})}
-#' \item{$LL}{maximized log-likelihood (full or restricted, depending on method)}
-#' \item{$beta.SE}{standard error for \eqn{\beta} (If SE = TRUE)}
-#' \item{$u.SE}{standard error for \eqn{u^*-u} (If SE = TRUE)}
-#' \item{$Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I} (If return.Hinv = TRUE)}
-#' \item{$Hinv2}{the inverse of \eqn{H2 = ZKZ'/\lambda + I} (If return.Hinv = TRUE)}
-#' \item{$lambda}{estimators for \eqn{\lambda = \sigma^2_e / \sigma^2_u} (If \eqn{n >= n.thres})}
-#' \item{$lambdas}{lambdas for each initial values (If \eqn{n >= n.thres})}
+#' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+#' \item{$beta.SE}{Standard error for \eqn{\beta} (If SE = TRUE)}
+#' \item{$u.SE}{Standard error for \eqn{u^*-u} (If SE = TRUE)}
+#' \item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I} (If return.Hinv = TRUE)}
+#' \item{$Hinv2}{The inverse of \eqn{H2 = ZKZ'/\lambda + I} (If return.Hinv = TRUE)}
+#' \item{$lambda}{Estimators for \eqn{\lambda = \sigma^2_e / \sigma^2_u} (If \eqn{n >= n.thres})}
+#' \item{$lambdas}{Lambdas for each initial values (If \eqn{n >= n.thres})}
 #' \item{$reest}{If parameter estimation may not be accurate, reest = 1, else reest = 0 (If \eqn{n >= n.thres})}
-#' \item{$counts}{the number of iterations until convergence for each initial values (If \eqn{n >= n.thres})}
+#' \item{$counts}{The number of iterations until convergence for each initial values (If \eqn{n >= n.thres})}
 #' }
 #'
 #'
@@ -742,23 +742,23 @@ EMM.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, n.thres
 #' where \eqn{Var[y] = \sum _{l=1} ^ {L} Z _ {l} K _ {l} Z _ {l}' \sigma _ {l} ^ 2 + I \sigma _ {e} ^ {2}}.
 #'
 #'
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X0 \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X0 A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA A list of variance matrices and its design matrices of random effects. You can use more than one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D)) (A for additive, D for dominance)
 #' Please set names of lists "Z" and "K"!
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
 #' @param eigen.SGS A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 #' You can use "spectralG.cpp" function in RAINBOWR.
@@ -776,15 +776,15 @@ EMM.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, n.thres
 #'
 #' @return
 #' \describe{
-#' \item{$y.pred}{the fitting values of y \eqn{y = X\beta + Zu}}
-#' \item{$Vu}{estimator for \eqn{\sigma^2_u}, all of the genetic variance}
-#' \item{$Ve}{estimator for \eqn{\sigma^2_e}}
+#' \item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
+#' \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
+#' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 #' \item{$beta}{BLUE(\eqn{\beta})}
 #' \item{$u}{BLUP(\eqn{u})}
-#' \item{$weights}{the proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
-#' \item{$LL}{maximized log-likelihood (full or restricted, depending on method)}
-#' \item{$Vinv}{the inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
-#' \item{$Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I}}
+#' \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
+#' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+#' \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
+#' \item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I}}
 #' }
 #'
 #' @references Kang, H.M. et al. (2008) Efficient Control of Population Structure
@@ -1049,8 +1049,8 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
 #' This function can be used only when the kernels other than genomic relationship matrix are linear kernels.
 #'
 #'
-#' @param y0 \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X0 \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y0 A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X0 A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
@@ -1062,15 +1062,19 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
 #' For example, if there is no weighting, Gammas0 = lapply(Ws0, function(x) diag(ncol(x)))
 #' @param gammas.diag If each Gamma is the diagonal matrix, please set this argument TRUE. The calculationtime can be saved.
 #' @param X.fix If you repeat this function and when X0 is fixed during iterations, please set this argument TRUE.
-#' @param eigen.SGS A list with $values : eigen values and $vectors : eigen vectors.
+#' @param eigen.SGS A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
 #' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 #' You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -1091,15 +1095,15 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
 #'
 #' @return
 #' \describe{
-#' \item{$y.pred}{the fitting values of y \eqn{y = X\beta + Zu}}
-#' \item{$Vu}{estimator for \eqn{\sigma^2_u}, all of the genetic variance}
-#' \item{$Ve}{estimator for \eqn{\sigma^2_e}}
+#' \item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
+#' \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
+#' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 #' \item{$beta}{BLUE(\eqn{\beta})}
 #' \item{$u}{BLUP(\eqn{u})}
-#' \item{$weights}{the proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
-#' \item{$LL}{maximized log-likelihood (full or restricted, depending on method)}
-#' \item{$Vinv}{the inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
-#' \item{$Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I}}
+#' \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
+#' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+#' \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
+#' \item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I}}
 #' }
 #'
 #' @references Kang, H.M. et al. (2008) Efficient Control of Population Structure
@@ -1327,13 +1331,13 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
 #' Calculte -log10(p) by score test (slow, for general cases)
 #'
 #'
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
 #' @param Gs A list of kernel matrices you want to test. For example, Gs = list(A.part = K.A.part, D.part = K.D.part)
-#' @param Gu \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
-#' @param Ge \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
-#' @param P0 \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
+#' @param Gu A \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
+#' @param Ge A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
+#' @param P0 A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
 #' \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.
-#' @param chi0.mixture RAINBOWR assumes the test statistic \eqn{l1' F l1} is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
+#' @param chi0.mixture RAINBOW assumes the test statistic \eqn{l1' F l1} is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
 #' where l1 is the first derivative of the log-likelihood and F is the Fisher information. And r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
 #'
@@ -1345,12 +1349,12 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
 score.cpp <- function(y, Gs, Gu, Ge, P0, chi0.mixture = 0.5){
   nuisance.no <- 2
   Gs.all <- c(Gs, list(Gu), list(Ge))
-
+  
   l1 <- score_l1(y = as.matrix(y), p0 = P0, Gs = Gs, lg = length(Gs))
   F.info <- score_fisher(p0 = P0, Gs_all = Gs.all, nuisance_no = nuisance.no,
                          lg_all = length(Gs.all))
-
-
+  
+  
   score.stat <- c(crossprod(l1, F.info %*% l1))
   logp <- ifelse(score.stat <= 0, 0, -log10((1 - chi0.mixture) *
                                               pchisq(deviance, df = length(Gs), lower.tail = FALSE)))
@@ -1362,17 +1366,17 @@ score.cpp <- function(y, Gs, Gu, Ge, P0, chi0.mixture = 0.5){
 #' Calculte -log10(p) by score test (fast, for limited cases)
 #'
 #'
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
 #' @param Ws A list of low rank matrices (ZW; \eqn{n \times k} matrix). This forms linear kernel \eqn{ZKZ' = ZW \Gamma (ZW)'}.
 #' For example, Ws = list(A.part = ZW.A, D.part = ZW.D)
 #' @param Gammas A list of matrices for weighting SNPs (Gamma; \eqn{k \times k} matrix). This forms linear kernel \eqn{ZKZ' = ZW \Gamma (ZW)'}.
 #' For example, if there is no weighting, Gammas = lapply(Ws, function(x) diag(ncol(x)))
 #' @param gammas.diag If each Gamma is the diagonal matrix, please set this argument TRUE. The calculation time can be saved.
-#' @param Gu \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
-#' @param Ge \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
-#' @param P0 \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
+#' @param Gu A \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
+#' @param Ge A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
+#' @param P0 A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
 #' \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.
-#' @param chi0.mixture RAINBOWR assumes the statistic \eqn{l1' F l1} follows the mixture of \eqn{\chi^2_0} and \eqn{\chi^2_r},
+#' @param chi0.mixture RAINBOW assumes the statistic \eqn{l1' F l1} follows the mixture of \eqn{\chi^2_0} and \eqn{\chi^2_r},
 #' where l1 is the first derivative of the log-likelihood and F is the Fisher information. And r is the degree of freedom.
 #' chi0.mixture determins the proportion of \eqn{\chi^2_0}
 #' @return -log10(p) calculated by score test
@@ -1390,13 +1394,13 @@ score.linker.cpp <- function(y, Ws, Gammas, gammas.diag = TRUE, Gu, Ge, P0, chi0
     }
     names(W2s) <- names(Ws)
     Gs.all <- c(W2s, list(Gu), list(Ge))
-
+    
     l1 <- score_l1_linker_diag(y = as.matrix(y), p0 = P0, W2s = W2s, lw = length(W2s))
     F.info <- score_fisher_linker_diag(p0 = P0, Gs_all = Gs.all,
                                        nuisance_no = nuisance.no, lw_all = length(Gs.all))
   }else{
     Gs.all <- c(Ws, list(Gu), list(Ge))
-
+    
     l1 <- score_l1_linker(y = as.matrix(y), p0 = P0, Ws = Ws, Gammas = Gammas, lw = length(Ws))
     F.info <- score_fisher_linker(p0 = P0, Gs_all = Gs.all, Gammas = Gammas,
                                   nuisance_no = nuisance.no, lw_all = length(Gs.all))

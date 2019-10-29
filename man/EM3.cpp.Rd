@@ -9,9 +9,9 @@ EM3.cpp(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL,
   REML = TRUE, pred = TRUE)
 }
 \arguments{
-\item{y}{\eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
+\item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
-\item{X0}{\eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
+\item{X0}{A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
 
 \item{ZETA}{A list of variance matrices and its design matrices of random effects. You can use more than one kernel matrix.
 For example, ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D)) (A for additive, D for dominance)
@@ -19,8 +19,8 @@ Please set names of lists "Z" and "K"!}
 
 \item{eigen.G}{A list with
 \describe{
-\item{$values}{eigen values}
-\item{$vectors}{eigen vectors}
+\item{$values}{Eigen values}
+\item{$vectors}{Eigen vectors}
 }
 The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -28,8 +28,8 @@ We recommend you assign the result of the eigen decomposition beforehand for tim
 
 \item{eigen.SGS}{A list with
 \describe{
-\item{$values}{eigen values}
-\item{$vectors}{eigen vectors}
+\item{$values}{Eigen values}
+\item{$vectors}{Eigen vectors}
 }
 The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 You can use "spectralG.cpp" function in RAINBOWR.
@@ -53,15 +53,15 @@ If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "
 }
 \value{
 \describe{
-\item{$y.pred}{the fitting values of y \eqn{y = X\beta + Zu}}
-\item{$Vu}{estimator for \eqn{\sigma^2_u}, all of the genetic variance}
-\item{$Ve}{estimator for \eqn{\sigma^2_e}}
+\item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
+\item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
+\item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 \item{$beta}{BLUE(\eqn{\beta})}
 \item{$u}{BLUP(\eqn{u})}
-\item{$weights}{the proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
-\item{$LL}{maximized log-likelihood (full or restricted, depending on method)}
-\item{$Vinv}{the inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
-\item{$Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I}}
+\item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
+\item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+\item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
+\item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I}}
 }
 }
 \description{
@@ -72,7 +72,7 @@ This function solves the following multi-kernel linear mixed effects model.
 where \eqn{Var[y] = \sum _{l=1} ^ {L} Z _ {l} K _ {l} Z _ {l}' \sigma _ {l} ^ 2 + I \sigma _ {e} ^ {2}}.
 }
 \examples{
-\dontrun{
+\donttest{
   ### Import RAINBOWR
   require(RAINBOWR)
   

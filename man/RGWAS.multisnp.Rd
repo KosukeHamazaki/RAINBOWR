@@ -2,7 +2,7 @@
 % Please edit documentation in R/RGWAS.multisnp.R
 \name{RGWAS.multisnp}
 \alias{RGWAS.multisnp}
-\title{Testing multiple SNPs simulataneously for GWAS}
+\title{Testing multiple SNPs simultaneously for GWAS}
 \usage{
 RGWAS.multisnp(pheno, geno, ZETA = NULL, covariate = NULL,
   covariate.factor = NULL, structure.matrix = NULL, n.PC = 0,
@@ -16,7 +16,7 @@ RGWAS.multisnp(pheno, geno, ZETA = NULL, covariate = NULL,
   plot.col2 = 1, plot.type = "p", plot.pch = 16, saveName = NULL,
   main.qq = NULL, main.man = NULL, plot.add.last = FALSE,
   return.EMM.res = FALSE, optimizer = "nlminb", thres = TRUE,
-  verbose = FALSE, count = TRUE, time = TRUE)
+  verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE)
 }
 \arguments{
 \item{pheno}{Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.}
@@ -96,7 +96,7 @@ In the first column, you should assign the gene name. And in the second column, 
 which correspond to the marker names of "geno" argument.}
 
 \item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-If Rainbow = FALSE, weights are not taken into account.}
+If weighting.center = FALSE, weights are not taken into account.}
 
 \item{weighting.other}{You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 For example, you can assign SNP effects from the information of gene annotation.}
@@ -117,7 +117,7 @@ If this argument = 2, the manhattan plot with axis based on Position (bp) will b
 You should substitute this argument as color vector whose length is 2.
 plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes}
 
-\item{plot.col2}{color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+\item{plot.col2}{Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 (so plot.col2 = 1 means color starts from red.)}
 
 \item{plot.type}{This argument determines the type of the manhattan plot. See the help page of "plot".}
@@ -141,7 +141,9 @@ However, you should also write "dev.off()" after adding something.}
 \item{thres}{If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 When return.EMM.res or thres is TRUE, the results will be "list" class.}
 
-\item{verbose}{If this argument is TRUE, welcome message will be shown.}
+\item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
+
+\item{verbose2}{If this argument is TRUE, welcome message will be shown.}
 
 \item{count}{When count is TRUE, you can know how far RGWAS has ended with percent display.}
 
@@ -157,8 +159,8 @@ If there are more than one test.effects, then multiple lists for each test.effec
 }
 }
 \description{
-This function performs SNP-set GWAS,
-which tests multiple SNPs simulataneously. The model of SNP-set GWAS is
+This function performs SNP-set GWAS (genome-wide association studies),
+which tests multiple SNPs (single nucleotide polymorphisms) simultaneously. The model of SNP-set GWAS is
 
 \deqn{y = X \beta + Q v +  Z _ {c} u _ {c} +  Z _ {r} u _ {r} + \epsilon,}
 
@@ -197,7 +199,7 @@ without solving the multi-kernel mixed model for each SNP-set.
 Then it performs the score test by using the fact that the score statistic follows the chi-square distribution.
 }
 \examples{
-\dontrun{
+\donttest{
   ### Import RAINBOWR
   require(RAINBOWR)
   

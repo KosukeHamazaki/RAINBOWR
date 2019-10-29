@@ -39,11 +39,11 @@ If tol is NULL, top 'n' eigen values will be effective.}
 \value{
 \describe{
 \item{$spectral.G}{The spectral decomposition results of G.}
-\item{$U}{eigen vectors of G.}
-\item{$delta}{eigen values of G.}
-\item{$spectral.SGS}{estimator for \eqn{\sigma^2_e}}
-\item{$Q}{eigen vectors of SGS.}
-\item{$theta}{eigen values of sGS.}
+\item{$U}{Eigen vectors of G.}
+\item{$delta}{Eigen values of G.}
+\item{$spectral.SGS}{Estimator for \eqn{\sigma^2_e}}
+\item{$Q}{Eigen vectors of SGS.}
+\item{$theta}{Eigen values of SGS.}
 }
 }
 \description{

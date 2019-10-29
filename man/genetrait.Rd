@@ -12,15 +12,15 @@ genetrait(x, sample.sets = NULL, candidate = NULL, pos = NULL,
   subpop = NULL, return.all = FALSE, seed.env = TRUE)
 }
 \arguments{
-\item{x}{n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
+\item{x}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
 
-\item{sample.sets}{n.sample x n.mark genotype matrix. Markers with fixed effects (QTNs) are chosen from sample.sets.
+\item{sample.sets}{A n.sample x n.mark genotype matrix. Markers with fixed effects (QTNs) are chosen from sample.sets.
 If sample.sets = NULL, sample.sets = x.}
 
 \item{candidate}{If you want to fix QTN postitions, please set the number where SNPs to be fixed are located in your data (so not position).
 If candidate = NULL, QTNs were randomly sampled from sample.sets or x.}
 
-\item{pos}{n.mark x 1 vector. cumulative position (over chromosomes) of each marker.}
+\item{pos}{A n.mark x 1 vector. Cumulative position (over chromosomes) of each marker.}
 
 \item{x.par}{If you don't want to match the sampling population and the genotype data to QTN effects, then use this argument as the latter.}
 
@@ -35,10 +35,10 @@ ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D))
 }
 For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.}
 
-\item{x2}{genotype matrix to calculate additive relationship matrix when Z.ETA = NULL.
+\item{x2}{A genotype matrix to calculate additive relationship matrix when Z.ETA = NULL.
 If Z.ETA = NULL & x2 = NULL, A.mat(x) will be calculated as kernel matrix.}
 
-\item{num.qtn}{the number of QTNs}
+\item{num.qtn}{The number of QTNs}
 
 \item{weight}{The weights for each QTN by their standard deviations. Negative value is also allowed.}
 
@@ -71,14 +71,13 @@ If TRUE, this function will return other information such as positions of candid
 \item{seed.env}{If TRUE, this function will generate different environment effects every time.}
 }
 \value{
-trait = trait, u = g.all2, e = e2, candidate = qtn.candidates, qtn.position = pos.qtns, heritability = true_h
 \describe{
-\item{trait}{generated phenotypic values}
-\item{u}{generated genotyope values}
-\item{e}{generated environmental effects}
-\item{candidate}{the numbers where QTNs are located in your data (so not position).}
+\item{trait}{Generated phenotypic values}
+\item{u}{Generated genotyope values}
+\item{e}{Generated environmental effects}
+\item{candidate}{The numbers where QTNs are located in your data (so not position).}
 \item{qtn.position}{QTN positions}
-\item{heritability}{var(u) / var(trait), genomic heritability for generated phenotypic values.}
+\item{heritability}{Genomic heritability for generated phenotypic values.}
 }
 }
 \description{

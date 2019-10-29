@@ -9,12 +9,12 @@
 #' The variances of \eqn{u} and \eqn{e} are automatically determined by the heritability.
 #'
 #'
-#' @param x n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
-#' @param sample.sets n.sample x n.mark genotype matrix. Markers with fixed effects (QTNs) are chosen from sample.sets.
+#' @param x A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param sample.sets A n.sample x n.mark genotype matrix. Markers with fixed effects (QTNs) are chosen from sample.sets.
 #' If sample.sets = NULL, sample.sets = x.
 #' @param candidate If you want to fix QTN postitions, please set the number where SNPs to be fixed are located in your data (so not position).
 #' If candidate = NULL, QTNs were randomly sampled from sample.sets or x.
-#' @param pos n.mark x 1 vector. cumulative position (over chromosomes) of each marker.
+#' @param pos A n.mark x 1 vector. Cumulative position (over chromosomes) of each marker.
 #' @param x.par If you don't want to match the sampling population and the genotype data to QTN effects, then use this argument as the latter.
 #' @param ZETA A list of covariance (relationship) matrix (K: \eqn{m \times m}) and its design matrix (Z: \eqn{n \times m}) of random effects.
 #' Please set names of list "Z" and "K"! You can use more than one kernel matrix.
@@ -26,9 +26,9 @@
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
-#' @param x2 genotype matrix to calculate additive relationship matrix when Z.ETA = NULL.
+#' @param x2 A genotype matrix to calculate additive relationship matrix when Z.ETA = NULL.
 #' If Z.ETA = NULL & x2 = NULL, A.mat(x) will be calculated as kernel matrix.
-#' @param num.qtn the number of QTNs
+#' @param num.qtn The number of QTNs
 #' @param weight The weights for each QTN by their standard deviations. Negative value is also allowed.
 #' @param qtn.effect Additive of dominance for each marker effect. This argument should be the same length as num.qtn.
 #' @param prop The proportion of effects of QTNs to polygenetic effects.
@@ -48,14 +48,13 @@
 #' @param seed.env If TRUE, this function will generate different environment effects every time.
 #'
 #' @return
-#' trait = trait, u = g.all2, e = e2, candidate = qtn.candidates, qtn.position = pos.qtns, heritability = true_h
 #' \describe{
-#' \item{trait}{generated phenotypic values}
-#' \item{u}{generated genotyope values}
-#' \item{e}{generated environmental effects}
-#' \item{candidate}{the numbers where QTNs are located in your data (so not position).}
+#' \item{trait}{Generated phenotypic values}
+#' \item{u}{Generated genotyope values}
+#' \item{e}{Generated environmental effects}
+#' \item{candidate}{The numbers where QTNs are located in your data (so not position).}
 #' \item{qtn.position}{QTN positions}
-#' \item{heritability}{var(u) / var(trait), genomic heritability for generated phenotypic values.}
+#' \item{heritability}{Genomic heritability for generated phenotypic values.}
 #' }
 genetrait <- function(x, sample.sets = NULL, candidate = NULL, pos = NULL, x.par = NULL, ZETA = NULL, x2 = NULL,
                       num.qtn = 3, weight = c(2, 1, 1), qtn.effect = rep("A", num.qtn), prop = 1, polygene.weight = 1, polygene = TRUE, h2 = 0.6, h.correction = FALSE,

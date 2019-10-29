@@ -10,7 +10,7 @@ qq(scores)
 \item{scores}{A vector of -log10(p) for each marker}
 }
 \value{
-draw qq plot
+Draw qq plot
 }
 \description{
 Draw qq plot

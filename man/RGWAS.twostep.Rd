@@ -2,7 +2,7 @@
 % Please edit documentation in R/RGWAS.twostep.R
 \name{RGWAS.twostep}
 \alias{RGWAS.twostep}
-\title{Perform normal GWAS first, then perform SNP-set GWAS for relatively significant markers}
+\title{Perform normal GWAS (genome-wide association studies) first, then perform SNP-set GWAS for relatively significant markers}
 \usage{
 RGWAS.twostep(pheno, geno, ZETA = NULL, covariate = NULL,
   covariate.factor = NULL, structure.matrix = NULL, n.PC = 0,
@@ -20,8 +20,8 @@ RGWAS.twostep(pheno, geno, ZETA = NULL, covariate = NULL,
   plot.col3 = c("red3", "orange3"), plot.type = "p", plot.pch = 16,
   saveName = NULL, main.qq.1 = NULL, main.man.1 = NULL,
   main.qq.2 = NULL, main.man.2 = NULL, plot.add.last = FALSE,
-  return.EMM.res = FALSE, thres = TRUE, verbose = FALSE,
-  count = TRUE, time = TRUE)
+  return.EMM.res = FALSE, thres = TRUE, verbose = TRUE,
+  verbose2 = FALSE, count = TRUE, time = TRUE)
 }
 \arguments{
 \item{pheno}{Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.}
@@ -125,7 +125,7 @@ In the first column, you should assign the gene name. And in the second column, 
 which correspond to the marker names of "geno" argument.}
 
 \item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-If Rainbow = FALSE, weights are not taken into account.}
+If weighting.center = FALSE, weights are not taken into account.}
 
 \item{weighting.other}{You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 For example, you can assign SNP effects from the information of gene annotation.}
@@ -150,10 +150,10 @@ Also, this plot's color is changed by all chromosomes.}
 You should substitute this argument as color vector whose length is 2.
 plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes}
 
-\item{plot.col2}{color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+\item{plot.col2}{Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 (so plot.col2 = 1 means color starts from red.)}
 
-\item{plot.col3}{color of the points of manhattan plot which are added after the reestimation by SNP-set method.
+\item{plot.col3}{Color of the points of manhattan plot which are added after the reestimation by SNP-set method.
 You should substitute this argument as color vector whose length is 2.
 plot.col3[1] for odd chromosomes and plot.col3[2] for even chromosomes.}
 
@@ -180,7 +180,9 @@ However, you should also write "dev.off()" after adding something.}
 \item{thres}{If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 When return.EMM.res or thres is TRUE, the results will be "list" class.}
 
-\item{verbose}{If this argument is TRUE, welcome message will be shown.}
+\item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
+
+\item{verbose2}{If this argument is TRUE, welcome message will be shown.}
 
 \item{count}{When count is TRUE, you can know how far RGWAS has ended with percent display.}
 
@@ -198,10 +200,10 @@ If there are more than one test.effects, then multiple lists for each test.effec
 }
 }
 \description{
-Perform normal GWAS first, then perform SNP-set GWAS for relatively significant markers
+Perform normal GWAS (genome-wide association studies) first, then perform SNP-set GWAS for relatively significant markers
 }
 \examples{
-\dontrun{
+\donttest{
   ### Import RAINBOWR
   require(RAINBOWR)
   

@@ -1,7 +1,7 @@
 #' Function to greet to users
 #'
 #'
-#' @return show welcome messages
+#' @return Show welcome messages
 #'
 #'
 #'
@@ -22,7 +22,7 @@ welcome_to_RGWAS <- function(){
 
   cat("#------------------------ Reliable Association INference By Optimizing Weights -------------------------#\n")
   cat("#  _____         --      _____  __      _  ____     __    _     _     _                                 #\n")
-  cat("#  |  __ \\      /  \\    |_   _||  \\    | ||  _ \\ /  __ \\ | |   | |   | |  Welcome to RAINBOWR GWAS!!!    #\n")
+  cat("#  |  __ \\      /  \\    |_   _||  \\    | ||  _ \\ /  __ \\ | |   | |   | |  Welcome to RAINBOW GWAS!!!    #\n")
   cat("#  | |__) |    / __ \\     | |  | |\\ \\  | || |_) || |  | || |   | |   | |  Version:",
       version, "               #\n")
   cat("#  |  ___/    / /__\\ \\    | |  | | \\ \\ | ||  _ <|| |  | | \\ \\  | |  / /                                 #\n")
@@ -36,17 +36,19 @@ welcome_to_RGWAS <- function(){
 
 #' Function to calculate threshold for GWAS
 #'
-#' @description Calculate thresholds for the given GWAS result by the Benjamini-Hochberg method or Bonferroni method.
+#' @description Calculate thresholds for the given GWAS (genome-wide association studies) result by the Benjamini-Hochberg method or Bonferroni method.
 #'
 #' @param input Data frame of GWAS results where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
 #' @param sig.level  Significance level for the threshold. The default is 0.05. You can also assign vector of sinificance levels.
 #' @param method Two methods are offered:
+#' 
 #' "BH" : Benjamini-Hochberg method. To control FDR, use this method.
 #' "Bonf" : Bonferroni method. To perform simple correction of multiple testing, use this method.
+#' 
 #' You can also assign both of them by 'method = c("BH", "Bonf")'
 #'
-#' @return the value of the threshold. If there is no threshold, it returns NA.
+#' @return The value of the threshold. If there is no threshold, it returns NA.
 #'
 #' @references Benjamini, Y. and Hochberg, Y. (1995) Controlling the false discovery rate:
 #'  a practical and powerful approach to multiple testing. J R Stat Soc. 57(1): 289-300.
@@ -61,7 +63,7 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
     smooth.df <- 3
 
     if(min(p) < 0 || max(p) > 1) {
-      print("ERROR: p-values not in valid range.")
+      stop("P-values not in valid range.")
       return(0)
     }
 
@@ -78,7 +80,7 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
     pi0 <- min(pi0, 1)
 
     if(pi0 <= 0) {
-      print("ERROR: The estimated pi0 <= 0. Check that you have valid p-values.")
+      stop("The estimated pi0 <= 0. Check that you have valid p-values.")
       return(0)
     }
 
@@ -191,8 +193,8 @@ design.Z <- function(pheno.labels, geno.names) {
   match.pheno_geno <- match(pheno.labels, geno.names)
 
   if(any(is.na(match.pheno_geno))){
-    cat("Warnings!! : The following lines have phenotypes but no genotypes:",
-        pheno.labels[is.na(match.pheno_geno)], " \n")
+    warning(paste("The following lines have phenotypes but no genotypes: ",
+                   paste(pheno.labels[is.na(match.pheno_geno)], collapse = ", ")))
   }
 
   match.pheno_geno.nonNA <- match.pheno_geno[!is.na(match.pheno_geno)]
@@ -258,8 +260,8 @@ modify.data <- function(pheno.mat, geno.mat, pheno.labels = NULL, geno.names = N
 
 
   if(any(is.na(match.pheno))){
-    cat("Warnings!! : The following lines have phenotypes but no genotypes:",
-        pheno.labels[is.na(match.pheno)], " \n")
+    warning(paste("The following lines have phenotypes but no genotypes: ",
+                   paste(pheno.labels[is.na(match.pheno)], collapse = ", ")))
   }
 
 
@@ -410,7 +412,7 @@ genesetmap <- function(map, gene.set, cumulative = FALSE) {
 #' @param plot.type  This argument determines the type of the manhattan plot. See the help page of "plot".
 #' @param plot.pch This argument determines the shape of the dot of the manhattan plot. See the help page of "plot".
 #'
-#' @return draw manhttan plot
+#' @return Draw manhttan plot
 #'
 #'
 #'
@@ -472,7 +474,7 @@ manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
 #' @param plot.type  This argument determines the type of the manhattan plot. See the help page of "plot".
 #' @param plot.pch This argument determines the shape of the dot of the manhattan plot. See the help page of "plot".
 #'
-#' @return draw manhttan plot
+#' @return Draw manhttan plot
 #'
 #'
 #'
@@ -514,16 +516,16 @@ manhattan.plus <- function(input, checks, plot.col1 = c("dark blue", "cornflower
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
 #' @param sig.level Siginifincance level for the threshold. The default is 0.05.
 #' @param method.thres Method for detemining threshold of significance. "BH" and "Bonferroni are offered.
-#' @param plot.col2 color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+#' @param plot.col2 Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 #' (so plot.col2 = 1 means color starts from red.)
 #' @param plot.type  This argument determines the type of the manhattan plot. See the help page of "plot".
 #' @param plot.pch This argument determines the shape of the dot of the manhattan plot. See the help page of "plot".
-#' @param cum.pos cumulative position (over chromosomes) of each marker
+#' @param cum.pos Cumulative position (over chromosomes) of each marker
 #' @param lwd.thres The line width for the threshold.
 #' @param cex.lab The font size of the labels.
 #' @param cex.axis The font size of the axes.
 #'
-#' @return draw manhttan plot
+#' @return Draw manhttan plot
 #'
 #'
 #'
@@ -564,7 +566,7 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", plot.col2 =
 #'
 #' @param input Data frame of GWAS results where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
-#' @param cum.pos cumulative position (over chromosomes) of each marker
+#' @param cum.pos Cumulative position (over chromosomes) of each marker
 #' @param plot.epi.3d If TRUE, draw 3d plot
 #' @param plot.epi.2d If TRUE, draw 2d plot
 #' @param main.epi.3d The title of 3d plot. If this argument is NULL, trait name is set as the title.
@@ -572,7 +574,7 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", plot.col2 =
 #' @param saveName When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
 #' When saveAt = NULL, the plot is not saved.
 #'
-#' @return draw 3d plot and 2d plot to show epistatic effects
+#' @return Draw 3d plot and 2d plot to show epistatic effects
 #'
 #'
 #'
@@ -655,7 +657,7 @@ manhattan3 <- function(input, cum.pos, plot.epi.3d = TRUE,
 #'
 #' @param scores A vector of -log10(p) for each marker
 #'
-#' @return draw qq plot
+#' @return Draw qq plot
 #'
 #'
 #'
@@ -681,20 +683,20 @@ qq <- function(scores) {
 #' @description Calculate -log10(p) of each SNP by the Wald test.
 #'
 #'
-#' @param M.now n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
-#' @param Hinv the inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param Hinv The inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.
 #' @param P3D When P3D = TRUE, variance components are estimated by REML only once, without any markers in the model.
 #' When P3D = FALSE, variance components are estimated by REML for each marker separately.
 #' @param optimizer The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -797,21 +799,21 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
 #' @description Calculate -log10(p) of each SNP by the Wald test.
 #'
 #'
-#' @param M.now n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
-#' @param Hinv the inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param Hinv The inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' @param P3D When P3D = TRUE, variance components are estimated by REML only once, without any markers in the model.
 #' When P3D = FALSE, variance components are estimated by REML for each marker separately.
 #' @param optimizer The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -903,9 +905,9 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRU
 
 #' Change a matrix to full-rank matrix
 #'
-#' @param X \eqn{n \times p} matrix which you want to change into full-rank matrix.
+#' @param X A \eqn{n \times p} matrix which you want to change into full-rank matrix.
 #'
-#' @return a full-rank matrix
+#' @return A full-rank matrix
 #'
 #'
 #'
@@ -927,7 +929,7 @@ make.full <- function(X) {
 
 #' Calculate -log10(p) of each SNP-set by the LR test
 #'
-#' @description This function calculates -log10(p) of each SNP-set by the LR test.
+#' @description This function calculates -log10(p) of each SNP-set by the LR (likelihood-ratio) test.
 #' First, the function solves the multi-kernel mixed model and calaculates the maximum restricted log likelihood.
 #' Then it performs the LR test by using the fact that the deviance
 #'
@@ -936,17 +938,17 @@ make.full <- function(X) {
 #' follows the chi-square distribution.
 #'
 #'
-#' @param M.now n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param LL0 The log-likelihood for the null model.
 #' @param eigen.SGS A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eeigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 #' You can use "spectralG.cpp" function in RAINBOWR.
@@ -954,8 +956,8 @@ make.full <- function(X) {
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -968,7 +970,7 @@ make.full <- function(X) {
 #' \item{"exponential"}{When this method is selected, exponential kernel is calculated by distance matrix.}
 #' \item{"linear"}{When this method is selected, linear kernel is calculated by A.mat.}
 #'}
-#' @param kernel.h The hyper parameter for gaussian or exponential kernel.
+#' @param kernel.h The hyper-parameter for gaussian or exponential kernel.
 #' If kernel.h = "tuned", this hyper parameter is calculated as the median of off-diagonals of distance matrix of genotype data.
 #' @param haplotype If the number of lines of your data is large (maybe > 100), you should set haplotype = TRUE.
 #'             When haplotype = TRUE, haplotype-based kernel will be used for calculating -log10(p).
@@ -988,7 +990,7 @@ make.full <- function(X) {
 #' where r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If Rainbow = FALSE, weights are not taken into account.
+#'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -1476,7 +1478,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
 
 #' Calculate -log10(p) of each SNP-set by the LR test (multi-cores)
 #'
-#' @description This function calculates -log10(p) of each SNP-set by the LR test.
+#' @description This function calculates -log10(p) of each SNP-set by the LR (likelihood-ratio) test.
 #' First, the function solves the multi-kernel mixed model and calaculates the maximum restricted log likelihood.
 #' Then it performs the LR test by using the fact that the deviance
 #'
@@ -1485,17 +1487,17 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
 #' follows the chi-square distribution.
 #'
 #'
-#' @param M.now n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param LL0 The log-likelihood for the null model.
 #' @param eigen.SGS A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 #' You can use "spectralG.cpp" function in RAINBOWR.
@@ -1503,8 +1505,8 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -1538,7 +1540,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
 #' where r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If Rainbow = FALSE, weights are not taken into account.
+#'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -2028,15 +2030,15 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
 #' Then it performs the score test by using the fact that the score statistic follows the chi-square distribution.
 #'
 #'
-#' @param M.now n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param LL0 The log-likelihood for the null model.
-#' @param Gu \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
-#' @param Ge \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
+#' @param Gu A \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
+#' @param Ge A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
 #' @param P0 \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
 #' \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.
 #' @param map Data frame of map information where the first column is the marker names,
@@ -2066,7 +2068,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
 #' where l1 is the first derivative of the log-likelihood and F is the Fisher information. And r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If Rainbow = FALSE, weights are not taken into account.
+#'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -2445,16 +2447,16 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
 #' Then it performs the score test by using the fact that the score statistic follows the chi-square distribution.
 #'
 #'
-#' @param M.now n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param LL0 The log-likelihood for the null model.
-#' @param Gu \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
-#' @param Ge \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
-#' @param P0 \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
+#' @param Gu A \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
+#' @param Ge A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
+#' @param P0 A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
 #' \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' @param map Data frame of map information where the first column is the marker names,
@@ -2484,7 +2486,7 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
 #' where l1 is the first derivative of the log-likelihood and F is the Fisher information. And r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If Rainbow = FALSE, weights are not taken into account.
+#'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -2854,16 +2856,16 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
 #' Calculate -log10(p) of epistatic effects by LR test
 #'
 #'
-#' @param M.now n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param eigen.SGS A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 #' You can use "spectralG.cpp" function in RAINBOWR.
@@ -2871,8 +2873,8 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
 #' @param eigen.G A list with
 #' \describe{
-#' \item{$values}{eigen values}
-#' \item{$vectors}{eigen vectors}
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
 #' }
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -3446,15 +3448,15 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
 #' Calculate -log10(p) of epistatic effects with score test
 #'
 #'
-#' @param M.now n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
-#' @param Gu \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
-#' @param Ge \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
-#' @param P0 \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param Gu A \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
+#' @param Ge A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
+#' @param P0 A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
 #' \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.
 #' @param map Data frame of map information where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.

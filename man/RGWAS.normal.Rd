@@ -12,7 +12,7 @@ RGWAS.normal(pheno, geno, ZETA = NULL, covariate = NULL,
   plot.col2 = 1, plot.type = "p", plot.pch = 16, saveName = NULL,
   main.qq = NULL, main.man = NULL, plot.add.last = FALSE,
   return.EMM.res = FALSE, optimizer = "nlminb", thres = TRUE,
-  verbose = FALSE, count = TRUE, time = TRUE)
+  verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE)
 }
 \arguments{
 \item{pheno}{Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.}
@@ -66,7 +66,7 @@ If this argument = 2, the manhattan plot with axis based on Position (bp) will b
 You should substitute this argument as color vector whose length is 2.
 plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes}
 
-\item{plot.col2}{color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+\item{plot.col2}{Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 (so plot.col2 = 1 means color starts from red.)}
 
 \item{plot.type}{This argument determines the type of the manhattan plot. See the help page of "plot".}
@@ -90,7 +90,9 @@ However, you should also write "dev.off()" after adding something.}
 \item{thres}{If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 When return.EMM.res or thres is TRUE, the results will be "list" class.}
 
-\item{verbose}{If this argument is TRUE, welcome message will be shown.}
+\item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
+
+\item{verbose2}{If this argument is TRUE, welcome message will be shown.}
 
 \item{count}{When count is TRUE, you can know how far RGWAS has ended with percent display.}
 
@@ -105,7 +107,7 @@ When return.EMM.res or thres is TRUE, the results will be "list" class.}
 }
 }
 \description{
-This function performs single-SNP GWAS. The model of GWAS is
+This function performs single-SNP GWAS (genome-wide association studies). The model of GWAS is
 
 \deqn{y = X \beta + S _ {i} \alpha _ {i} + Q v +  Z u + \epsilon,}
 

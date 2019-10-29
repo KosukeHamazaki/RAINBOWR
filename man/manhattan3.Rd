@@ -11,7 +11,7 @@ manhattan3(input, cum.pos, plot.epi.3d = TRUE, plot.epi.2d = TRUE,
 \item{input}{Data frame of GWAS results where the first column is the marker names,
 the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.}
 
-\item{cum.pos}{cumulative position (over chromosomes) of each marker}
+\item{cum.pos}{Cumulative position (over chromosomes) of each marker}
 
 \item{plot.epi.3d}{If TRUE, draw 3d plot}
 
@@ -25,7 +25,7 @@ the second and third column is the chromosome amd map position, and the forth co
 When saveAt = NULL, the plot is not saved.}
 }
 \value{
-draw 3d plot and 2d plot to show epistatic effects
+Draw 3d plot and 2d plot to show epistatic effects
 }
 \description{
 Draw the effects of epistasis (3d plot and 2d plot)

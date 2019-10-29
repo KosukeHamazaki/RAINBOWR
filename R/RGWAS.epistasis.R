@@ -1,4 +1,4 @@
-#' Check epistatic effects by kernel-based GWAS
+#' Check epistatic effects by kernel-based GWAS (genome-wide association studies)
 #'
 #' @param pheno Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.
 #' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
@@ -56,7 +56,8 @@
 #' @param main.epi.2d The title of 2d plot. If this argument is NULL, trait name is set as the title.
 #' @param saveName When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
 #' When saveName = NULL, the plot is not saved.
-#' @param verbose If this argument is TRUE, welcome message will be shown.
+#' @param verbose If this argument is TRUE, messages for the current steps will be shown.
+#' @param verbose2 If this argument is TRUE, welcome message will be shown.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
 #' @param time When time is TRUE, you can know how much time it took to perform RGWAS.
 #'
@@ -106,15 +107,15 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariat
                             test.method = "LR", dominance.eff = TRUE, haplotype = TRUE, num.hap = NULL,
                             window.size.half = 5, window.slide = 1, chi0.mixture = 0.5, optimizer = "nlminb",
                             gene.set = NULL, plot.epi.3d = TRUE, plot.epi.2d = TRUE,
-                            main.epi.3d = NULL, main.epi.2d = NULL, saveName = NULL, verbose = FALSE,
-                            count = TRUE, time = TRUE){
+                            main.epi.3d = NULL, main.epi.2d = NULL, saveName = NULL, verbose = TRUE,
+                            verbose2 = FALSE, count = TRUE, time = TRUE){
 
   #### The start of the RGWAS function ####
   start <- Sys.time()
 
 
   #### Some settings to perform RGWAS ####
-  if(verbose){
+  if(verbose2){
     welcome_to_RGWAS()
   }
 
@@ -258,7 +259,9 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariat
   ##### START RGWAS for each phenotype #####
   for(pheno.no in 1:n.pheno){
     trait.name <- trait.names[pheno.no]
-    print(paste("GWAS for trait :", trait.name))
+    if (verbose) {
+      print(paste("GWAS for trait:", trait.name))
+    }
     y0 <- pheno.match[, pheno.ix[pheno.no]]
     not.NA <- which(!is.na(y0))
     y <- y0[not.NA]
@@ -393,7 +396,9 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariat
       main.epi.2d <- trait.name
     }
 
-    print("Now Plotting (3d plot for epistasis). Please Wait.")
+    if (verbose) {
+      print("Now Plotting (3d plot for epistasis). Please Wait.")
+    }
     manhattan3(input = epi.res, cum.pos = cum.pos, plot.epi.3d = plot.epi.3d,
                plot.epi.2d = plot.epi.2d,  main.epi.3d = main.epi.3d,
                main.epi.2d = main.epi.2d, saveName = saveName)

@@ -9,17 +9,17 @@ score.calc(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE,
   count = TRUE)
 }
 \arguments{
-\item{M.now}{n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
+\item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
 
 \item{ZETA.now}{A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 For example, ZETA = list(A = list(Z = Z, K = K))
 Please set names of list "Z" and "K"!}
 
-\item{y}{\eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
+\item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
-\item{X.now}{\eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
+\item{X.now}{A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
 
-\item{Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.}
+\item{Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.}
 
 \item{P3D}{When P3D = TRUE, variance components are estimated by REML only once, without any markers in the model.
 When P3D = FALSE, variance components are estimated by REML for each marker separately.}
@@ -28,8 +28,8 @@ When P3D = FALSE, variance components are estimated by REML for each marker sepa
 
 \item{eigen.G}{A list with
 \describe{
-\item{$values}{eigen values}
-\item{$vectors}{eigen vectors}
+\item{$values}{Eigen values}
+\item{$vectors}{Eigen vectors}
 }
 The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.

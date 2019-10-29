@@ -1,6 +1,6 @@
 #' Print the R code which you should perform for RAINBOWR GWAS
-#'
-#' @return the R code which you should perform for RAINBOWR GWAS
+#' @description Print the R code which you should perform for RAINBOWR (Reliable Association INference By Optimizing Weights with R).
+#' @return The R code which you should perform for RAINBOWR GWAS
 #'
 #'
 RGWAS.menu <- function(){

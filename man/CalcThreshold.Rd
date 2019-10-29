@@ -13,15 +13,17 @@ the second and third column is the chromosome amd map position, and the forth co
 \item{sig.level}{Significance level for the threshold. The default is 0.05. You can also assign vector of sinificance levels.}
 
 \item{method}{Two methods are offered:
+
 "BH" : Benjamini-Hochberg method. To control FDR, use this method.
 "Bonf" : Bonferroni method. To perform simple correction of multiple testing, use this method.
+
 You can also assign both of them by 'method = c("BH", "Bonf")'}
 }
 \value{
-the value of the threshold. If there is no threshold, it returns NA.
+The value of the threshold. If there is no threshold, it returns NA.
 }
 \description{
-Calculate thresholds for the given GWAS result by the Benjamini-Hochberg method or Bonferroni method.
+Calculate thresholds for the given GWAS (genome-wide association studies) result by the Benjamini-Hochberg method or Bonferroni method.
 }
 \references{
 Benjamini, Y. and Hochberg, Y. (1995) Controlling the false discovery rate:

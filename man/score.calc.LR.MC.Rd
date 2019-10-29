@@ -13,11 +13,11 @@ score.calc.LR.MC(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL,
   count = TRUE)
 }
 \arguments{
-\item{M.now}{n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
+\item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
 
-\item{y}{\eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
+\item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
-\item{X.now}{\eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
+\item{X.now}{A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
 
 \item{ZETA.now}{A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 For example, ZETA = list(A = list(Z = Z, K = K))
@@ -27,8 +27,8 @@ Please set names of list "Z" and "K"!}
 
 \item{eigen.SGS}{A list with
 \describe{
-\item{$values}{eigen values}
-\item{$vectors}{eigen vectors}
+\item{$values}{Eigen values}
+\item{$vectors}{Eigen vectors}
 }
 The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
 You can use "spectralG.cpp" function in RAINBOWR.
@@ -37,8 +37,8 @@ We recommend you assign the result of the eigen decomposition beforehand for tim
 
 \item{eigen.G}{A list with
 \describe{
-\item{$values}{eigen values}
-\item{$vectors}{eigen vectors}
+\item{$values}{Eigen values}
+\item{$vectors}{Eigen vectors}
 }
 The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -84,7 +84,7 @@ where r is the degree of freedom.
 The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.}
 
 \item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-If Rainbow = FALSE, weights are not taken into account.}
+If weighting.center = FALSE, weights are not taken into account.}
 
 \item{weighting.other}{You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 For example, you can assign SNP effects from the information of gene annotation.}
@@ -103,7 +103,7 @@ If a marker has a MAF less than min.MAF, it is assigned a zero score.}
 -log10(p) for each SNP-set
 }
 \description{
-This function calculates -log10(p) of each SNP-set by the LR test.
+This function calculates -log10(p) of each SNP-set by the LR (likelihood-ratio) test.
 First, the function solves the multi-kernel mixed model and calaculates the maximum restricted log likelihood.
 Then it performs the LR test by using the fact that the deviance
 

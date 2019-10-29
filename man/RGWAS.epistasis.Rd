@@ -2,7 +2,7 @@
 % Please edit documentation in R/RGWAS.epistasis.R
 \name{RGWAS.epistasis}
 \alias{RGWAS.epistasis}
-\title{Check epistatic effects by kernel-based GWAS}
+\title{Check epistatic effects by kernel-based GWAS (genome-wide association studies)}
 \usage{
 RGWAS.epistasis(pheno, geno, ZETA = NULL, covariate = NULL,
   covariate.factor = NULL, structure.matrix = NULL, n.PC = 0,
@@ -11,7 +11,8 @@ RGWAS.epistasis(pheno, geno, ZETA = NULL, covariate = NULL,
   window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
   optimizer = "nlminb", gene.set = NULL, plot.epi.3d = TRUE,
   plot.epi.2d = TRUE, main.epi.3d = NULL, main.epi.2d = NULL,
-  saveName = NULL, verbose = FALSE, count = TRUE, time = TRUE)
+  saveName = NULL, verbose = TRUE, verbose2 = FALSE, count = TRUE,
+  time = TRUE)
 }
 \arguments{
 \item{pheno}{Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.}
@@ -93,7 +94,9 @@ which correspond to the marker names of "geno" argument.}
 \item{saveName}{When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
 When saveName = NULL, the plot is not saved.}
 
-\item{verbose}{If this argument is TRUE, welcome message will be shown.}
+\item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
+
+\item{verbose2}{If this argument is TRUE, welcome message will be shown.}
 
 \item{count}{When count is TRUE, you can know how far RGWAS has ended with percent display.}
 
@@ -112,10 +115,10 @@ When saveName = NULL, the plot is not saved.}
 }
 }
 \description{
-Check epistatic effects by kernel-based GWAS
+Check epistatic effects by kernel-based GWAS (genome-wide association studies)
 }
 \examples{
-\dontrun{
+\donttest{
   ### Import RAINBOWR
   require(RAINBOWR)
 

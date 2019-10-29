@@ -7,10 +7,10 @@
 make.full(X)
 }
 \arguments{
-\item{X}{\eqn{n \times p} matrix which you want to change into full-rank matrix.}
+\item{X}{A \eqn{n \times p} matrix which you want to change into full-rank matrix.}
 }
 \value{
-a full-rank matrix
+A full-rank matrix
 }
 \description{
 Change a matrix to full-rank matrix

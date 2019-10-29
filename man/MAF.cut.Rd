@@ -8,7 +8,7 @@ MAF.cut(x.0, map.0 = NULL, min.MAF = 0.05, max.MS = 0.05,
   return.MAF = FALSE)
 }
 \arguments{
-\item{x.0}{\eqn{n \times m} original marker genotype matrix.}
+\item{x.0}{A \eqn{n \times m} original marker genotype matrix.}
 
 \item{map.0}{Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.}
 

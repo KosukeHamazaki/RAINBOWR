@@ -1,6 +1,6 @@
 #' Perform normal GWAS (test each single SNP)
 #'
-#' @description This function performs single-SNP GWAS. The model of GWAS is
+#' @description This function performs single-SNP GWAS (genome-wide association studies). The model of GWAS is
 #'
 #' \deqn{y = X \beta + S _ {i} \alpha _ {i} + Q v +  Z u + \epsilon,}
 #'
@@ -56,7 +56,7 @@
 #' @param plot.col1 This argument determines the color of the manhattan plot.
 #'  You should substitute this argument as color vector whose length is 2.
 #'  plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes
-#' @param plot.col2 color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
+#' @param plot.col2 Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 #' (so plot.col2 = 1 means color starts from red.)
 #' @param plot.type  This argument determines the type of the manhattan plot. See the help page of "plot".
 #' @param plot.pch This argument determines the shape of the dot of the manhattan plot. See the help page of "plot".
@@ -70,7 +70,8 @@
 #' @param return.EMM.res When return.EMM.res = TRUE, the results of equation of mixed models are included in the result of RGWAS.
 #' @param thres If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 #' When return.EMM.res or thres is TRUE, the results will be "list" class.
-#' @param verbose If this argument is TRUE, welcome message will be shown.
+#' @param verbose If this argument is TRUE, messages for the current steps will be shown.
+#' @param verbose2 If this argument is TRUE, welcome message will be shown.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
 #' @param time When time is TRUE, you can know how much time it took to perform RGWAS.
 #'
@@ -136,14 +137,14 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
                          plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
                          plot.type = "p", plot.pch = 16, saveName = NULL, main.qq = NULL,
                          main.man = NULL, plot.add.last = FALSE, return.EMM.res = FALSE, optimizer = "nlminb",
-                         thres = TRUE, verbose = FALSE, count = TRUE, time = TRUE){
+                         thres = TRUE, verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE){
 
   #### The start of the RGWAS function ####
   start <- Sys.time()
 
 
   #### Some settings to perform RGWAS ####
-  if(verbose){
+  if(verbose2){
     welcome_to_RGWAS()
   }
 
@@ -276,7 +277,9 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
   ##### START RGWAS for each phenotype #####
   for(pheno.no in 1:n.pheno){
     trait.name <- trait.names[pheno.no]
-    print(paste("GWAS for trait :", trait.name))
+    if (verbose) {
+      print(paste("GWAS for trait:", trait.name))
+    }
     y0 <- pheno.match[, pheno.ix[pheno.no]]
     not.NA <- which(!is.na(y0))
     y <- y0[not.NA]
@@ -301,7 +304,9 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
 
       Hinv <- EMM.res0$Hinv
       eigen.G <- NULL
-      print("Variance components estimated. Testing markers.")
+      if (verbose) {
+        print("Variance components estimated. Testing markers.")
+      }
     }else{
       spI <- diag(n)
       if(length(ZETA) > 1){
@@ -331,7 +336,9 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
     }
 
     if (plot.qq) {
-      print("Now Plotting (Q-Q plot). Please Wait.")
+      if (verbose) {
+        print("Now Plotting (Q-Q plot). Please Wait.")
+      }
       if(is.null(saveName)){
         if (length(grep("RStudio", names(dev.cur()))) == 0) {
           if (dev.cur() == dev.next()) {
@@ -361,7 +368,9 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
 
 
     if (plot.Manhattan) {
-      print("Now Plotting (Manhattan plot). Please Wait.")
+      if (verbose) {
+        print("Now Plotting (Manhattan plot). Please Wait.")
+      }
       if(is.null(saveName)){
         if (length(grep("RStudio", names(dev.cur()))) == 0) {
           if (dev.cur() == dev.next()) {

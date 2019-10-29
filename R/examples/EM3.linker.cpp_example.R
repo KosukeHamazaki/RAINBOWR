@@ -1,4 +1,4 @@
-\dontrun{
+\donttest{
   ### Import RAINBOWR
   require(RAINBOWR)
   

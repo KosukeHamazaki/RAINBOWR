@@ -11,9 +11,9 @@ EMM1.cpp(y, X = NULL, ZETA, eigen.G = NULL, lam.len = 4,
   return.Hinv = TRUE)
 }
 \arguments{
-\item{y}{\eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
+\item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
-\item{X}{\eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
+\item{X}{A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
 
 \item{ZETA}{A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 For example, ZETA = list(A = list(Z = Z, K = K))
@@ -21,8 +21,8 @@ Please set names of list "Z" and "K"!}
 
 \item{eigen.G}{A list with
 \describe{
-\item{$values}{eigen values}
-\item{$vectors}{eigen vectors}
+\item{$values}{Eigen values}
+\item{$vectors}{Eigen vectors}
 }
 The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
@@ -64,19 +64,19 @@ We don't recommend plot.l = TRUE when lam.len >= 2.}
 }
 \value{
 \describe{
-\item{$Vu}{estimator for \eqn{\sigma^2_u}}
-\item{$Ve}{estimator for \eqn{\sigma^2_e}}
+\item{$Vu}{Estimator for \eqn{\sigma^2_u}}
+\item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 \item{$beta}{BLUE(\eqn{\beta})}
 \item{$u}{BLUP(\eqn{u})}
-\item{$LL}{maximized log-likelihood (full or restricted, depending on method)}
-\item{$beta.SE}{standard error for \eqn{\beta} (If SE = TRUE)}
-\item{$u.SE}{standard error for \eqn{u^*-u} (If SE = TRUE)}
-\item{$Hinv}{the inverse of \eqn{H = ZKZ' + \lambda I} (If return.Hinv = TRUE)}
-\item{$Hinv2}{the inverse of \eqn{H2 = ZKZ'/\lambda + I} (If return.Hinv = TRUE)}
-\item{$lambda}{estimators for \eqn{\lambda = \sigma^2_e / \sigma^2_u}}
-\item{$lambdas}{lambdas for each initial values}
+\item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+\item{$beta.SE}{Standard error for \eqn{\beta} (If SE = TRUE)}
+\item{$u.SE}{Standard error for \eqn{u^*-u} (If SE = TRUE)}
+\item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I} (If return.Hinv = TRUE)}
+\item{$Hinv2}{The inverse of \eqn{H2 = ZKZ'/\lambda + I} (If return.Hinv = TRUE)}
+\item{$lambda}{Estimators for \eqn{\lambda = \sigma^2_e / \sigma^2_u}}
+\item{$lambdas}{Lambdas for each initial values}
 \item{$reest}{If parameter estimation may not be accurate, reest = 1, else reest = 0}
-\item{$counts}{the number of iterations until convergence for each initial values}
+\item{$counts}{The number of iterations until convergence for each initial values}
 }
 }
 \description{

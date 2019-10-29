@@ -7,7 +7,7 @@
 welcome_to_RGWAS()
 }
 \value{
-show welcome messages
+Show welcome messages
 }
 \description{
 Function to greet to users

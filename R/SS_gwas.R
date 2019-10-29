@@ -1,8 +1,8 @@
-#' Calculate some summary statistics of GWAS (for simulation study)
+#' Calculate some summary statistics of GWAS (genome-wide association studies) for simulation study
 #'
 #' @param res Data frame of GWAS results where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
-#' @param x N (lines) x M (markers) marker genotype data (matrix), coded as {-1, 0, 1} = {aa, Aa, AA}.
+#' @param x A N (lines) x M (markers) marker genotype data (matrix), coded as {-1, 0, 1} = {aa, Aa, AA}.
 #' @param map.x Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
 #' @param qtn.candidate A vector of causal markers. You should assign where those causal markers are positioned in our marker genotype,
 #' rather than physical position of those causal markers.
@@ -42,7 +42,7 @@
 #' \item{$Hm}{Harmonic mean of Recall and Precision.}
 #' \item{$haplo.name}{The haplotype block name which correspond to causals.}
 #' \item{$mean.false}{The mean of -log10(p) values of top 'n.top.false.block' blocks.}
-#' \item{$max.trues}{Max of the -log10(p) values of the region near causals.}
+#' \item{$max.trues}{Maximum of the -log10(p) values of the region near causals.}
 #' }
 #'
 #'
