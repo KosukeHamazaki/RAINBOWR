@@ -107,7 +107,7 @@ We will describe the comments and their solution as follows.
 
 
 ## R CMD check results
-The same results as [those of the previous version 0.1.9]() were obtained as follows.
+The same results as [those of the previous version 0.1.9](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#r-cmd-check-results-1) were obtained as follows.
 
 #### There were no ERRORs.
 
