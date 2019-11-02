@@ -152,7 +152,7 @@ See(u)
 
 
 ### Perform genomic prediction with 10-fold cross validation
-\dontrun{
+\donttest{
   noNA <- !is.na(c(pheno.mat))   ### NA (missing) in the phenotype data
   
   phenoNoNA <- pheno.mat[noNA, , drop = FALSE]   ### remove NA

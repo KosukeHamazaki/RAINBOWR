@@ -72,6 +72,53 @@ This function solves the following multi-kernel linear mixed effects model.
 where \eqn{Var[y] = \sum _{l=1} ^ {L} Z _ {l} K _ {l} Z _ {l}' \sigma _ {l} ^ 2 + I \sigma _ {e} ^ {2}}.
 }
 \examples{
+\dontshow{
+  ### Import RAINBOWR
+  require(RAINBOWR)
+  
+  ### Load example datasets
+  data("Rice_Zhao_etal")
+  Rice_geno_score <- Rice_Zhao_etal$genoScore
+  Rice_geno_map <- Rice_Zhao_etal$genoMap
+  Rice_pheno <- Rice_Zhao_etal$pheno
+  
+  ### Select one trait for example
+  trait.name <- "Flowering.time.at.Arkansas"
+  y <- as.matrix(Rice_pheno[1:100, trait.name, drop = FALSE])
+  # use first 100 accessions
+  
+  ### Remove SNPs whose MAF <= 0.05
+  x.0 <- t(Rice_geno_score)
+  MAF.cut.res <- MAF.cut(x.0 = x.0, map.0 = Rice_geno_map)
+  x <- MAF.cut.res$x
+  map <- MAF.cut.res$map
+  
+  
+  ### Estimate additive genetic relationship matrix & epistatic relationship matrix
+  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  K.AA <- K.A * K.A   ### additive x additive epistatic effects
+  
+  
+  ### Modify data
+  Z <- design.Z(pheno.labels = rownames(y),
+                geno.names = rownames(K.A))  ### design matrix for random effects
+  pheno.mat <- y[rownames(Z), , drop = FALSE]
+  ZETA <- list(A = list(Z = Z, K = K.A),
+               AA = list(Z = Z, K = K.AA))
+  
+  
+  ### Solve multi-kernel linear mixed effects model (2 random efects)
+  EM3.res <- EM3.cpp(y = pheno.mat, X = NULL, ZETA = ZETA)
+  Vu <- EM3.res$Vu   ### estimated genetic variance
+  Ve <- EM3.res$Ve   ### estimated residual variance
+  weights <- EM3.res$weights   ### estimated proportion of two genetic variances
+  herit <- Vu * weights / (Vu + Ve)   ### genomic heritability (additive, additive x additive)
+  
+  beta <- EM3.res$beta   ### Here, this is an intercept.
+  u <- EM3.res$u   ### estimated genotypic values (additive, additive x additive)
+}
+
+
 \donttest{
   ### Import RAINBOWR
   require(RAINBOWR)

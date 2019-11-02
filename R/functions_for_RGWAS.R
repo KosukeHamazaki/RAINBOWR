@@ -787,7 +787,9 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
       }
     }
   }
-  cat("\n")
+  if (count) {
+    cat("\n")
+  }
   return(scores)
 }
 
@@ -891,7 +893,9 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRU
     }
     return(scores.now)
   }
-  cat("\n")
+  if (count) {
+    cat("\n")
+  }
 
   scores <- unlist(pbmcapply::pbmclapply(X = 1:n.mark, FUN = score.calc.MC.oneSNP, mc.cores = n.core))
 
@@ -1467,7 +1471,10 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
   }else{
     colnames(scores) <- kernel.method
   }
-  cat("\n")
+  
+  if (count) {
+    cat("\n")
+  }
   return(scores)
 }
 
@@ -2009,7 +2016,10 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
   }else{
     colnames(scores) <- kernel.method
   }
-  cat("\n")
+  
+  if (count) {
+    cat("\n")
+  }
   return(scores)
 }
 
@@ -2431,7 +2441,10 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
   }else{
     colnames(scores) <- kernel.method
   }
-  cat("\n")
+  
+  if (count) {
+    cat("\n")
+  }
   return(scores)
 }
 
@@ -2844,7 +2857,10 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
   }else{
     colnames(scores) <- kernel.method
   }
-  cat("\n")
+  
+  if (count) {
+    cat("\n")
+  }
   return(scores)
 }
 
@@ -3435,7 +3451,10 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
   }else{
     rownames(scores) <- colnames(scores) <- gene.name
   }
-  cat("\n")
+  
+  if (count) {
+    cat("\n")
+  }
   return(scores)
 }
 
@@ -3981,7 +4000,10 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
   }else{
     rownames(scores) <- colnames(scores) <- gene.name
   }
-  cat("\n")
+  
+  if (count) {
+    cat("\n")
+  }
   return(scores)
 }
 

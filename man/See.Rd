@@ -5,7 +5,8 @@
 \title{Function to view the first part of data (like head(), tail())}
 \usage{
 See(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6, rowst = 1,
-  colst = 1, narray = 2, drop = FALSE, save.variable = FALSE)
+  colst = 1, narray = 2, drop = FALSE, save.variable = FALSE,
+  verbose = TRUE)
 }
 \arguments{
 \item{data}{Your data. 'vector', 'matrix', 'array' (whose dimensions <= 4), 'data.frame' are supported format.
@@ -31,6 +32,8 @@ This argument is effective only your data is array (whose dimensions >= 3).}
 \item{drop}{When rown = 1 or coln = 1, the dimension will be reduced if this argument is TRUE.}
 
 \item{save.variable}{If you want to assign the result to a variable, please set this agument TRUE.}
+
+\item{verbose}{If TRUE, print the first part of data.}
 }
 \value{
 If save.variable is FALSE, NULL. If TRUE, the first part of your data will be returned.

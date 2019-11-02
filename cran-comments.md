@@ -115,3 +115,60 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 #### There were 1 NOTE:
 ##### * checking CRAN incoming feasibility ... NOTE
+
+
+
+
+
+# Nov 2, 2019, RAINBOWR version 0.1.11 (resubmission)
+## Major changes
+We fixed some parts commented by the CRAN manager, Dr. Martina Schmirl.
+We will describe the comments and their solution as follows.
+
+> The package cannot be copyright holder of the package. (license file.)
+
+- We changed the copyright holder to "Kosuke Hamazaki".
+
+
+> Please ensure that your functions do not write by default or in your examples/vignettes/tests in the user's home filespace (including the package directory and getwd()). That is not allowed by CRAN policies. 
+> Please only write/save files if the user has specified a directory in the function themselves. Therefore please omit any default path = getwd() in writing functions.
+> In your examples/vignettes/tests you can write to tempdir().
+> e.g. genetrait.R, ...
+
+- We removed "getwd()" from the `genetrait` function.
+
+
+> You still write information messages to the console that cannot be easily suppressed. 
+> It is more R like to generate objects that can be used to extract the information a user is interested in, and then print() that object.
+> Instead of print()/cat() rather use message()/warning()  or if(verbose)cat(..) if you really have to write text to the console.
+> (except for print() and summary() functions)
+
+- We modified some print()/cat() functions as follows.
+  - cat("\n") --> if (count) { cat("\n") }  ### in the functions related to `RGWAS`
+  - print()  --> if (verbose) { print() }  ### in the `See` function, we added `verbose` argument
+- Now, the messages to the console can be easily suppressed.
+  You can check this from the examples in \dontshow{}.
+
+
+> However, there is still a dontrun in EMM.cpp.Rd
+> Also we would appreciate it to have examples for automatic test so you can wrap unrealistic examles in \dontshow. Then we can have the checks and the users do not see those examples.
+
+- We replaced \dontrun in the example of `EMM.cpp` function to \donttest.
+- We also prepared \dontshow examples (unrealistic toy examples) for the functions that had not offered the examples for the CRAN tests (`EM3.cpp`, `EM3.linker.cpp`, `RGWAS.epistasis`, `RGWAS.multisnp`, `RGWAS.twostep.epi`, `RGWAS.twostep`) before.
+
+
+
+## Test environments 
+* platform x86_64-apple-darwin15.6.0, R version 3.6.0
+* win-builder (release), R version 3.6.1
+
+
+## R CMD check results
+The same results as [those of the previous version 0.1.9](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#r-cmd-check-results-1) were obtained as follows.
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs:
+
+#### There were 1 NOTE:
+##### * checking CRAN incoming feasibility ... NOTE

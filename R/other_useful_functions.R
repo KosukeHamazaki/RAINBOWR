@@ -14,110 +14,114 @@
 #' This argument is effective only your data is array (whose dimensions >= 3).
 #' @param drop  When rown = 1 or coln = 1, the dimension will be reduced if this argument is TRUE.
 #' @param save.variable If you want to assign the result to a variable, please set this agument TRUE.
+#' @param verbose If TRUE, print the first part of data.
 #'
 #' @return If save.variable is FALSE, NULL. If TRUE, the first part of your data will be returned.
 #'
 #'
 See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
                 rowst = 1, colst = 1, narray = 2, drop = FALSE,
-                save.variable = FALSE){
+                save.variable = FALSE, verbose = TRUE){
   islist <- is.list(data)
   isvec <- is.vector(data)
   isfac <- is.factor(data)
-
-
-
-  if((isvec | isfac) & (!islist)){
+  
+  
+  
+  if ((isvec | isfac) & (!islist)) {
     n.data <- length(data)
-    if(fh){
+    if (fh) {
       start <- min(rowst, n.data)
       end <- min(rowst + rown - 1, n.data)
-    }else{
+    } else {
       start <- max(n.data - rowst - rown + 2, 1)
       end <- max(n.data - rowst + 1, 1)
     }
     data.show <- data[start:end]
     dim.show <- length(data)
-  }else{
+  } else {
     ismat <- is.matrix(data)
     isdf <- is.data.frame(data)
-
-    if(ismat | isdf){
+    
+    if (ismat | isdf) {
       n.data.row <- nrow(data)
-      if(fh){
+      if (fh) {
         start.row <- min(rowst, n.data.row)
         end.row <- min(rowst + rown - 1, n.data.row)
-      }else{
+      } else {
         start.row <- max(n.data.row - rowst - rown + 2, 1)
         end.row <- max(n.data.row - rowst + 1, 1)
       }
-
+      
       n.data.col <- ncol(data)
-      if(fl){
+      if (fl) {
         start.col <- min(colst, n.data.col)
         end.col <- min(colst + coln - 1, n.data.col)
-      }else{
+      } else {
         start.col <- max(n.data.col - colst - coln + 2, 1)
         end.col <- max(n.data.col - colst + 1, 1)
       }
-
+      
       class.each <- rep(NA, end.col - start.col + 1)
-
-      for(i in 1:(end.col - start.col + 1)){
+      
+      for (i in 1:(end.col - start.col + 1)) {
         class.each[i] <- class(data[, i])
       }
       class.show <- paste0("<", class.each, ">")
-      data.show <- data[start.row:end.row, start.col:end.col, drop = drop]
-      data.show <- as.data.frame(rbind(class.show, apply(data.show, 2, as.character)))
+      data.show <-
+        data[start.row:end.row, start.col:end.col, drop = drop]
+      data.show <-
+        as.data.frame(rbind(class.show, apply(data.show, 2, as.character)))
       data.rowname <- rownames(data)
-      if(!is.null(data.rowname)){
+      if (!is.null(data.rowname)) {
         rownames(data.show) <- c("class", rownames(data)[start.row:end.row])
-      }else{
-        rownames(data.show) <- c("class", paste0("NULL_", start.row:end.row))
+      } else {
+        rownames(data.show) <-
+          c("class", paste0("NULL_", start.row:end.row))
       }
       dim.show <- dim(data)
-    }else{
+    } else {
       isarray <- is.array(data)
-
-      if(isarray){
+      
+      if (isarray) {
         n.array <- length(dim(data))
-
-        if(narray <= 4){
+        
+        if (narray <= 4) {
           n.data.row <- nrow(data)
-          if(fh){
+          if (fh) {
             start.row <- min(rowst, n.data.row)
             end.row <- min(rowst + rown - 1, n.data.row)
-          }else{
+          } else {
             start.row <- max(n.data.row - rowst - rown + 2, 1)
             end.row <- max(n.data.row - rowst + 1, 1)
           }
-
+          
           n.data.col <- ncol(data)
-          if(fl){
+          if (fl) {
             start.col <- min(colst, n.data.col)
             end.col <- min(colst + coln - 1, n.data.col)
-          }else{
+          } else {
             start.col <- max(n.data.col - colst - coln + 2, 1)
             end.col <- max(n.data.col - colst + 1, 1)
           }
-
+          
           start.other <- 1
           end.other <- narray
-
-          if(n.array == 1){
+          
+          if (n.array == 1) {
             data.show <- data[start.row:end.row, drop = drop]
           }
-
-          if(n.array == 2){
+          
+          if (n.array == 2) {
             data.show <- data[start.row:end.row, start.col:end.col, drop = drop]
           }
-
-          if(n.array == 3){
+          
+          if (n.array == 3) {
             data.show <- data[start.row:end.row, start.col:end.col,
                               start.other:end.other, drop = drop]
           }
-
-          if(n.array == 4){
+          
+          if (n.array == 4) {
             data.show <- data[start.row:end.row, start.col:end.col,
                               start.other:end.other, start.other:end.other, drop = drop]
           }
@@ -132,13 +136,16 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
       }
     }
   }
-
-  if(!is.null(data.show)){
-    print(data.show)
+  
+  if (verbose) {
+    if (!is.null(data.show)) {
+      print(data.show)
+    }
+    print(paste0("class: ", paste(class(data), collapse = " & ")))
+    print(paste0("dimension: ", paste(dim.show, collapse = " x ")))
   }
-  print(paste0("class : ", paste(class(data), collapse = " & ")))
-  print(paste0("dimension : ", paste(dim.show, collapse = " x ")))
-  if(save.variable){
+  
+  if (save.variable) {
     return(data.show)
   }
 }
@@ -164,57 +171,62 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
 #' \item{$after}{Minor allele frequencies of the modified marker genotype.}
 #'}
 #'
-MAF.cut <- function(x.0, map.0 = NULL, min.MAF = 0.05, max.MS = 0.05, return.MAF = FALSE){
+MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
+                     max.MS = 0.05, return.MAF = FALSE) {
   x.unique <- sort(unique(c(x.0)), decreasing = FALSE)
   len.x.unique <- length(x.unique)
-
-  if(len.x.unique == 2){
+  
+  if (len.x.unique == 2) {
     is.scoring1 <- all(x.unique == c(-1, 1))
     is.scoring2 <- all(x.unique == c(0, 2))
-  }else{
-    if(len.x.unique == 3){
+  } else{
+    if (len.x.unique == 3) {
       is.scoring1 <- all(x.unique == c(-1, 0, 1))
       is.scoring2 <- all(x.unique == c(0, 1, 2))
-    }else{
+    } else{
       stop("Something wrong with your genotype data!!")
     }
   }
-
-  if(is.scoring1){
-    freq <- apply(x.0, 2, function(x){
+  
+  if (is.scoring1) {
+    freq <- apply(x.0, 2, function(x) {
       return(mean(x + 1, na.rm = TRUE) / 2)
     })
-  }else{
-    if(is.scoring2){
-      freq <- apply(x.0, 2, function(x){
+  } else{
+    if (is.scoring2) {
+      freq <- apply(x.0, 2, function(x) {
         return(mean(x, na.rm = TRUE) / 2)
       })
-    }else{
+    } else{
       stop("Genotype data should be scored with (-1, 0, 1) or (0, 1, 2)!!")
     }
   }
-
+  
   MAF.before <- pmin(freq, 1 - freq)
   mark.remain.MAF <- MAF.before >= min.MAF
-
-  MS.rate <- apply(x.0, 2, function(x) mean(is.na(x)))
+  
+  MS.rate <- apply(x.0, 2, function(x)
+    mean(is.na(x)))
   mark.remain.MS <- MS.rate <= max.MS
-
+  
   mark.remain <- mark.remain.MAF & mark.remain.MS
-
-
+  
+  
   x <- x.0[, mark.remain]
-
-  if(!is.null(map.0)){
-    map <- map.0[mark.remain, ]
-  }else{
+  
+  if (!is.null(map.0)) {
+    map <- map.0[mark.remain,]
+  } else{
     map <- NULL
   }
   MAF.after <- MAF.before[mark.remain]
-
-  if(return.MAF){
-    return(list(data = list(x = x, map = map), MAF = list(before = MAF.before, after = MAF.after)))
-  }else{
+  
+  if (return.MAF) {
+    return(list(
+      data = list(x = x, map = map),
+      MAF = list(before = MAF.before, after = MAF.after)
+    ))
+  } else{
     return(list(x = x, map = map))
   }
 }
