@@ -617,7 +617,7 @@ manhattan3 <- function(input, cum.pos, plot.epi.3d = TRUE,
         dir <- paste(spr[-length(spr)], collapse = "/")
         file_name <- spr[length(spr)]
       }else{
-        dir <- getwd()
+        dir <- ""
         file_name <- saveName
       }
       writeWebGL(dir = dir, filename = file.path(dir, paste(file_name, "_epistasis_3d_webplot.html")),
@@ -634,7 +634,7 @@ manhattan3 <- function(input, cum.pos, plot.epi.3d = TRUE,
              legend = paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1)),
              pch = 1, col = rev(rainbow(7)), cex = 1)
       title(main = main.epi.2d)
-      par(op)
+      on.exit(par(op))
       dev.off()
     }
   }else{
@@ -646,7 +646,7 @@ manhattan3 <- function(input, cum.pos, plot.epi.3d = TRUE,
              legend = paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1)),
              pch = 1, col = rev(rainbow(7)), cex = 1)
       title(main = main.epi.2d)
-      par(op)
+      on.exit(par(op))
     }
   }
 }

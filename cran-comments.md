@@ -172,3 +172,36 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 #### There were 1 NOTE:
 ##### * checking CRAN incoming feasibility ... NOTE
+
+
+
+
+# Nov 6, 2019, RAINBOWR version 0.1.12 (resubmission)
+## Major changes
+We fixed some parts commented by the CRAN manager, Dr. Swetlana Herbrandt.
+We will describe the comments and their solution as follows.
+
+> please write package names, software names and API names in single quotes (e.g. 'RAINBOWR') in your Description text.
+
+- We changed "By using RAINBOWR ..." in the Description text to "By using 'RAINBOWR' ...".
+
+
+> You are changing the user's par() settings in your functions. Please ensure with an immediate call of on.exit() that the settings are reset.
+
+- We modified `par(op)` in the `manhattan3` function (in the `functions_for_RGWAS.R` file) to `on.exit(par(op))` to reset the graphical settings.
+
+
+## Test environments 
+* platform x86_64-apple-darwin15.6.0, R version 3.6.0
+* win-builder (devel and release), R version 3.6.1
+
+
+## R CMD check results
+The same results as [those of the previous version 0.1.9](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#r-cmd-check-results-1) were obtained as follows.
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs:
+
+#### There were 1 NOTE:
+##### * checking CRAN incoming feasibility ... NOTE
