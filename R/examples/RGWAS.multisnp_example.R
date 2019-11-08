@@ -11,8 +11,8 @@
   
   ### Select one trait for example
   trait.name <- "Flowering.time.at.Arkansas"
-  y <- as.matrix(Rice_pheno[1:50, trait.name, drop = FALSE])
-  # use first 50 accessions
+  y <- as.matrix(Rice_pheno[1:30, trait.name, drop = FALSE])
+  # use first 30 accessions
   
   
   ### Remove SNPs whose MAF <= 0.05
@@ -30,12 +30,12 @@
   modify.data.res <- modify.data(pheno.mat = y, geno.mat = x, map = map,
                                  return.ZETA = TRUE, return.GWAS.format = TRUE)
   pheno.GWAS <- modify.data.res$pheno.GWAS
-  geno.GWAS <- modify.data.res$geno.GWAS
+  geno.GWAS <- modify.data.res$geno.GWAS[1:300, ]  ### first 300 SNPs
   ZETA <- modify.data.res$ZETA
   
   
   
-  ### Perform SNP-set GWAS (by regarding 21 SNPs as one SNP-set)
+  ### Perform SNP-set GWAS (by regarding 41 SNPs as one SNP-set)
   SNP_set.res <- RGWAS.multisnp(pheno = pheno.GWAS, geno = geno.GWAS,
                                 ZETA = ZETA, n.PC = 4, test.method = "LR",
                                 kernel.method = "linear", gene.set = NULL,

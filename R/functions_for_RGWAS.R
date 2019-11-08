@@ -627,26 +627,28 @@ manhattan3 <- function(input, cum.pos, plot.epi.3d = TRUE,
 
     if(plot.epi.2d){
       png(paste(saveName, "_epistasis_2d_plot.png", ""), width = 600, height = 500)
-      op <- par(mar = c(3, 3, 3, 6), xpd = T)
+      oldpar <- par(no.readonly = TRUE)
+      on.exit(par(oldpar))
+      par(mar = c(3, 3, 3, 6), xpd = T)
       plot(x, y, cex = pl.size, xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)), col = col.id[col.num], pch = 1)
       segments(0, 0, max(cum.pos), max(cum.pos), lty = "dotted")
-      legend(par()$usr[2], par()$usr[4],
+      legend(oldpar$usr[2], oldpar$usr[4],
              legend = paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1)),
              pch = 1, col = rev(rainbow(7)), cex = 1)
       title(main = main.epi.2d)
-      on.exit(par(op))
       dev.off()
     }
   }else{
     if(plot.epi.2d){
-      op <- par(mar = c(3, 3, 3, 6), xpd = T)
+      oldpar <- par(no.readonly = TRUE)
+      on.exit(par(oldpar))
+      par(mar = c(3, 3, 3, 6), xpd = T)
       plot(x, y, cex = pl.size, xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)), col = col.id[col.num], pch = 1)
       segments(0, 0, max(cum.pos), max(cum.pos), lty = "dotted")
-      legend(par()$usr[2], par()$usr[4],
+      legend(oldpar$usr[2], oldpar$usr[4],
              legend = paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1)),
              pch = 1, col = rev(rainbow(7)), cex = 1)
       title(main = main.epi.2d)
-      on.exit(par(op))
     }
   }
 }

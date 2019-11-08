@@ -216,8 +216,8 @@ Perform normal GWAS (genome-wide association studies) first, then perform SNP-se
   
   ### Select one trait for example
   trait.name <- "Flowering.time.at.Arkansas"
-  y <- as.matrix(Rice_pheno[1:50, trait.name, drop = FALSE])
-  # use first 50 accessions
+  y <- as.matrix(Rice_pheno[1:30, trait.name, drop = FALSE])
+  # use first 30 accessions
   
   ### Remove SNPs whose MAF <= 0.05
   x.0 <- t(Rice_geno_score)

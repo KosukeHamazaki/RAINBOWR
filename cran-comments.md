@@ -205,3 +205,51 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 #### There were 1 NOTE:
 ##### * checking CRAN incoming feasibility ... NOTE
+
+
+
+
+# Nov 8, 2019, RAINBOWR version 0.1.13 (resubmission)
+## Major changes
+We fixed some parts commented by the CRAN manager, Dr. Jelena Saf.
+We will describe the comments and their solution as follows.
+
+> Please shorten the title to a maximum of 65 characters. 
+
+- We changed the title to "Genome-Wide Association Study with SNP-Set Methods" (51 characters).
+
+
+> Please make sure that you do not change the user's options, par or working directory. If you really have to do so, please ensure with an *immediate* call of on.exit() that the settings are reset when the function is exited, similar to this:
+
+- We have to change the user's options `par`, so we modified the `manhattan3` function (in the `functions_for_RGWAS.R` file) as follows to reset the graphical settings. (We put the `on.exit(par(oldpar))` before the plotting section.)
+
+```
+      oldpar <- par(no.readonly = TRUE)
+      on.exit(par(oldpar))
+      par(mar = c(3, 3, 3, 6), xpd = T)
+      plot(x, y, cex = pl.size, xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)),
+      col = col.id[col.num], pch = 1)
+```
+
+
+> The checktime of 664 seconds exceeds the limit of 10 minutes.
+> Please add small executable examples in your Rd-files to illustrate the use of the exported function but also enable automatic testing.
+
+- We had already prepared toy examples before, but we changed the toy examples to a smaller one. We also prepared the smaller version of vignettes because we thought that the building vignettes is the most time-consuming part.
+
+
+
+## Test environments 
+* platform x86_64-apple-darwin15.6.0, R version 3.6.0
+* win-builder (devel and release), R version 3.6.1
+
+
+## R CMD check results
+The same results as [those of the previous version 0.1.9](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#r-cmd-check-results-1) were obtained as follows.
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs:
+
+#### There were 1 NOTE:
+##### * checking CRAN incoming feasibility ... NOTE

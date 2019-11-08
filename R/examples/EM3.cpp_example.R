@@ -10,8 +10,8 @@
   
   ### Select one trait for example
   trait.name <- "Flowering.time.at.Arkansas"
-  y <- as.matrix(Rice_pheno[1:100, trait.name, drop = FALSE])
-  # use first 100 accessions
+  y <- as.matrix(Rice_pheno[1:30, trait.name, drop = FALSE])
+  # use first 30 accessions
   
   ### Remove SNPs whose MAF <= 0.05
   x.0 <- t(Rice_geno_score)

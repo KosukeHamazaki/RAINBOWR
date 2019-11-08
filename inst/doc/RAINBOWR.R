@@ -69,8 +69,8 @@ manhattan(normal.res$D)
 ### Automatically draw Q-Q plot and Manhattan if you set plot.qq = TRUE and plot.Manhattan = TRUE.
 
 ## ---- include=TRUE, message=FALSE----------------------------------------
-### Perform SNP-set GWAS (by regarding 11 SNPs as one SNP-set)
-SNP_set.res <- RGWAS.multisnp(pheno = pheno.GWAS, geno = geno.GWAS, ZETA = ZETA,
+### Perform SNP-set GWAS (by regarding 11 SNPs as one SNP-set, first 300 SNPs)
+SNP_set.res <- RGWAS.multisnp(pheno = pheno.GWAS, geno = geno.GWAS[1:300, ], ZETA = ZETA,
                               plot.qq = FALSE, plot.Manhattan = FALSE, count = FALSE,
                               n.PC = 4, test.method = "LR", kernel.method = "linear", gene.set = NULL,
                               test.effect = "additive", window.size.half = 5, window.slide = 11)

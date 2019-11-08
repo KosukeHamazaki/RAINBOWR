@@ -11,8 +11,8 @@
   
   ### Select one trait for example
   trait.name <- "Flowering.time.at.Arkansas"
-  y <- as.matrix(Rice_pheno[1:50, trait.name, drop = FALSE])
-  # use first 50 acessions
+  y <- as.matrix(Rice_pheno[1:30, trait.name, drop = FALSE])
+  # use first 30 acessions
   
   
   ### Remove SNPs whose MAF <= 0.05
