@@ -515,11 +515,11 @@ double llik(int n, int p, double logH, double yPy, double logXtX, double logXtHi
   double l = 0;
 
   if(REML){
-    l = ((n - p) * log((n - p) / (2 * pi)) - (n - p) + logXtX -
-      logH - logXtHinvX -  (n - p) * log(yPy)) / 2;
+    l = ((n - p) * std::log((n - p) / (2 * pi)) - (n - p) + logXtX -
+      logH - logXtHinvX -  (n - p) * std::log(yPy)) / 2;
     Rcpp::Named("l.REML") = l;
   }else{
-    l = (n * log(n / (2 * pi)) - n - logH - n * log(yPy)) / 2;
+    l = (n * std::log(n / (2 * pi)) - n - logH - n * std::log(yPy)) / 2;
     Rcpp::Named("l.ML") = l;
   }
   return(l);
@@ -827,11 +827,11 @@ double llik_out(int n, int p, double logH, double yPy, double logXtX, double log
   double l = 0;
 
   if(REML){
-    l = ((n - p) * log((n - p) / (2 * pi)) - (n - p) + logXtX -
-      logH - logXtHinvX -  (n - p) * log(yPy)) / 2;
+    l = ((n - p) * std::log((n - p) / (2 * pi)) - (n - p) + logXtX -
+      logH - logXtHinvX -  (n - p) * std::log(yPy)) / 2;
     Rcpp::Named("l.REML") = l;
   }else{
-    l = (n * log(n / (2 * pi)) - n - logH - n * log(yPy)) / 2;
+    l = (n * std::log(n / (2 * pi)) - n - logH - n * std::log(yPy)) / 2;
     Rcpp::Named("l.ML") = l;
   }
   return(l);
@@ -1204,7 +1204,7 @@ Rcpp::List spectralG_eigen(Rcpp::NumericMatrix zkzt, Rcpp::NumericMatrix x,
                            bool return_G = true, bool return_SGS = false){
   const MapMat X = Rcpp::as<MapMat>(x);
   const MapMat ZKZt = Rcpp::as<MapMat>(zkzt);
-  const int n(X.rows()), p(X.cols());
+  const double n(X.rows()), p(X.cols());
   MatrixXd I = MatrixXd::Identity(n, n);
   MatrixXd U;
   MatrixXd D;
@@ -1212,8 +1212,7 @@ Rcpp::List spectralG_eigen(Rcpp::NumericMatrix zkzt, Rcpp::NumericMatrix x,
   MatrixXd theta;
 
 
-
-  double offset = sqrt(n);
+  double offset = std::sqrt(n);
   MatrixXd Hb = ZKZt + offset * I;
 
   if(return_G){
@@ -1468,7 +1467,7 @@ Rcpp::List P_calc(double lambda, Rcpp::List Ws, Rcpp::List Gammas,
 // Calculate restricted log likelihood using P
 //
 // [[Rcpp::export]]
-double llik_REML(int n, int p, double yPy, double lnP){
+double llik_REML(double n, double p, double yPy, double lnP){
   const double pi = 3.14159;
   return(((n - p) * (std::log(n - p) - std::log(2 * pi) - 1 - std::log(yPy)) + lnP) / 2);
 }
@@ -1477,7 +1476,7 @@ double llik_REML(int n, int p, double yPy, double lnP){
 // Calculate log likelihood using P
 //
 // [[Rcpp::export]]
-double llik_ML(int n, double yPy, double lnHinv){
+double llik_ML(double n, double yPy, double lnHinv){
   const double pi = 3.14159;
   return((n * (std::log(n) - std::log(2 * pi) - 1 - std::log(yPy)) + lnHinv) / 2);
 }

@@ -239,13 +239,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // llik_REML
-double llik_REML(int n, int p, double yPy, double lnP);
+double llik_REML(double n, double p, double yPy, double lnP);
 RcppExport SEXP _RAINBOWR_llik_REML(SEXP nSEXP, SEXP pSEXP, SEXP yPySEXP, SEXP lnPSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< int >::type p(pSEXP);
+    Rcpp::traits::input_parameter< double >::type n(nSEXP);
+    Rcpp::traits::input_parameter< double >::type p(pSEXP);
     Rcpp::traits::input_parameter< double >::type yPy(yPySEXP);
     Rcpp::traits::input_parameter< double >::type lnP(lnPSEXP);
     rcpp_result_gen = Rcpp::wrap(llik_REML(n, p, yPy, lnP));
@@ -253,12 +253,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // llik_ML
-double llik_ML(int n, double yPy, double lnHinv);
+double llik_ML(double n, double yPy, double lnHinv);
 RcppExport SEXP _RAINBOWR_llik_ML(SEXP nSEXP, SEXP yPySEXP, SEXP lnHinvSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< double >::type n(nSEXP);
     Rcpp::traits::input_parameter< double >::type yPy(yPySEXP);
     Rcpp::traits::input_parameter< double >::type lnHinv(lnHinvSEXP);
     rcpp_result_gen = Rcpp::wrap(llik_ML(n, yPy, lnHinv));

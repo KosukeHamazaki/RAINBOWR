@@ -253,3 +253,60 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 #### There were 1 NOTE:
 ##### * checking CRAN incoming feasibility ... NOTE
+
+
+
+
+
+# Nov 14, 2019, RAINBOWR version 0.1.14 (resubmission)
+## Major changes
+We fixed some parts commented by the CRAN manager, Dr. Brian D. Ripley.
+We will describe the comments and their solution as follows.
+
+> See the CRAN check results page for your package, https://cran.r-project.org/web/checks/check_results_RAINBOWR.html .
+> You were warned in 'Writing R Extensions' that calling math functions such as log pow sqrt with integer arguments is not portable.
+
+- In the above URL, CRAN Package Check Results for `r-patched-solaris-x86` said:
+
+> EMM_functions.cpp: In function ‘Rcpp::List spectralG_eigen(Rcpp::NumericMatrix, Rcpp::NumericMatrix, bool, bool)’: 
+EMM_functions.cpp:1216:25: error: call of overloaded ‘sqrt(const int&)’ is ambiguous
+   double offset = sqrt(n);
+
+- Then, we changed the C++ code in the `spectralG_eigen` function in the `EMM_functions.cpp` file as follows.
+
+  - Before
+  ```
+    const int n(X.rows()), p(X.cols());   # L1207
+  
+    double offset = sqrt(n);            # L1215
+  ```
+
+  - After
+  ```
+    const double n(X.rows()), p(X.cols());   # L1207
+  
+    double offset = std::sqrt(n);            # L1215
+  ```
+  
+- We also modified other parts related to the calling math functions (such as log pow sqrt) with integer arguments in the `EMM_functions.cpp` file.
+
+- Actually, we are not sure that this change is correct because we cannot check the error disappears for the `Solaris` OS. So, if we have additional parts to be corrected, please tell us details with examples of correct codes.
+
+
+
+
+
+## Test environments 
+* platform x86_64-apple-darwin15.6.0, R version 3.6.0
+* win-builder (devel and release), R version 3.6.1
+
+
+## R CMD check results
+The same results as [those of the previous version 0.1.9](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#r-cmd-check-results-1) were obtained as follows.
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs:
+
+#### There were 1 NOTE:
+##### * checking CRAN incoming feasibility ... NOTE
