@@ -346,7 +346,11 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
     X.now <- X[not.NA, , drop = FALSE]
     ZETA.now <- lapply(ZETA, function(x) list(Z = x$Z[not.NA, ], K = x$K))
 
-    M.now <- Z.A[not.NA, ] %*% M
+    if (sum(is.na(M)) == 0) {
+      M.now <- Z.A[not.NA, ] %*% M
+    } else {
+      M.now <- M[apply(Z.A[not.NA, ], 1, function(x) which(x == 1)), ]
+    }
 
     p <- ncol(X.now)
     m <- ncol(Z.A)

@@ -310,3 +310,34 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 #### There were 1 NOTE:
 ##### * checking CRAN incoming feasibility ... NOTE
+
+
+
+
+# Nov 16, 2019, RAINBOWR version 0.1.15
+## Major changes
+We fixed some parts related to the treatment of the missing in marker genotypes.
+
+- As the previous version, if the marker genotype has missing values, errors as follows will be occurred in `RGWAS.normal`, `RGWAS.multisnp`, `RGWAS.epistasis`, `RGWAS.twostep`, and `RGWAS.twostep.epi` functions.
+
+```
+
+```
+
+
+- Then, we changed the R code in the `RGWAS.normal`, `RGWAS.multisnp`, and `RGWAS.epistasis` functions as follows.
+
+  - Before
+  ```
+      M.now <- Z.A[not.NA, ] %*% M
+  ```
+
+  - After
+  ```
+    if (sum(is.na(M)) == 0) {
+      M.now <- Z.A[not.NA, ] %*% M
+    } else {
+      M.now <- M[apply(Z.A[not.NA, ], 1, function(x) which(x == 1)), ]
+    }
+  ```
+
