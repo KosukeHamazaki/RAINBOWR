@@ -5,13 +5,6 @@ knitr::opts_chunk$set(
   fig.dpi=96
 )
 
-## ---- include=TRUE, eval=FALSE-------------------------------------------
-#  ### If you have not installed yet, ...
-#  install.packages("devtools")
-#  
-#  ### Install RAINBOWR from GitHub
-#  devtools::install_github("KosukeHamazaki/RAINBOWR")
-
 ## ---- include=TRUE-------------------------------------------------------
 ### Import RAINBOWR
 require(RAINBOWR)

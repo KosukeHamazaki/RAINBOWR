@@ -38,9 +38,14 @@ Finally, `RAINBOWR` offers other useful functions.
 - `SS_GWAS` function to summarize GWAS results (only for simulation study)
 
 ## Installation
-`RAINBOWR` is now available on [`GitHub`](https://github.com/KosukeHamazaki/RAINBOWR), so please run the following code in the R console.
+The stable version of `RAINBOWR` is now available at the [CRAN (Comprehensive R Archive Network)](https://cran.r-project.org/web/packages/RAINBOWR/index.html). The latest version of `RAINBOWR` is also available at the `KosukeHamazaki/RAINBOWR` repository in the [`GitHub`](https://github.com/KosukeHamazaki/RAINBOWR), so please run the following code in the R console.
 
 ``` r
+#### Stable version of RAINBOWR ####
+install.packages("RAINBOWR")  
+
+
+#### Latest version of RAINBOWR ####
 ### If you have not installed yet, ...
 install.packages("devtools")  
 
@@ -65,8 +70,6 @@ Optima
 
 In `RAINBOWR`,  since part of the code is written in `Rcpp` (`C++` in `R`),  please check if you can use `C++` in `R`.
 For `Windows` users,  you should install [`Rtools`](https://cran.r-project.org/bin/windows/Rtools/).
-
-In the near future, we will try to publish `RAINBOWR` on `CRAN`.
 
 If you have some questions about installation, please contact us by e-mail (hamazaki@ut-biomet.org).
 

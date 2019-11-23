@@ -130,8 +130,13 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </div>
 <div id="installation" class="section level2">
 <h2>Installation</h2>
-<p><code>RAINBOWR</code> is now available on <a href="https://github.com/KosukeHamazaki/RAINBOWR"><code>GitHub</code></a>, so please run the following code in the R console.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">### If you have not installed yet, ...
+<p>The stable version of <code>RAINBOWR</code> is now available at the <a href="https://cran.r-project.org/web/packages/RAINBOWR/index.html">CRAN (Comprehensive R Archive Network)</a>. The latest version of <code>RAINBOWR</code> is also available at the <code>KosukeHamazaki/RAINBOWR</code> repository in the <a href="https://github.com/KosukeHamazaki/RAINBOWR"><code>GitHub</code></a>, so please run the following code in the R console.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### Stable version of RAINBOWR ####
+<span class="kw">install.packages</span>(<span class="st">&quot;RAINBOWR&quot;</span>)  
+
+
+#### Latest version of RAINBOWR ####
+### If you have not installed yet, ...
 <span class="kw">install.packages</span>(<span class="st">&quot;devtools&quot;</span>)  
 
 ### Install RAINBOWR from GitHub
@@ -281,7 +286,7 @@ normal.res &lt;-<span class="st"> </span><span class="kw">RGWAS.normal</span>(<s
                            <span class="dt">ZETA =</span> ZETA, <span class="dt">n.PC =</span> <span class="dv">4</span>, <span class="dt">P3D =</span> <span class="ot">TRUE</span>, <span class="dt">count =</span> <span class="ot">FALSE</span>)
 <span class="co">#&gt; [1] &quot;GWAS for trait: Flowering.time.at.Arkansas&quot;</span>
 <span class="co">#&gt; [1] &quot;Variance components estimated. Testing markers.&quot;</span>
-<span class="co">#&gt; Time difference of 4.534442 secs</span>
+<span class="co">#&gt; Time difference of 5.457355 secs</span>
 <span class="kw">See</span>(normal.res<span class="op">$</span>D)  ### Column 4 contains -log10(p) values for markers
 <span class="co">#&gt;          marker     chrom       pos Flowering.time.at.Arkansas</span>
 <span class="co">#&gt; class  &lt;factor&gt; &lt;integer&gt; &lt;integer&gt;                  &lt;numeric&gt;</span>
@@ -301,7 +306,7 @@ SNP_set.res &lt;-<span class="st"> </span><span class="kw">RGWAS.multisnp</span>
                               <span class="dt">n.PC =</span> <span class="dv">4</span>, <span class="dt">test.method =</span> <span class="st">&quot;LR&quot;</span>, <span class="dt">kernel.method =</span> <span class="st">&quot;linear&quot;</span>, <span class="dt">gene.set =</span> <span class="ot">NULL</span>,
                               <span class="dt">test.effect =</span> <span class="st">&quot;additive&quot;</span>, <span class="dt">window.size.half =</span> <span class="dv">5</span>, <span class="dt">window.slide =</span> <span class="dv">11</span>)
 <span class="co">#&gt; [1] &quot;GWAS for trait: Flowering.time.at.Arkansas&quot;</span>
-<span class="co">#&gt; Time difference of 40.52511 secs</span>
+<span class="co">#&gt; Time difference of 42.07932 secs</span>
 
 <span class="kw">See</span>(SNP_set.res<span class="op">$</span>D)  ### Column 4 contains -log10(p) values for markers
 <span class="co">#&gt;          marker     chrom       pos Flowering.time.at.Arkansas</span>
