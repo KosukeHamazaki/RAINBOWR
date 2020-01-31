@@ -448,4 +448,4 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
       return(data.frame(map, all.scores))
     }
   }
-  }
+}

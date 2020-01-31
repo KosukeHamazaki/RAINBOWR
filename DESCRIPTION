@@ -1,7 +1,7 @@
 Package: RAINBOWR
 Type: Package
 Title: Genome-Wide Association Study with SNP-Set Methods
-Version: 0.1.15
+Version: 0.1.16
 Authors@R: c(
   person("Kosuke", "Hamazaki", email = "hamazaki@ut-biomet.org", role = c("aut", "cre")),
   person("Hiroyoshi", "Iwata", email = "aiwata@mail.ecc.u-tokyo.ac.jp", role = c("aut", "ctb"))
