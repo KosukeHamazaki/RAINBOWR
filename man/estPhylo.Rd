@@ -6,17 +6,16 @@
 \usage{
 estPhylo(blockInterest = NULL, gwasRes = NULL, nTopRes = 1,
   gene.set = NULL, indexRegion = 1:10, chrInterest = NULL,
-  posRegion = NULL, pheno, geno, ZETA = NULL, plotTree = TRUE,
-  distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
-  subpopInfo = NULL, groupingMethod = "kmeans", nGrp = 4,
-  nIterClustering = 100, saveName = NULL, saveStyle = "png",
-  pchBase = c(1, 16), colNodeBase = c(2, 4), colTipCand = 2:8,
-  cexMax = 2, edgeColoring = TRUE, tipLabel = TRUE)
+  posRegion = NULL, pheno = NULL, geno = NULL, ZETA = NULL,
+  plotTree = TRUE, distMat = NULL, distMethod = "manhattan",
+  evolutionDist = FALSE, subpopInfo = NULL,
+  groupingMethod = "kmeans", nGrp = 4, nIterClustering = 100,
+  saveName = NULL, saveStyle = "png", pchBase = c(1, 16),
+  colNodeBase = c(2, 4), colTipBase = c(3, 5, 6, 7), cexMax = 2,
+  edgeColoring = TRUE, tipLabel = TRUE, verbose = TRUE)
 }
 \arguments{
-\item{tipLabel}{}
-
-\item{groupingMethod@param}{}
+\item{verbose}{}
 }
 \value{
 \describe{

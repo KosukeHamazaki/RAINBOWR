@@ -265,10 +265,11 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' @param saveStyle
 #' @param pchBase
 #' @param colNodeBase
-#' @param colTipCand
+#' @param colTipBase
 #' @param cexMax
 #' @param edgeColoring
 #' @param tipLabel
+#' @param verbose
 #'
 #' @return
 #' \describe{
@@ -278,106 +279,123 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #'
 estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set = NULL,
                      indexRegion = 1:10, chrInterest = NULL, posRegion = NULL,
-                     pheno, geno, ZETA = NULL, plotTree = TRUE,
+                     pheno = NULL, geno = NULL, ZETA = NULL, plotTree = TRUE,
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
                      subpopInfo = NULL, groupingMethod = "kmeans",
                      nGrp = 4, nIterClustering = 100,
                      saveName = NULL, saveStyle = "png",
                      pchBase = c(1, 16), colNodeBase = c(2, 4),
-                     colTipCand = 2:8, cexMax = 2,
-                     edgeColoring = TRUE, tipLabel = TRUE) {
-  M <- t(geno[, -c(1:3)])
-  map <- geno[, 1:3]
-  
-  nLine <- nrow(M)
-  lineNames <- rownames(M)
-  
-  if (is.null(ZETA)) {
-    K <- A.mat(M)
-    Z <- diag(nLine)
+                     colTipBase = c(3, 5, 6, 7), cexMax = 2,
+                     edgeColoring = TRUE, tipLabel = TRUE, verbose = TRUE) {
+  if (!is.null(geno)) {
+    M <- t(geno[, -c(1:3)])
+    map <- geno[, 1:3]
     
-    rownames(Z) <- colnames(Z) <- lineNames
+    nLine <- nrow(M)
+    lineNames <- rownames(M)
     
-    ZETA <- list(A = list(Z = Z, K = K))
-  }
-  
-  
-  if (is.null(subpopInfo)) {
-    print("Now clustering...")
-    if (nGrp > 0) {
-      if (groupingMethod == "kmeans") {
-        bwSSRatios <- rep(NA, nIterClustering)
-        kmResList <- NULL
-        
-        for (iterNo in 1:nIterClustering) {
-          kmResNow <- kmeans(x = M, centers = nGrp)
-          bwSSRatio <- kmResNow$betweenss / (kmResNow$betweenss + kmResNow$tot.withinss)
-          
-          bwSSRatios[iterNo] <- bwSSRatio
-          kmResList <- c(kmResList, list(kmResNow))
-        }
-        
-        maxNo <- which(bwSSRatios == max(bwSSRatios))
-        maxNoNow <- sample(maxNo, 1)
-        clusterNos <- match(kmResList[[maxNoNow]]$cluster, unique(kmResList[[maxNoNow]]$cluster))
-      } else if (groupingMethod == "kmedoids") {
-        kmResNow <- pam(x = M, k = nGrp)
-        clusterNos <- match(kmResNow$clustering, unique(kmResNow$clustering))
-      } else if (groupingMethod == "hclust") {
-        tre <- hclust(dist(M, method = distMethod))
-        cutreeRes <- cutree(tree = tre, k = nGrp)
-        clusterNos <- match(cutreeRes, unique(cutreeRes))
-      } else {
-        stop("We only offer 'kmeans', 'kmedoids', and 'hclust' methods for grouping methods.")
-      }
-      clusterRes <- factor(paste0("cluster_", clusterNos))
-      names(clusterRes) <- lineNames
+    if (is.null(ZETA)) {
+      K <- A.mat(M)
+      Z <- diag(nLine)
       
-      subpopInfo <- clusterRes
-    } else {
-      subpopInfo <- NULL
+      rownames(Z) <- colnames(Z) <- lineNames
+      
+      ZETA <- list(A = list(Z = Z, K = K))
     }
-  }
-  
-  if (is.null(blockInterest)) {
-    if (!is.null(gwasRes)) {
-      gwasResOrd <- gwasRes[order(gwasRes[, 4], decreasing = TRUE), ]
-      
-      if (nTopRes == 1) {
-        blockName <- as.character(gwasResOrd[1, 1])
-        mrkInBlock <- gene.set[gene.set[, 1] %in% blockName, 2]
+    
+    
+    if (is.null(subpopInfo)) {
+      if (verbose) {
+        print("Now clustering...")
+      }
+      if (nGrp > 0) {
+        if (groupingMethod == "kmeans") {
+          bwSSRatios <- rep(NA, nIterClustering)
+          kmResList <- NULL
+          
+          for (iterNo in 1:nIterClustering) {
+            kmResNow <- kmeans(x = M, centers = nGrp)
+            bwSSRatio <- kmResNow$betweenss / (kmResNow$betweenss + kmResNow$tot.withinss)
+            
+            bwSSRatios[iterNo] <- bwSSRatio
+            kmResList <- c(kmResList, list(kmResNow))
+          }
+          
+          maxNo <- which(bwSSRatios == max(bwSSRatios))
+          maxNoNow <- sample(maxNo, 1)
+          clusterNos <- match(kmResList[[maxNoNow]]$cluster, unique(kmResList[[maxNoNow]]$cluster))
+        } else if (groupingMethod == "kmedoids") {
+          kmResNow <- pam(x = M, k = nGrp)
+          clusterNos <- match(kmResNow$clustering, unique(kmResNow$clustering))
+        } else if (groupingMethod == "hclust") {
+          tre <- hclust(dist(M, method = distMethod))
+          cutreeRes <- cutree(tree = tre, k = nGrp)
+          clusterNos <- match(cutreeRes, unique(cutreeRes))
+        } else {
+          stop("We only offer 'kmeans', 'kmedoids', and 'hclust' methods for grouping methods.")
+        }
+        clusterRes <- factor(paste0("cluster_", clusterNos))
+        names(clusterRes) <- lineNames
         
-        blockInterest <- M[, geno[, 1] %in% mrkInBlock]
+        subpopInfo <- clusterRes
       } else {
-        blockInterest <- NULL
-        blockNames <- rep(NA, nTopRes)
+        subpopInfo <- NULL
+      }
+    } else {
+      nGrp <- length(unique(subpopInfo))
+    }
+
+    if (is.null(blockInterest)) {
+      if (!is.null(gwasRes)) {
+        gwasResOrd <- gwasRes[order(gwasRes[, 4], decreasing = TRUE), ]
         
-        for (topNo in 1:nTopRes) {
-          blockName <- as.character(gwasResOrd[topNo, 1])
+        if (nTopRes == 1) {
+          blockName <- as.character(gwasResOrd[1, 1])
           mrkInBlock <- gene.set[gene.set[, 1] %in% blockName, 2]
           
-          blockInterestNow <- M[, geno[, 1] %in% mrkInBlock]
+          blockInterest <- M[, geno[, 1] %in% mrkInBlock]
+        } else {
+          blockInterest <- NULL
+          blockNames <- rep(NA, nTopRes)
           
-          blockNames[topNo] <- blockName
-          blockInterest <- c(blockInterest, list(blockInterestNow))
+          for (topNo in 1:nTopRes) {
+            blockName <- as.character(gwasResOrd[topNo, 1])
+            mrkInBlock <- gene.set[gene.set[, 1] %in% blockName, 2]
+            
+            blockInterestNow <- M[, geno[, 1] %in% mrkInBlock]
+            
+            blockNames[topNo] <- blockName
+            blockInterest <- c(blockInterest, list(blockInterestNow))
+          }
+        }
+      } else if (!is.null(posRegion)) {
+        if (is.null(chrInterest)) {
+          stop("Please input the chromosome number of interest!")
+        } else {
+          chrCondition <- map[, 2] %in% chrInterest
+          posCondition <- (posRegion[1] <= map[, 3]) & (posRegion[2] >= map[, 3])
+          
+          indexRegion <- which(chrCondition & posCondition)
         }
       }
-    } else if (!is.null(posRegion)) {
-      if (is.null(chrInterest)) {
-        stop("Please input the chromosome number of interest!")
-      } else {
-        chrCondition <- map[, 2] %in% chrInterest
-        posCondition <- (posRegion[1] <= map[, 3]) & (posRegion[2] >= map[, 3])
-        
-        indexRegion <- which(chrCondition & posCondition)
-      }
+      blockInterest <- M[, indexRegion]
+      blockName <- NULL
+    } else {
+      blockName <- NULL
     }
-    blockInterest <- M[, indexRegion]
-    blockName <- NULL
   } else {
-    blockName <- NULL
+    blockInterestCheck <- !is.null(blockInterest)
+    ZETACheck <- !is.null(ZETA)
+    
+    if (blockInterestCheck & ZETACheck) {
+      lineNames <- rownames(blockInterest)
+      nLine <- nrow(blockInterest)
+      
+      blockName <- NULL
+    } else {
+      stop("Please input 'geno', or both 'blockInterest' and 'ZETA'.")
+    }
   }
-  
   
   if (is.matrix(blockInterest)) {
     nMrkInBlock <- ncol(blockInterest)
@@ -414,48 +432,60 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     rownames(ZgKernelPart) <- colnames(ZgKernelPart) <- lineNames
     
     ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+    if (verbose) {
+      print("Now estimating genotypic values...")
+    }
     
-    print("Now estimating genotypic values...")
-    EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-    gvEst <- EM3Res$u[(nLine + 1):(2 * nLine), ]
-    LL <- EM3Res$LL
-    EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
-    LL0 <- EMMRes0$LL
-    
-    pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
-    minuslog10p <- - log10(pVal)
-    
-    ZgKernel <- diag(nTotal)
-    rownames(ZgKernel) <- colnames(ZgKernel) <- rownames(gKernel)
-    
-    ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
-    gvEst2 <- matrix(c(gvEst, rep(NA, nNode)))
-    rownames(gvEst2) <- rownames(gKernel)
-    
-    EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-    gvNode <- EMMRes$u[(nLine + 1):nTotal]
-    gvEstTotal <- c(gvEst, gvNode)
-    names(gvEstTotal) <- rownames(gKernel)
-    gvCentered <- gvEstTotal - mean(gvEstTotal)
-    gvScaled <- gvCentered / sd(gvCentered)
-    gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
-    
-    
-    cexNode <- abs(gvScaled4Cex)[(nLine + 1):nTotal]
-    pchNode <- ifelse(gvNode > 0, pchBase[1], pchBase[2])
-    colNode <- ifelse(gvNode > 0, colNodeBase[1], colNodeBase[2])
-    
-    cexTip <- abs(gvScaled4Cex)[1:nLine]
-    pchTip <- ifelse(gvEst > 0, pchBase[1], pchBase[2])
+    if (!is.null(pheno)) {
+      EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
+      gvEst <- EM3Res$u[(nLine + 1):(2 * nLine), ]
+      LL <- EM3Res$LL
+      EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
+      LL0 <- EMMRes0$LL
+      
+      pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
+      minuslog10p <- - log10(pVal)
+      
+      ZgKernel <- diag(nTotal)
+      rownames(ZgKernel) <- colnames(ZgKernel) <- rownames(gKernel)
+      
+      ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
+      gvEst2 <- matrix(c(gvEst, rep(NA, nNode)))
+      rownames(gvEst2) <- rownames(gKernel)
+      
+      EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
+      gvNode <- EMMRes$u[(nLine + 1):nTotal]
+      gvEstTotal <- c(gvEst, gvNode)
+      names(gvEstTotal) <- rownames(gKernel)
+      gvCentered <- gvEstTotal - mean(gvEstTotal)
+      gvScaled <- gvCentered / sd(gvCentered)
+      gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
+      
+      
+      cexNode <- abs(gvScaled4Cex)[(nLine + 1):nTotal]
+      pchNode <- ifelse(gvNode > 0, pchBase[1], pchBase[2])
+      colNode <- ifelse(gvNode > 0, colNodeBase[1], colNodeBase[2])
+      
+      cexTip <- abs(gvScaled4Cex)[1:nLine]
+      pchTip <- ifelse(gvEst > 0, pchBase[1], pchBase[2])
+    } else {
+      gvEstTotal <- rep(NA, nLine)
+      minuslog10p <- NA
+      
+      cexTip <- cexMax / 2
+      pchTip <- pchBase[2]
+    }
     
     if (!is.null(subpopInfo)) {
-      colTip <- as.numeric(subpopInfo) + 1
-      names(colTip) <- lineNames
-      colUsed <- unique(c(colTip, colNodeBase))
-      colTipCand2 <- colTipCand[!(colTipCand %in% colUsed)]
+      if (length(colTipBase) != nGrp) {
+        stop("The length of 'colTipBase' should be equal to 'nGrp' or the number of subpopulations!")
+      }
       
-      colTip[colTip == colNodeBase[1]] <- colTipCand2[1]
-      colTip[colTip == colNodeBase[2]] <- colTipCand2[2]
+      colTipNo <- as.numeric(subpopInfo)
+      colTip <- colTipBase[colTipNo]
+      
+      names(colTipNo) <- names(colTip) <- lineNames
+      
       edgeCol <- as.numeric(colTip[njRes$edge[, 2]])
     } else {
       colTip <- rep("gray", nLine)
@@ -464,51 +494,66 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     
     edgeCol[is.na(edgeCol)] <- "gray"
     
-    
-    if (!is.null(saveName)) {
-      if (saveStyle == "pdf") {
-        savePlotName <- paste0(saveName, "_phylogenetic_tree.pdf")
-        pdf(file = savePlotName, width = 12, height = 9)
-      } else if (saveStyle == "jpg") {
-        savePlotName <- paste0(saveName, "_phylogenetic_tree.jpg")  
-        jpeg(file = savePlotName, width = 800, height = 600)
-      } else if (saveStyle == "tiff") {
-        savePlotName <- paste0(saveName, "_phylogenetic_tree.tiff")
-        tiff(file = savePlotName, width = 800, height = 600)
+    if (plotTree) {
+      
+      if (!is.null(saveName)) {
+        if (saveStyle == "pdf") {
+          savePlotName <- paste0(saveName, "_phylogenetic_tree.pdf")
+          pdf(file = savePlotName, width = 12, height = 9)
+        } else if (saveStyle == "jpg") {
+          savePlotName <- paste0(saveName, "_phylogenetic_tree.jpg")  
+          jpeg(file = savePlotName, width = 800, height = 600)
+        } else if (saveStyle == "tiff") {
+          savePlotName <- paste0(saveName, "_phylogenetic_tree.tiff")
+          tiff(file = savePlotName, width = 800, height = 600)
+        } else {
+          savePlotName <- paste0(saveName, "_phylogenetic_tree.png")
+          png(file = savePlotName, width = 800, height = 600)
+        }
+      }
+      
+      if (edgeColoring) {
+        plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = edgeCol)
       } else {
-        savePlotName <- paste0(saveName, "_phylogenetic_tree.png")
-        png(file = savePlotName, width = 800, height = 600)
+        plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = "gray30")
+      }
+      if (!is.null(pheno)) {
+        nodelabels(pch = pchNode, cex = cexNode, col = colNode)
+      }
+      if (tipLabel) {
+        tiplabels(pch = pchTip, cex = cexTip, col = colTip)
+      }
+      title(main = paste0(paste(c(colnames(pheno)[2], 
+                                  blockName), collapse = "_"),
+                          " (-log10p: ", round(minuslog10p, 2), ")"))
+      if (!is.null(pheno)) {
+        if (!is.null(subpopInfo)) {
+          legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
+                                              rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
+                                       "Node (gv:+)", "Node (gv:-)"),
+                 col = c(rep(unique(colTip), each = 2), colNodeBase),
+                 pch = rep(pchBase, nGrp + 1))
+        } else {
+          legend("topleft", legend = c("Tip (gv:+)", "Tip (gv:-)",
+                                       "Node (gv:+)", "Node (gv:-)"),
+                 col = c(rep(unique(colTip), each = 2), colNodeBase),
+                 pch = rep(pchBase, 2))
+        }
+      } else {
+        if (!is.null(subpopInfo)) {
+          legend("topleft", legend = unique(subpopInfo),
+                 col = unique(colTip),
+                 pch = pchTip)
+        } else {
+          legend("topleft", legend = "Tip",
+                 col = unique(colTip),
+                 pch = pchTip)
+        }   
+      }
+      if (!is.null(saveName)) {
+        dev.off()
       }
     }
-    
-    if (edgeColoring) {
-      plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = edgeCol)
-    } else {
-      plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = "gray30")
-    }
-    nodelabels(pch = pchNode, cex = cexNode, col = colNode)
-    if (tipLabel) {
-      tiplabels(pch = pchTip, cex = cexTip, col = colTip)
-    }
-    title(main = paste0(paste(c(colnames(pheno)[2], 
-                                blockName), collapse = "_"),
-                        " (-log10p: ", round(minuslog10p, 2), ")"))
-    if (!is.null(subpopInfo)) {
-      legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
-                                          rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
-                                   "Node (gv:+)", "Node (gv:-)"),
-             col = c(rep(unique(colTip), each = 2), colNodeBase),
-             pch = rep(pchBase, nGrp + 1))
-    } else {
-      legend("topleft", legend = c("Tip (gv:+)", "Tip (gv:-)",
-                                   "Node (gv:+)", "Node (gv:-)"),
-             col = c(rep(unique(colTip), each = 2), colNodeBase),
-             pch = rep(pchBase, 2))
-    }
-    if (!is.null(saveName)) {
-      dev.off()
-    }
-    
     
     return(list(gvTotal = gvEstTotal,
                 minuslog10p = minuslog10p))
@@ -558,49 +603,56 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       rownames(ZgKernelPart) <- colnames(ZgKernelPart) <- lineNames
       
       ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+      if (verbose) {
+        print("Now estimating genotypic values...")
+      }
       
-      print("Now estimating genotypic values...")
-      EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-      gvEst <- EM3Res$u[(nLine + 1):(2 * nLine), ]
-      LL <- EM3Res$LL
-      EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
-      LL0 <- EMMRes0$LL
-      
-      pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
-      minuslog10p <- - log10(pVal)
-      
-      ZgKernel <- diag(nTotal)
-      rownames(ZgKernel) <- colnames(ZgKernel) <- rownames(gKernel)
-      
-      ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
-      gvEst2 <- matrix(c(gvEst, rep(NA, nNode)))
-      rownames(gvEst2) <- rownames(gKernel)
-      
-      EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-      gvNode <- EMMRes$u[(nLine + 1):nTotal]
-      gvEstTotal <- c(gvEst, gvNode)
-      names(gvEstTotal) <- rownames(gKernel)
-      gvCentered <- gvEstTotal - mean(gvEstTotal)
-      gvScaled <- gvCentered / sd(gvCentered)
-      gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
-      
-      
-      cexNode <- abs(gvScaled4Cex)[(nLine + 1):nTotal]
-      pchNode <- ifelse(gvNode > 0, pchBase[1], pchBase[2])
-      colNode <- ifelse(gvNode > 0, colNodeBase[1], colNodeBase[2])
-      
-      cexTip <- abs(gvScaled4Cex)[1:nLine]
-      pchTip <- ifelse(gvEst > 0, pchBase[1], pchBase[2])
-      
-      if (!is.null(subpopInfo)) {
-        colTip <- as.numeric(subpopInfo) + 1
-        names(colTip) <- lineNames
-        colUsed <- unique(c(colTip, colNodeBase))
-        colTipCand2 <- colTipCand[!(colTipCand %in% colUsed)]
+      if (!is.null(pheno)) {
+        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
+        gvEst <- EM3Res$u[(nLine + 1):(2 * nLine), ]
+        LL <- EM3Res$LL
+        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
+        LL0 <- EMMRes0$LL
         
-        colTip[colTip == colNodeBase[1]] <- colTipCand2[1]
-        colTip[colTip == colNodeBase[2]] <- colTipCand2[2]
-        edgeCol <- as.numeric(colTip[njRes$edge[, 2]])
+        pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
+        minuslog10p <- - log10(pVal)
+        
+        ZgKernel <- diag(nTotal)
+        rownames(ZgKernel) <- colnames(ZgKernel) <- rownames(gKernel)
+        
+        ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
+        gvEst2 <- matrix(c(gvEst, rep(NA, nNode)))
+        rownames(gvEst2) <- rownames(gKernel)
+        
+        EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
+        gvNode <- EMMRes$u[(nLine + 1):nTotal]
+        gvEstTotal <- c(gvEst, gvNode)
+        names(gvEstTotal) <- rownames(gKernel)
+        gvCentered <- gvEstTotal - mean(gvEstTotal)
+        gvScaled <- gvCentered / sd(gvCentered)
+        gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
+        
+        
+        cexNode <- abs(gvScaled4Cex)[(nLine + 1):nTotal]
+        pchNode <- ifelse(gvNode > 0, pchBase[1], pchBase[2])
+        colNode <- ifelse(gvNode > 0, colNodeBase[1], colNodeBase[2])
+        
+        cexTip <- abs(gvScaled4Cex)[1:nLine]
+        pchTip <- ifelse(gvEst > 0, pchBase[1], pchBase[2])
+      } else {
+        gvEstTotal <- rep(NA, nLine)
+        minuslog10p <- NA
+        
+        cexTip <- cexMax / 2
+        pchTip <- pchBase[2]
+      }
+      if (!is.null(subpopInfo)) {
+        colTipNo <- as.numeric(subpopInfo)
+        colTip <- colTipBase[colTipNo]
+        
+        names(colTipNo) <- names(colTip) <- lineNames
+        
+        edgeCol <- colTip[njRes$edge[, 2]]
       } else {
         colTip <- rep("gray", nLine)
         edgeCol <- colTip[njRes$edge[, 2]]
@@ -608,49 +660,65 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       
       edgeCol[is.na(edgeCol)] <- "gray"
       
-      if (!is.null(saveName)) {
-        if (saveStyle == "pdf") {
-          savePlotName <- paste0(saveName, "_phylogenetic_tree.pdf")
-          pdf(file = savePlotName, width = 12, height = 9)
-        } else if (saveStyle == "jpg") {
-          savePlotName <- paste0(saveName, "_phylogenetic_tree.jpg")  
-          jpeg(file = savePlotName, width = 800, height = 600)
-        } else if (saveStyle == "tiff") {
-          savePlotName <- paste0(saveName, "_phylogenetic_tree.tiff")
-          tiff(file = savePlotName, width = 800, height = 600)
-        } else {
-          savePlotName <- paste0(saveName, "_phylogenetic_tree.png")
-          png(file = savePlotName, width = 800, height = 600)
+      if (plotTree) {
+        
+        if (!is.null(saveName)) {
+          if (saveStyle == "pdf") {
+            savePlotName <- paste0(saveName, "_phylogenetic_tree.pdf")
+            pdf(file = savePlotName, width = 12, height = 9)
+          } else if (saveStyle == "jpg") {
+            savePlotName <- paste0(saveName, "_phylogenetic_tree.jpg")  
+            jpeg(file = savePlotName, width = 800, height = 600)
+          } else if (saveStyle == "tiff") {
+            savePlotName <- paste0(saveName, "_phylogenetic_tree.tiff")
+            tiff(file = savePlotName, width = 800, height = 600)
+          } else {
+            savePlotName <- paste0(saveName, "_phylogenetic_tree.png")
+            png(file = savePlotName, width = 800, height = 600)
+          }
         }
-      }
-      
-      if (edgeColoring) {
-        plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = edgeCol)
-      } else {
-        plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = "gray30")
-      }
-      nodelabels(pch = pchNode, cex = cexNode, col = colNode)
-      if (tipLabel) {
-        tiplabels(pch = pchTip, cex = cexTip, col = colTip)
-      }
-      title(main = paste0(paste(c(colnames(pheno)[2], 
-                                  blockName), collapse = "_"),
-                          " (-log10p: ", round(minuslog10p, 2), ")"))
-      if (!is.null(subpopInfo)) {
-        legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
-                                            rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
-                                     "Node (gv:+)", "Node (gv:-)"),
-               col = c(rep(unique(colTip), each = 2), colNodeBase),
-               pch = rep(pchBase, nGrp + 1))
-      } else {
-        legend("topleft", legend = c("Tip (gv:+)", "Tip (gv:-)",
-                                     "Node (gv:+)", "Node (gv:-)"),
-               col = c(rep(unique(colTip), each = 2), colNodeBase),
-               pch = rep(pchBase, 2))
-      }
-      
-      if (!is.null(saveName)) {
-        dev.off()
+        
+        if (edgeColoring) {
+          plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = edgeCol)
+        } else {
+          plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = "gray30")
+        }
+        if (!is.null(pheno)) {
+          nodelabels(pch = pchNode, cex = cexNode, col = colNode)
+        }
+        if (tipLabel) {
+          tiplabels(pch = pchTip, cex = cexTip, col = colTip)
+        }
+        title(main = paste0(paste(c(colnames(pheno)[2], 
+                                    blockName), collapse = "_"),
+                            " (-log10p: ", round(minuslog10p, 2), ")"))
+        if (!is.null(pheno)) {
+          if (!is.null(subpopInfo)) {
+            legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
+                                                rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
+                                         "Node (gv:+)", "Node (gv:-)"),
+                   col = c(rep(unique(colTip), each = 2), colNodeBase),
+                   pch = rep(pchBase, nGrp + 1))
+          } else {
+            legend("topleft", legend = c("Tip (gv:+)", "Tip (gv:-)",
+                                         "Node (gv:+)", "Node (gv:-)"),
+                   col = c(rep(unique(colTip), each = 2), colNodeBase),
+                   pch = rep(pchBase, 2))
+          }
+        } else {
+          if (!is.null(subpopInfo)) {
+            legend("topleft", legend = unique(subpopInfo),
+                   col = unique(colTip),
+                   pch = pchTip)
+          } else {
+            legend("topleft", legend = "Tip",
+                   col = unique(colTip),
+                   pch = pchTip)
+          }   
+        }
+        if (!is.null(saveName)) {
+          dev.off()
+        }
       }
       
       gvEstTotals[, topNo] <- gvEstTotal
