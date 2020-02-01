@@ -6,9 +6,9 @@
 \usage{
 estPhylo(blockInterest = NULL, gwasRes = NULL, nTopRes = 1,
   gene.set = NULL, indexRegion = 1:10, chrInterest = NULL,
-  posRegion = NULL, pheno = NULL, geno = NULL, ZETA = NULL,
-  plotTree = TRUE, distMat = NULL, distMethod = "manhattan",
-  evolutionDist = FALSE, subpopInfo = NULL,
+  posRegion = NULL, blockName = NULL, pheno = NULL, geno = NULL,
+  ZETA = NULL, plotTree = TRUE, distMat = NULL,
+  distMethod = "manhattan", evolutionDist = FALSE, subpopInfo = NULL,
   groupingMethod = "kmedoids", nGrp = 4, nIterClustering = 100,
   kernelType = "A.mat", saveName = NULL, saveStyle = "png",
   pchBase = c(1, 16), colNodeBase = c(2, 4), colTipBase = c(3, 5, 6,

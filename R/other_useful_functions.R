@@ -250,6 +250,7 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' @param indexRegion
 #' @param chrInterest
 #' @param posRegion
+#' @param blockName
 #' @param pheno
 #' @param geno
 #' @param ZETA
@@ -279,7 +280,7 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #'}
 #'
 estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set = NULL,
-                     indexRegion = 1:10, chrInterest = NULL, posRegion = NULL,
+                     indexRegion = 1:10, chrInterest = NULL, posRegion = NULL, blockName = NULL,
                      pheno = NULL, geno = NULL, ZETA = NULL, plotTree = TRUE,
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
                      subpopInfo = NULL, groupingMethod = "kmedoids",
@@ -342,9 +343,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       } else {
         subpopInfo <- NULL
       }
-    } else {
-      nGrp <- length(unique(subpopInfo))
-    }
+    } 
+    
+    nGrp <- length(unique(subpopInfo))
+    
     
     if (is.null(blockInterest)) {
       if (!is.null(gwasRes)) {
@@ -380,10 +382,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         }
       }
       blockInterest <- M[, indexRegion]
-      blockName <- NULL
-    } else {
-      blockName <- NULL
-    }
+    } 
   } else {
     blockInterestCheck <- !is.null(blockInterest)
     ZETACheck <- !is.null(ZETA)
@@ -391,8 +390,6 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     if (blockInterestCheck & ZETACheck) {
       lineNames <- rownames(blockInterest)
       nLine <- nrow(blockInterest)
-      
-      blockName <- NULL
     } else {
       stop("Please input 'geno', or both 'blockInterest' and 'ZETA'.")
     }
