@@ -261,6 +261,7 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' @param groupingMethod
 #' @param nGrp
 #' @param nIterClustering
+#' @param kernelType
 #' @param saveName
 #' @param saveStyle
 #' @param pchBase
@@ -281,8 +282,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      indexRegion = 1:10, chrInterest = NULL, posRegion = NULL,
                      pheno = NULL, geno = NULL, ZETA = NULL, plotTree = TRUE,
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
-                     subpopInfo = NULL, groupingMethod = "kmeans",
-                     nGrp = 4, nIterClustering = 100,
+                     subpopInfo = NULL, groupingMethod = "kmedoids",
+                     nGrp = 4, nIterClustering = 100, kernelType = "A.mat",
                      saveName = NULL, saveStyle = "png",
                      pchBase = c(1, 16), colNodeBase = c(2, 4),
                      colTipBase = c(3, 5, 6, 7), cexMax = 2,
@@ -344,7 +345,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     } else {
       nGrp <- length(unique(subpopInfo))
     }
-
+    
     if (is.null(blockInterest)) {
       if (!is.null(gwasRes)) {
         gwasResOrd <- gwasRes[order(gwasRes[, 4], decreasing = TRUE), ]
@@ -431,7 +432,11 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     ZgKernelPart <- diag(nLine)
     rownames(ZgKernelPart) <- colnames(ZgKernelPart) <- lineNames
     
-    ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+    if (kernelType == "dist") {
+      ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+    } else {
+      ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = A.mat(blockInterest))))
+    }
     if (verbose) {
       print("Now estimating genotypic values...")
     }
@@ -602,7 +607,11 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       ZgKernelPart <- diag(nLine)
       rownames(ZgKernelPart) <- colnames(ZgKernelPart) <- lineNames
       
-      ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+      if (kernelType == "dist") {
+        ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+      } else {
+        ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = A.mat(blockInterestNow))))
+      }
       if (verbose) {
         print("Now estimating genotypic values...")
       }
