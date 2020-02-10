@@ -4,7 +4,7 @@
 \alias{manhattan.plus}
 \title{Add points of -log10(p) corrected by kernel methods to manhattan plot}
 \usage{
-manhattan.plus(input, checks, plot.col1 = c("dark blue",
+manhattan.plus(input, checks, cex = 1, plot.col1 = c("dark blue",
   "cornflowerblue"), plot.col3 = c("red3", "orange3"), plot.type = "p",
   plot.pch = 16)
 }
@@ -13,6 +13,8 @@ manhattan.plus(input, checks, plot.col1 = c("dark blue",
 the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.}
 
 \item{checks}{The marker numbers whose -log10(p)s are corrected by kernel methods.}
+
+\item{cex}{A numerical value giving the amount by which plotting text and symbols should be magnified relative to the default.}
 
 \item{plot.col1}{This argument determines the color of the manhattan plot.
 You should substitute this argument as a color vector whose length is 2.

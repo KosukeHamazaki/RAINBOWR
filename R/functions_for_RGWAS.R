@@ -402,6 +402,7 @@ genesetmap <- function(map, gene.set, cumulative = FALSE) {
 #' @param sig.level Significance level for the threshold. The default is 0.05.
 #' @param method.thres Method for detemining threshold of significance. "BH" and "Bonferroni are offered.
 #' @param y.max The maximum value for the vertical axis of manhattan plot. If NULL, automatically determined.
+#' @param cex A numerical value giving the amount by which plotting text and symbols should be magnified relative to the default.
 #' @param cex.lab The font size of the labels.
 #' @param lwd.thres The line width for the threshold.
 #' @param plot.col1 This argument determines the color of the manhattan plot.
@@ -417,7 +418,7 @@ genesetmap <- function(map, gene.set, cumulative = FALSE) {
 #'
 #'
 manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
-                      y.max = NULL, cex.lab = 1, lwd.thres = 1,
+                      y.max = NULL, cex = 1, cex.lab = 1, lwd.thres = 1,
                       plot.col1 = c("dark blue", "cornflowerblue"),
                       cex.axis.x = 1, cex.axis.y = 1, plot.type = "p", plot.pch = 16){
   input <- input[!is.na(input[, 4]), , drop = FALSE]
@@ -436,18 +437,19 @@ manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
     y.max <- max(input[, 4]) + 1
   }
   plot(0, 0, type = "n", xlim = c(0, x.max), ylim = c(0, y.max), ylab = expression(-log[10](italic(p))),
-       xlab = "Chromosome", xaxt = "n", cex.lab = cex.lab, cex.axis = cex.axis.y)
+       xlab = "Chromosome", xaxt = "n", cex = cex, cex.lab = cex.lab, cex.axis = cex.axis.y)
   for (i in seq(1, n.chrom, by = 2)) {
     ix <- which(input[, 2] == chroms[i])
     chrom.mid[i] <- median(chrom.start[i] + input[ix, 3])
-    points(chrom.start[i] + input[ix, 3], input[ix, 4],
+    points(chrom.start[i] + input[ix, 3], input[ix, 4], cex = cex,
            col = plot.col1[1], type = plot.type, pch = plot.pch)
   }
   if (n.chrom > 1) {
     for (i in seq(2, n.chrom, by = 2)) {
       ix <- which(input[, 2] == chroms[i])
       chrom.mid[i] <- median(chrom.start[i] + input[ix, 3])
-      points(chrom.start[i] + input[ix, 3], input[ix, 4], col = plot.col1[2], type = plot.type, pch = plot.pch)
+      points(chrom.start[i] + input[ix, 3], input[ix, 4], cex = cex,
+             col = plot.col1[2], type = plot.type, pch = plot.pch)
     }
   }
 
@@ -467,6 +469,7 @@ manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
 #' @param input Data frame of GWAS results where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
 #' @param checks The marker numbers whose -log10(p)s are corrected by kernel methods.
+#' @param cex A numerical value giving the amount by which plotting text and symbols should be magnified relative to the default.
 #' @param plot.col1 This argument determines the color of the manhattan plot.
 #'  You should substitute this argument as a color vector whose length is 2.
 #'  plot.col1[1] for odd chromosomes and plot.col1[2] for even chromosomes.
@@ -479,7 +482,7 @@ manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
 #'
 #'
 
-manhattan.plus <- function(input, checks, plot.col1 = c("dark blue", "cornflowerblue"),
+manhattan.plus <- function(input, checks, cex = 1, plot.col1 = c("dark blue", "cornflowerblue"),
                            plot.col3 = c("red3", "orange3"), plot.type = "p", plot.pch = 16) {
   input <- input[!is.na(input[, 4]), , drop = FALSE]
   input <- input[order(input[, 2], input[, 3]), ]
@@ -496,14 +499,15 @@ manhattan.plus <- function(input, checks, plot.col1 = c("dark blue", "cornflower
   for (i in seq(1, n.chrom, by = 2)) {
     ix <- checks[which(input[checks, 2] == chroms[i])]
     chrom.mid[i] <- median(chrom.start[i] + input[ix, 3])
-    points(chrom.start[i] + input[ix, 3], input[ix, 4],
+    points(chrom.start[i] + input[ix, 3], input[ix, 4], cex = cex,
            col = plot.col3[1], type = plot.type, pch = plot.pch)
   }
   if (n.chrom > 1) {
     for (i in seq(2, n.chrom, by = 2)) {
       ix <- checks[which(input[checks, 2] == chroms[i])]
       chrom.mid[i] <- median(chrom.start[i] + input[ix, 3])
-      points(chrom.start[i] + input[ix, 3], input[ix, 4], col = plot.col3[2], type = plot.type, pch = plot.pch)
+      points(chrom.start[i] + input[ix, 3], input[ix, 4], cex = cex, 
+             col = plot.col3[2], type = plot.type, pch = plot.pch)
     }
   }
 }
@@ -516,6 +520,7 @@ manhattan.plus <- function(input, checks, plot.col1 = c("dark blue", "cornflower
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
 #' @param sig.level Siginifincance level for the threshold. The default is 0.05.
 #' @param method.thres Method for detemining threshold of significance. "BH" and "Bonferroni are offered.
+#' @param cex A numerical value giving the amount by which plotting text and symbols should be magnified relative to the default.
 #' @param plot.col2 Color of the manhattan plot. color changes with chromosome and it starts from plot.col2 + 1
 #' (so plot.col2 = 1 means color starts from red.)
 #' @param plot.type  This argument determines the type of the manhattan plot. See the help page of "plot".
@@ -529,7 +534,7 @@ manhattan.plus <- function(input, checks, plot.col1 = c("dark blue", "cornflower
 #'
 #'
 #'
-manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", plot.col2 = 1,
+manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", cex = 1, plot.col2 = 1,
                        plot.type = "p", plot.pch = 16, cum.pos = NULL, lwd.thres = 1,
                        cex.lab = 1, cex.axis = 1) {
   input <- input[!is.na(input[, 4]), , drop = FALSE]
@@ -553,7 +558,7 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", plot.col2 =
   }
   plot(cum.pos, input[, 4], col = chr + plot.col2, type = plot.type,
        pch = plot.pch, xlab = "Position (bp)", ylab = "-log10(p)",
-       cex.lab = cex.lab, cex.axis = cex.axis)
+       cex.lab = cex.lab, cex.axis = cex.axis, cex = cex)
 
   threshold <- try(CalcThreshold(input, sig.level = sig.level, method = method.thres), silent = TRUE)
   if((class(threshold) != "try-error") & (!is.na(threshold))){
