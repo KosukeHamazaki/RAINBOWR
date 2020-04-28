@@ -4,9 +4,15 @@
 \alias{modify.data}
 \title{Function to modify genotype and phenotype data to match}
 \usage{
-modify.data(pheno.mat, geno.mat, pheno.labels = NULL,
-  geno.names = NULL, map = NULL, return.ZETA = TRUE,
-  return.GWAS.format = FALSE)
+modify.data(
+  pheno.mat,
+  geno.mat,
+  pheno.labels = NULL,
+  geno.names = NULL,
+  map = NULL,
+  return.ZETA = TRUE,
+  return.GWAS.format = FALSE
+)
 }
 \arguments{
 \item{pheno.mat}{A \eqn{n _ 1 \times p} matrix of phenotype data. rownames(pheno.mat) should be genotype (line; accesion; variety) names.}

@@ -4,10 +4,25 @@
 \alias{score.calc.epistasis.score}
 \title{Calculate -log10(p) of epistatic effects with score test}
 \usage{
-score.calc.epistasis.score(M.now, y, X.now, ZETA.now, Gu, Ge, P0, map,
-  haplotype = TRUE, num.hap = NULL, window.size.half = 5,
-  window.slide = 1, chi0.mixture = 0.5, gene.set = NULL,
-  dominance.eff = TRUE, min.MAF = 0.02, count = TRUE)
+score.calc.epistasis.score(
+  M.now,
+  y,
+  X.now,
+  ZETA.now,
+  Gu,
+  Ge,
+  P0,
+  map,
+  haplotype = TRUE,
+  num.hap = NULL,
+  window.size.half = 5,
+  window.slide = 1,
+  chi0.mixture = 0.5,
+  gene.set = NULL,
+  dominance.eff = TRUE,
+  min.MAF = 0.02,
+  count = TRUE
+)
 }
 \arguments{
 \item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}

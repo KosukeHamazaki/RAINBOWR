@@ -4,11 +4,25 @@
 \alias{score.calc.epistasis.LR}
 \title{Calculate -log10(p) of epistatic effects by LR test}
 \usage{
-score.calc.epistasis.LR(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
-  eigen.G = NULL, optimizer = "nlminb", map, haplotype = TRUE,
-  num.hap = NULL, window.size.half = 5, window.slide = 1,
-  chi0.mixture = 0.5, gene.set = NULL, dominance.eff = TRUE,
-  min.MAF = 0.02, count = TRUE)
+score.calc.epistasis.LR(
+  M.now,
+  y,
+  X.now,
+  ZETA.now,
+  eigen.SGS = NULL,
+  eigen.G = NULL,
+  optimizer = "nlminb",
+  map,
+  haplotype = TRUE,
+  num.hap = NULL,
+  window.size.half = 5,
+  window.slide = 1,
+  chi0.mixture = 0.5,
+  gene.set = NULL,
+  dominance.eff = TRUE,
+  min.MAF = 0.02,
+  count = TRUE
+)
 }
 \arguments{
 \item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}

@@ -4,9 +4,17 @@
 \alias{spectralG.cpp}
 \title{Perform spectral decomposition (inplemented by Rcpp)}
 \usage{
-spectralG.cpp(ZETA, ZWs = NULL, X = NULL, weights = 1,
-  return.G = TRUE, return.SGS = FALSE, spectral.method = NULL,
-  tol = NULL, df.H = NULL)
+spectralG.cpp(
+  ZETA,
+  ZWs = NULL,
+  X = NULL,
+  weights = 1,
+  return.G = TRUE,
+  return.SGS = FALSE,
+  spectral.method = NULL,
+  tol = NULL,
+  df.H = NULL
+)
 }
 \arguments{
 \item{ZETA}{A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.

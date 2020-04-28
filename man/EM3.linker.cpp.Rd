@@ -4,11 +4,26 @@
 \alias{EM3.linker.cpp}
 \title{Equation of mixed model for multi-kernel (fast, for limited cases)}
 \usage{
-EM3.linker.cpp(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
-  Gammas0 = lapply(Ws0, function(x) diag(ncol(x))), gammas.diag = TRUE,
-  X.fix = TRUE, eigen.SGS = NULL, eigen.G = NULL, tol = NULL,
-  bounds = c(1e-06, 1e+06), optimizer = "nlminb", traceInside = 0,
-  n.thres = 450, spectral.method = NULL, REML = TRUE, pred = TRUE)
+EM3.linker.cpp(
+  y0,
+  X0 = NULL,
+  ZETA = NULL,
+  Zs0 = NULL,
+  Ws0,
+  Gammas0 = lapply(Ws0, function(x) diag(ncol(x))),
+  gammas.diag = TRUE,
+  X.fix = TRUE,
+  eigen.SGS = NULL,
+  eigen.G = NULL,
+  tol = NULL,
+  bounds = c(1e-06, 1e+06),
+  optimizer = "nlminb",
+  traceInside = 0,
+  n.thres = 450,
+  spectral.method = NULL,
+  REML = TRUE,
+  pred = TRUE
+)
 }
 \arguments{
 \item{y0}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}

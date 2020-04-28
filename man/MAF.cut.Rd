@@ -4,8 +4,7 @@
 \alias{MAF.cut}
 \title{Function to remove the minor alleles}
 \usage{
-MAF.cut(x.0, map.0 = NULL, min.MAF = 0.05, max.MS = 0.05,
-  return.MAF = FALSE)
+MAF.cut(x.0, map.0 = NULL, min.MAF = 0.05, max.MS = 0.05, return.MAF = FALSE)
 }
 \arguments{
 \item{x.0}{A \eqn{n \times m} original marker genotype matrix.}

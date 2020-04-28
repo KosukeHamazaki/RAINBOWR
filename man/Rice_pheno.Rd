@@ -3,10 +3,12 @@
 \name{Rice_pheno}
 \alias{Rice_pheno}
 \title{Phenotype data of rice field trial}
-\format{A data frame with 413 rows and 36 variables:
+\format{
+A data frame with 413 rows and 36 variables:
 \describe{
   Phenotypic data of 36 traits obtained by the field trial with 413 genotypes.
-}}
+}
+}
 \source{
 \url{http://www.ricediversity.org/data/}
 }

@@ -4,13 +4,30 @@
 \alias{score.calc.LR}
 \title{Calculate -log10(p) of each SNP-set by the LR test}
 \usage{
-score.calc.LR(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL,
-  eigen.G = NULL, optimizer = "nlminb", map,
-  kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE,
-  num.hap = NULL, test.effect = "additive", window.size.half = 5,
-  window.slide = 1, chi0.mixture = 0.5, weighting.center = TRUE,
-  weighting.other = NULL, gene.set = NULL, min.MAF = 0.02,
-  count = TRUE)
+score.calc.LR(
+  M.now,
+  y,
+  X.now,
+  ZETA.now,
+  LL0,
+  eigen.SGS = NULL,
+  eigen.G = NULL,
+  optimizer = "nlminb",
+  map,
+  kernel.method = "linear",
+  kernel.h = "tuned",
+  haplotype = TRUE,
+  num.hap = NULL,
+  test.effect = "additive",
+  window.size.half = 5,
+  window.slide = 1,
+  chi0.mixture = 0.5,
+  weighting.center = TRUE,
+  weighting.other = NULL,
+  gene.set = NULL,
+  min.MAF = 0.02,
+  count = TRUE
+)
 }
 \arguments{
 \item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}

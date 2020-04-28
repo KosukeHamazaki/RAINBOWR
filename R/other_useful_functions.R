@@ -243,45 +243,85 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 
 #' Function to estimate & plot phylogenetic tree
 #'
-#' @param blockInterest
-#' @param gwasRes
-#' @param nTopRes
-#' @param gene.set
-#' @param indexRegion
-#' @param chrInterest
-#' @param posRegion
-#' @param blockName
-#' @param pheno
-#' @param geno
-#' @param ZETA
-#' @param plotTree
-#' @param distMat
-#' @param distMethod
-#' @param evolutionDist
-#' @param subpopInfo
-#' @param groupingMethod
-#' @param nGrp
-#' @param nIterClustering
-#' @param kernelType
-#' @param saveName
-#' @param saveStyle
-#' @param pchBase
-#' @param colNodeBase
-#' @param colTipBase
-#' @param cexMax
-#' @param edgeColoring
-#' @param tipLabel
-#' @param verbose
+#' @param blockInterest A \eqn{n \times M} matrix representing the marker genotype that belongs to the haplotype block of interest.
+#' If this argument is NULL, this argument will automatically be determined by `geno`, 
+#' @param gwasRes You can use the results (data.frame) of haplotype-based (SNP-set) GWAS by `RGWAS.multisnp` function. 
+#' @param nTopRes Haplotype blocks (or gene sets, SNP-sets) with top `nTopRes` p-values by `gwasRes` will be used.
+#' @param gene.set If you have information of gene (or haplotype block), you can use it to perform kernel-based GWAS.
+#'            You should assign your gene information to gene.set in the form of a "data.frame" (whose dimension is (the number of gene) x 2).
+#'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
+#'            which correspond to the marker names of "geno" argument.
+#' @param indexRegion You can specify the haplotype block (or gene set, SNP-set) of interest by the marker index in `geno`.
+#' @param chrInterest You can specify the haplotype block (or gene set, SNP-set) of interest by the marker position in `geno`.
+#' Please assign the chromosome number to this argument.
+#' @param posRegion You can specify the haplotype block (or gene set, SNP-set) of interest by the marker position in `geno`.
+#' Please assign the position in the chromosome to this argument.
+#' @param blockName You can specify the haplotype block (or gene set, SNP-set) of interest by the name of haplotype block in `geno`.
+#' @param pheno Data frame where the first column is the line name (gid). 
+#' The remaining columns should be a phenotype to test.
+#' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
+#'        Columns 4 and higher contain the marker scores for each line, coded as {-1, 0, 1} = {aa, Aa, AA}.
+#' @param ZETA A list of covariance (relationship) matrix (K: \eqn{m \times m}) and its design matrix (Z: \eqn{n \times m}) of random effects.
+#' Please set names of list "Z" and "K"! You can use more than one kernel matrix.
+#' For example,
+#'
+#' ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D))
+#' \describe{
+#' \item{Z.A, Z.D}{Design matrix (\eqn{n \times m}) for the random effects. So, in many cases, you can use the identity matrix.}
+#' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
+#' }
+#' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
+#' @param chi2Test If TRUE, chi-square test for the relationship between haplotypes & subpopulations will be performed. 
+#' @param thresChi2Test The threshold for the chi-square test.
+#' @param plotTree If TRUE, the function will return the plot of phylogenetic tree.
+#' @param distMat You can assign the distance matrix of the block of interest. 
+#' If NULL, the distance matrix will be computed in this function.
+#' @param distMethod You can choose the method to calculate distance between accessions.
+#' This argument corresponds to the `method` argument in the `dist` function.
+#' @param evolutionDist If TRUE, the evolution distance will be used instead of the pure distance.
+#' The `distMat` will be converted to the distance matrix by the evolution distance.
+#' @param subpopInfo The information of subpopulations. This argument should be a vector of factor. 
+#' @param groupingMethod If `subpopInfo` argument is NULL, this function estimates subpopulation information from marker genotype.
+#' You can choose the grouping method from `kmeans`, `kmedoids`, and `hclust`. 
+#' @param nGrp The number of groups (or subpopulations) grouped by `groupingMethod`.
+#' If this argument is 0, the subpopulation information will not be estimated.
+#' @param nIterClustering If `groupingMethod` = `kmeans`, the clustering will be performed multiple times.
+#' This argument specifies the number of classification performed by the function.
+#' @param kernelType In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
+#' This argument specifies the method to compute similarility matrix: 
+#' If this argument is `A.mat`, then the `A.mat` function in the `rrBLUP` package will be used,
+#' and if this argument is `dist`, the gaussian kernel will be computed from marker genotype.
+#' @param saveName When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
+#' When saveName = NULL, the plot is not saved.
+#' @param saveStyle This argument specifies how to save the plot of phylogenetic tree.
+#' The function offers `png`, `pdf`, `jpg`, and `tiff`.
+#' @param pchBase A vector of two integers specifying the plot types for the positive and negative genotypic values respectively.
+#' @param colNodeBase A vector of two integers or chracters specifying color of nodes for the positive and negative genotypic values respectively.
+#' @param colTipBase A vector of integers or chracters specifying color of tips for the positive and negative genotypic values respectively.
+#' The length of the vector should equal to the number of subpopulations.
+#' @param cexMax A numeric specifying the point size of the plot.
+#' @param edgeColoring If TRUE, the edge branch of phylogenetic tree wiil be colored.
+#' @param tipLabel If TRUE, lavels for tips will be shown.
+#' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #'
 #' @return
-#' \describe{
-#' \item{$gvTotal}{a}
-#' \item{$minuslog10p}{a}
+#' \describe{A List of 
+#' \item{$haplotypeInfo}{\describe{A List of haplotype information with 
+#' \item{$haploCluster}{A vector indicating each individual belongs to which haplotypes.}
+#' \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
+#' }
+#' }
+#' \item{$pValChi2Test}{A p-value of the chi-square test for the dependency between haplotypes & subpopulations.
+#' If `chi2Test = FALSE`, `NA` will be returned.}
+#' \item{$gvTotal}{Estimated genotypic values by Gaussian kernel regression for each individuals.}
+#' \item{$minuslog10p}{\eqn{-log_{10}(p)} for haplotype block of interest.
+#'  p is the p-value for the siginifacance of the haplotype block effect.}
 #'}
 #'
 estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set = NULL,
                      indexRegion = 1:10, chrInterest = NULL, posRegion = NULL, blockName = NULL,
-                     pheno = NULL, geno = NULL, ZETA = NULL, plotTree = TRUE,
+                     pheno = NULL, geno = NULL, ZETA = NULL, 
+                     chi2Test = TRUE, thresChi2Test = 5e-2,  plotTree = TRUE,
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
                      subpopInfo = NULL, groupingMethod = "kmedoids",
                      nGrp = 4, nIterClustering = 100, kernelType = "A.mat",
@@ -396,6 +436,48 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
   }
   
   if (is.matrix(blockInterest)) {
+    stringBlock <- apply(blockInterest, 1, function(x) paste0(x, collapse = ""))
+    blockInterestUnique <- blockInterest[!duplicated(stringBlock), ]
+    nHaplo <- length(unique(stringBlock))
+    haploClusterNow <- as.numeric(factor(stringBlock))
+    names(haploClusterNow) <- lineNames
+    
+    blockInterestUniqueSorted <- blockInterestUnique[order(unique(stringBlock)), ]
+    rownames(blockInterestUniqueSorted) <- paste0("haplo_", 1:nHaplo)
+    
+    tableRes <- table(haploCluster = paste0("haplo_", haploClusterNow),
+                      subpop = subpopInfo)
+    
+    haplotypeInfo <- list(haploCluster = paste0("haplo_", haploClusterNow),
+                          haploBlock = blockInterestUniqueSorted)
+    
+    if (verbose) {
+      cat("Tabular for haplotype x subpopulation: \n")
+      print(head(tableRes))
+      cat("\nThe number of haplotypes: ", nHaplo, "\n")
+    }
+    
+    if (chi2Test) {
+      chi2TestRes <- chisq.test(tableRes)
+      pValChi2Test <- chi2TestRes$p.value
+      
+      if (verbose) {
+        cat("\n")
+        print(chi2TestRes)
+        
+        cat("Haplotypes & Subpopulations are: \n")
+        if (pValChi2Test <= thresChi2Test) {
+          cat("\tSiginificantly dependent\n")
+        } else {
+          cat("\tindependent\n")
+        }
+      }
+    } else {
+      pValChi2Test <- NA
+    }
+    
+    
+    
     nMrkInBlock <- ncol(blockInterest)
     
     if (is.null(distMat)) {
@@ -504,13 +586,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           pdf(file = savePlotName, width = 12, height = 9)
         } else if (saveStyle == "jpg") {
           savePlotName <- paste0(saveName, "_phylogenetic_tree.jpg")  
-          jpeg(file = savePlotName, width = 800, height = 600)
+          jpeg(filename = savePlotName, width = 800, height = 600)
         } else if (saveStyle == "tiff") {
           savePlotName <- paste0(saveName, "_phylogenetic_tree.tiff")
-          tiff(file = savePlotName, width = 800, height = 600)
+          tiff(filename = savePlotName, width = 800, height = 600)
         } else {
           savePlotName <- paste0(saveName, "_phylogenetic_tree.png")
-          png(file = savePlotName, width = 800, height = 600)
+          png(filename = savePlotName, width = 800, height = 600)
         }
       }
       
@@ -557,12 +639,18 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       }
     }
     
-    return(list(gvTotal = gvEstTotal,
+    return(list(haplotypeInfo = haplotypeInfo,
+                pValChi2Test = pValChi2Test,
+                gvTotal = gvEstTotal,
                 minuslog10p = minuslog10p))
   } else {
     gvEstTotals <- matrix(NA, nrow = nLine, ncol = nTopRes)
-    minuslog10ps <- rep(NA, nTopRes)
-    colnames(gvEstTotals) <- names(minuslog10ps) <- blockNames
+    minuslog10ps <- pValChi2Tests <- rep(NA, nTopRes)
+    haplotypeInfos <- rep(list(NULL), nTopRes)
+    
+    colnames(gvEstTotals) <- names(minuslog10ps) <- 
+      names(haplotypeInfos) <- 
+      names(pValChi2Tests) <- blockNames
     rownames(gvEstTotals) <- lineNames
     
     for (topNo in 1:nTopRes) {
@@ -570,6 +658,47 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       print(paste0("block No: ", topNo, "; ", blockName))
       
       blockInterestNow <- blockInterest[[topNo]]
+      
+      
+      stringBlock <- apply(blockInterestNow, 1, function(x) paste0(x, collapse = ""))
+      blockInterestUnique <- blockInterestNow[!duplicated(stringBlock), ]
+      nHaplo <- length(unique(stringBlock))
+      haploClusterNow <- as.numeric(factor(stringBlock))
+      names(haploClusterNow) <- lineNames
+      
+      blockInterestUniqueSorted <- blockInterestUnique[order(unique(stringBlock)), ]
+      rownames(blockInterestUniqueSorted) <- paste0("haplo_", 1:nHaplo)
+      
+      tableRes <- table(haploCluster = paste0("haplo_", haploClusterNow),
+                        subpop = subpopInfo)
+      haplotypeInfo <- list(haploCluster = paste0("haplo_", haploClusterNow),
+                            haploBlock = blockInterestUniqueSorted)
+      
+      if (verbose) {
+        cat("Tabular for haplotype x subpopulation: \n")
+        print(head(tableRes))
+        cat("\nThe number of haplotypes: ", nHaplo, "\n")
+      }
+      
+      if (chi2Test) {
+        chi2TestRes <- chisq.test(tableRes)
+        pValChi2Test <- chi2TestRes$p.value
+        
+        if (verbose) {
+          cat("\n")
+          print(chi2TestRes)
+          
+          cat("Haplotypes & Subpopulations are: \n")
+          if (pValChi2Test <= thresChi2Test) {
+            cat("\tSiginificantly dependent\n")
+          } else {
+            cat("\tindependent\n")
+          }
+        }
+      } else {
+        pValChi2Test <- NA
+      }
+      
       
       nMrkInBlock <- ncol(blockInterestNow)
       
@@ -674,13 +803,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
             pdf(file = savePlotName, width = 12, height = 9)
           } else if (saveStyle == "jpg") {
             savePlotName <- paste0(saveName, "_phylogenetic_tree.jpg")  
-            jpeg(file = savePlotName, width = 800, height = 600)
+            jpeg(filename = savePlotName, width = 800, height = 600)
           } else if (saveStyle == "tiff") {
             savePlotName <- paste0(saveName, "_phylogenetic_tree.tiff")
-            tiff(file = savePlotName, width = 800, height = 600)
+            tiff(filename = savePlotName, width = 800, height = 600)
           } else {
             savePlotName <- paste0(saveName, "_phylogenetic_tree.png")
-            png(file = savePlotName, width = 800, height = 600)
+            png(filename = savePlotName, width = 800, height = 600)
           }
         }
         
@@ -727,11 +856,15 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         }
       }
       
+      haplotypeInfos[[topNo]] <- haplotypeInfo
+      pValChi2Tests[topNo] <- pValChi2Test
       gvEstTotals[, topNo] <- gvEstTotal
       minuslog10ps[topNo] <- minuslog10p
     }
     
-    return(list(gvTotal = gvEstTotals,
+    return(list(haplotypeInfo = haplotypeInfos,
+                pValChi2Test = pValChi2Tests,
+                gvTotal = gvEstTotals,
                 minuslog10p = minuslog10ps))
   }
 }

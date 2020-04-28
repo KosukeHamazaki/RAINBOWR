@@ -4,8 +4,15 @@
 \alias{manhattan3}
 \title{Draw the effects of epistasis (3d plot and 2d plot)}
 \usage{
-manhattan3(input, cum.pos, plot.epi.3d = TRUE, plot.epi.2d = TRUE,
-  main.epi.3d = NULL, main.epi.2d = NULL, saveName = NULL)
+manhattan3(
+  input,
+  cum.pos,
+  plot.epi.3d = TRUE,
+  plot.epi.2d = TRUE,
+  main.epi.3d = NULL,
+  main.epi.2d = NULL,
+  saveName = NULL
+)
 }
 \arguments{
 \item{input}{Data frame of GWAS results where the first column is the marker names,

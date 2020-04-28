@@ -4,9 +4,20 @@
 \alias{EMM2.cpp}
 \title{Equation of mixed model for one kernel, EMMA-based method (inplemented by Rcpp)}
 \usage{
-EMM2.cpp(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL,
-  tol = NULL, optimizer = "nlminb", traceInside = 0, REML = TRUE,
-  bounds = c(1e-09, 1e+09), SE = FALSE, return.Hinv = FALSE)
+EMM2.cpp(
+  y,
+  X = NULL,
+  ZETA,
+  eigen.G = NULL,
+  eigen.SGS = NULL,
+  tol = NULL,
+  optimizer = "nlminb",
+  traceInside = 0,
+  REML = TRUE,
+  bounds = c(1e-09, 1e+09),
+  SE = FALSE,
+  return.Hinv = FALSE
+)
 }
 \arguments{
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}

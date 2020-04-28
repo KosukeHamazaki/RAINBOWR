@@ -4,9 +4,19 @@
 \alias{score.calc.MC}
 \title{Calculate -log10(p) for single-SNP GWAS (multi-cores)}
 \usage{
-score.calc.MC(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRUE,
-  optimizer = "nlminb", eigen.G = NULL, min.MAF = 0.02,
-  count = TRUE)
+score.calc.MC(
+  M.now,
+  ZETA.now,
+  y,
+  X.now,
+  Hinv,
+  n.core = 2,
+  P3D = TRUE,
+  optimizer = "nlminb",
+  eigen.G = NULL,
+  min.MAF = 0.02,
+  count = TRUE
+)
 }
 \arguments{
 \item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}

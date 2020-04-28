@@ -754,7 +754,7 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
           jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.mark - i + 1) / (i - 1)
           print(paste0((i - 1) * 100 / n.mark2, "%...Done. ",
                        round(jikan.scorecalc, 2), " ", attr(jikan.scorecalc, "units"),
-                       " to end.  Sceduled end time : ", end.scorecalc + jikan.scorecalc))
+                       " to end.  Scheduled end time : ", end.scorecalc + jikan.scorecalc))
         }
       }
     }
@@ -1073,7 +1073,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
           jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.scores - i + 1) / (i - 1)
           print(paste0((i - 1) * 100 / n.scores2, "%...Done. ",
                        round(jikan.scorecalc, 2), " ", attr(jikan.scorecalc, "units"),
-                       " to end.  Sceduled end time : ", end.scorecalc + jikan.scorecalc))
+                       " to end.  Scheduled end time : ", end.scorecalc + jikan.scorecalc))
         }
       }
     }
@@ -2156,7 +2156,7 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
           jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.scores - i + 1) / (i - 1)
           print(paste0((i - 1) * 100 / n.scores2, "%...Done. ",
                        round(jikan.scorecalc, 2), " ", attr(jikan.scorecalc, "units"),
-                       " to end.  Sceduled end time : ", end.scorecalc + jikan.scorecalc))
+                       " to end.  Scheduled end time : ", end.scorecalc + jikan.scorecalc))
         }
       }
     }
@@ -3179,7 +3179,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
             jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.calc - num.now + 1) / (num.now - 1)
             print(paste0((num.now - 1) * 100 / n.calc2, "%...Done. ",
                          round(jikan.scorecalc, 2), " ", attr(jikan.scorecalc, "units"),
-                         " to end.  Sceduled end time : ", end.scorecalc + jikan.scorecalc))
+                         " to end.  Scheduled end time : ", end.scorecalc + jikan.scorecalc))
           }
         }
       }
@@ -3758,7 +3758,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
             jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.calc - num.now + 1) / (num.now - 1)
             print(paste0((num.now - 1) * 100 / n.calc2, "%...Done. ",
                          round(jikan.scorecalc, 2), " ", attr(jikan.scorecalc, "units"),
-                         " to end.  Sceduled end time : ", end.scorecalc + jikan.scorecalc))
+                         " to end.  Scheduled end time : ", end.scorecalc + jikan.scorecalc))
           }
         }
       }

@@ -4,9 +4,15 @@
 \alias{manhattan.plus}
 \title{Add points of -log10(p) corrected by kernel methods to manhattan plot}
 \usage{
-manhattan.plus(input, checks, cex = 1, plot.col1 = c("dark blue",
-  "cornflowerblue"), plot.col3 = c("red3", "orange3"), plot.type = "p",
-  plot.pch = 16)
+manhattan.plus(
+  input,
+  checks,
+  cex = 1,
+  plot.col1 = c("dark blue", "cornflowerblue"),
+  plot.col3 = c("red3", "orange3"),
+  plot.type = "p",
+  plot.pch = 16
+)
 }
 \arguments{
 \item{input}{Data frame of GWAS results where the first column is the marker names,

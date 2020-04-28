@@ -3,12 +3,14 @@
 \name{Rice_geno_map}
 \alias{Rice_geno_map}
 \title{Physical map of rice genome}
-\format{A data frame with 1311 rows and 3 variables:
+\format{
+A data frame with 1311 rows and 3 variables:
 \describe{
   \item{marker}{marker name for each marker, character}
   \item{chr}{chromosome number for each marker, integer}
   \item{pos}{physical position for each marker, integer, (b.p.)}
-}}
+}
+}
 \source{
 \url{http://www.ricediversity.org/data/}
 }

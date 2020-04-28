@@ -3,7 +3,6 @@
 \docType{package}
 \name{RAINBOWR}
 \alias{RAINBOWR}
-\alias{RAINBOWR-package}
 \title{RAINBOWR:
 Perform Genome-Wide Asscoiation Study (GWAS) By Kernel-Based Methods}
 \description{

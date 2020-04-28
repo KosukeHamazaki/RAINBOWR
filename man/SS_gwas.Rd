@@ -4,11 +4,22 @@
 \alias{SS_gwas}
 \title{Calculate some summary statistics of GWAS (genome-wide association studies) for simulation study}
 \usage{
-SS_gwas(res, x, map.x, qtn.candidate, gene.set = NULL,
-  n.top.false.block = 10, sig.level = c(0.05, 0.01),
-  method.thres = "BH", inflator.plus = 2, LD_length = 150000,
-  cor.thres = 0.35, window.size = 0, saveName = NULL,
-  plot.ROC = TRUE)
+SS_gwas(
+  res,
+  x,
+  map.x,
+  qtn.candidate,
+  gene.set = NULL,
+  n.top.false.block = 10,
+  sig.level = c(0.05, 0.01),
+  method.thres = "BH",
+  inflator.plus = 2,
+  LD_length = 150000,
+  cor.thres = 0.35,
+  window.size = 0,
+  saveName = NULL,
+  plot.ROC = TRUE
+)
 }
 \arguments{
 \item{res}{Data frame of GWAS results where the first column is the marker names,

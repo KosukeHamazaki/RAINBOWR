@@ -4,10 +4,20 @@
 \alias{manhattan}
 \title{Draw manhattan plot}
 \usage{
-manhattan(input, sig.level = 0.05, method.thres = "BH", y.max = NULL,
-  cex = 1, cex.lab = 1, lwd.thres = 1, plot.col1 = c("dark blue",
-  "cornflowerblue"), cex.axis.x = 1, cex.axis.y = 1, plot.type = "p",
-  plot.pch = 16)
+manhattan(
+  input,
+  sig.level = 0.05,
+  method.thres = "BH",
+  y.max = NULL,
+  cex = 1,
+  cex.lab = 1,
+  lwd.thres = 1,
+  plot.col1 = c("dark blue", "cornflowerblue"),
+  cex.axis.x = 1,
+  cex.axis.y = 1,
+  plot.type = "p",
+  plot.pch = 16
+)
 }
 \arguments{
 \item{input}{Data frame of GWAS results where the first column is the marker names,

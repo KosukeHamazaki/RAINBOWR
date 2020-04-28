@@ -4,9 +4,19 @@
 \alias{See}
 \title{Function to view the first part of data (like head(), tail())}
 \usage{
-See(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6, rowst = 1,
-  colst = 1, narray = 2, drop = FALSE, save.variable = FALSE,
-  verbose = TRUE)
+See(
+  data,
+  fh = TRUE,
+  fl = TRUE,
+  rown = 6,
+  coln = 6,
+  rowst = 1,
+  colst = 1,
+  narray = 2,
+  drop = FALSE,
+  save.variable = FALSE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{data}{Your data. 'vector', 'matrix', 'array' (whose dimensions <= 4), 'data.frame' are supported format.

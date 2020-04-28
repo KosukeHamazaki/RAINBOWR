@@ -4,12 +4,14 @@
 \name{Rice_Zhao_etal}
 \alias{Rice_Zhao_etal}
 \title{Rice_Zhao_etal:}
-\format{A list of 3 data frames:
+\format{
+A list of 3 data frames:
 \describe{
   \item{$genoScore}{marker genotyope, \link{Rice_geno_score}}
   \item{$genoMap}{physical map, \link{Rice_geno_map}}
   \item{$pheno}{phenotype, \link{Rice_pheno}}
-}}
+}
+}
 \source{
 \url{http://www.ricediversity.org/data/}
 }

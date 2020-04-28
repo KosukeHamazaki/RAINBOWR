@@ -4,9 +4,18 @@
 \alias{score.calc}
 \title{Calculate -log10(p) for single-SNP GWAS}
 \usage{
-score.calc(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE,
-  optimizer = "nlminb", eigen.G = NULL, min.MAF = 0.02,
-  count = TRUE)
+score.calc(
+  M.now,
+  ZETA.now,
+  y,
+  X.now,
+  Hinv,
+  P3D = TRUE,
+  optimizer = "nlminb",
+  eigen.G = NULL,
+  min.MAF = 0.02,
+  count = TRUE
+)
 }
 \arguments{
 \item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}

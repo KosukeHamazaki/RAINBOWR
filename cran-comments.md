@@ -318,11 +318,8 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 ## Major changes
 We fixed some parts related to the treatment of the missing in marker genotypes.
 
-- As the previous version, if the marker genotype has missing values, errors as follows will be occurred in `RGWAS.normal`, `RGWAS.multisnp`, `RGWAS.epistasis`, `RGWAS.twostep`, and `RGWAS.twostep.epi` functions.
+- As the previous version, if the marker genotype has missing values, errors will be occurred in `RGWAS.normal`, `RGWAS.multisnp`, `RGWAS.epistasis`, `RGWAS.twostep`, and `RGWAS.twostep.epi` functions.
 
-```
-
-```
 
 
 - Then, we changed the R code in the `RGWAS.normal`, `RGWAS.multisnp`, and `RGWAS.epistasis` functions as follows.
@@ -341,3 +338,30 @@ We fixed some parts related to the treatment of the missing in marker genotypes.
     }
   ```
 
+
+
+
+
+# Apr 28, 2020, RAINBOWR version 0.1.16
+## Major changes
+- We added the citation file for RAINBOWR becuase our paper about RAINBOWR had been published in PLOS Computational Biology (https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1007663). We also changed the `Description` in the `DESCRIPTION` file to update the reference information.
+
+
+
+- We added the `estPhylo` function to estimate and plot the phylogenetic tree for the block of interest. This function will also estimate the genotypic values for the block of interest. We also added `ape` and `cluster` packages in the `NAMESPACE` and `DESCRIPTION` files because these packages are used in the `estPhylo` function.
+
+
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.0.0
+* win-builder release, R version 4.0.0
+* win-builder oldrelease, R version 3.6.3
+
+## R CMD check results
+The same results as [those of the previous version 0.1.9](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#r-cmd-check-results-1) were obtained as follows.
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs:
+
+#### There were 1 NOTE:
+##### * checking CRAN incoming feasibility ... NOTE

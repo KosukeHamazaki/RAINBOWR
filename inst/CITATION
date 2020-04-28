@@ -1,0 +1,11 @@
+bibentry(bibtype = "Article",
+         title = "RAINBOW: Haplotype-based genome-wide association study using a novel SNP-set method",
+         author = c(person("Kosuke", "Hamazaki"),
+                    person("Hiryoshi", "Iwata")),
+         journal = "PLOS Computational Biology",
+         publisher = "Public Library of Science",
+         year = "2020",
+         volume = "16",
+         pages = "1-17",
+         number = "2",
+         doi = "10.1371/journal.pcbi.1007663")

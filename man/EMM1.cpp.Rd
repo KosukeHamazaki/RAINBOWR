@@ -4,11 +4,24 @@
 \alias{EMM1.cpp}
 \title{Equation of mixed model for one kernel, GEMMA-based method (inplemented by Rcpp)}
 \usage{
-EMM1.cpp(y, X = NULL, ZETA, eigen.G = NULL, lam.len = 4,
-  init.range = c(1e-04, 100), init.one = 0.5, conv.param = 1e-06,
-  count.max = 15, bounds = c(1e-06, 1e+06), tol = NULL,
-  REML = TRUE, silent = TRUE, plot.l = FALSE, SE = FALSE,
-  return.Hinv = TRUE)
+EMM1.cpp(
+  y,
+  X = NULL,
+  ZETA,
+  eigen.G = NULL,
+  lam.len = 4,
+  init.range = c(1e-04, 100),
+  init.one = 0.5,
+  conv.param = 1e-06,
+  count.max = 15,
+  bounds = c(1e-06, 1e+06),
+  tol = NULL,
+  REML = TRUE,
+  silent = TRUE,
+  plot.l = FALSE,
+  SE = FALSE,
+  return.Hinv = TRUE
+)
 }
 \arguments{
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}

@@ -4,15 +4,35 @@
 \alias{RGWAS.epistasis}
 \title{Check epistatic effects by kernel-based GWAS (genome-wide association studies)}
 \usage{
-RGWAS.epistasis(pheno, geno, ZETA = NULL, covariate = NULL,
-  covariate.factor = NULL, structure.matrix = NULL, n.PC = 0,
-  min.MAF = 0.02, n.core = 1, test.method = "LR",
-  dominance.eff = TRUE, haplotype = TRUE, num.hap = NULL,
-  window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
-  optimizer = "nlminb", gene.set = NULL, plot.epi.3d = TRUE,
-  plot.epi.2d = TRUE, main.epi.3d = NULL, main.epi.2d = NULL,
-  saveName = NULL, verbose = TRUE, verbose2 = FALSE, count = TRUE,
-  time = TRUE)
+RGWAS.epistasis(
+  pheno,
+  geno,
+  ZETA = NULL,
+  covariate = NULL,
+  covariate.factor = NULL,
+  structure.matrix = NULL,
+  n.PC = 0,
+  min.MAF = 0.02,
+  n.core = 1,
+  test.method = "LR",
+  dominance.eff = TRUE,
+  haplotype = TRUE,
+  num.hap = NULL,
+  window.size.half = 5,
+  window.slide = 1,
+  chi0.mixture = 0.5,
+  optimizer = "nlminb",
+  gene.set = NULL,
+  plot.epi.3d = TRUE,
+  plot.epi.2d = TRUE,
+  main.epi.3d = NULL,
+  main.epi.2d = NULL,
+  saveName = NULL,
+  verbose = TRUE,
+  verbose2 = FALSE,
+  count = TRUE,
+  time = TRUE
+)
 }
 \arguments{
 \item{pheno}{Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.}

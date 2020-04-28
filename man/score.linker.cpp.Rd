@@ -4,8 +4,16 @@
 \alias{score.linker.cpp}
 \title{Calculte -log10(p) by score test (fast, for limited cases)}
 \usage{
-score.linker.cpp(y, Ws, Gammas, gammas.diag = TRUE, Gu, Ge, P0,
-  chi0.mixture = 0.5)
+score.linker.cpp(
+  y,
+  Ws,
+  Gammas,
+  gammas.diag = TRUE,
+  Gu,
+  Ge,
+  P0,
+  chi0.mixture = 0.5
+)
 }
 \arguments{
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}

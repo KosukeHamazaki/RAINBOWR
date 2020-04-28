@@ -4,12 +4,29 @@
 \alias{EMM.cpp}
 \title{Equation of mixed model for one kernel, a wrapper of two methods}
 \usage{
-EMM.cpp(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL,
-  n.thres = 450, reestimation = FALSE, lam.len = 4,
-  init.range = c(1e-06, 100), init.one = 0.5, conv.param = 1e-06,
-  count.max = 20, bounds = c(1e-06, 1e+06), tol = NULL,
-  optimizer = "nlminb", traceInside = 0, REML = TRUE,
-  silent = TRUE, plot.l = FALSE, SE = FALSE, return.Hinv = TRUE)
+EMM.cpp(
+  y,
+  X = NULL,
+  ZETA,
+  eigen.G = NULL,
+  eigen.SGS = NULL,
+  n.thres = 450,
+  reestimation = FALSE,
+  lam.len = 4,
+  init.range = c(1e-06, 100),
+  init.one = 0.5,
+  conv.param = 1e-06,
+  count.max = 20,
+  bounds = c(1e-06, 1e+06),
+  tol = NULL,
+  optimizer = "nlminb",
+  traceInside = 0,
+  REML = TRUE,
+  silent = TRUE,
+  plot.l = FALSE,
+  SE = FALSE,
+  return.Hinv = TRUE
+)
 }
 \arguments{
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}

@@ -3,11 +3,13 @@
 \name{Rice_geno_score}
 \alias{Rice_geno_score}
 \title{Marker genotype of rice genome}
-\format{A data frame with 1311 rows and 395 variables:
+\format{
+A data frame with 1311 rows and 395 variables:
 \describe{
   Each column shows the marker genotype of each accession.
   The column names are the names of accessions and the rownames are the names of markers.
-}}
+}
+}
 \source{
 \url{http://www.ricediversity.org/data/}
 }

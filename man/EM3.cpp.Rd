@@ -4,9 +4,19 @@
 \alias{EM3.cpp}
 \title{Equation of mixed model for multi-kernel (slow, general version)}
 \usage{
-EM3.cpp(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL,
-  tol = NULL, optimizer = "nlminb", traceInside = 0, n.thres = 450,
-  REML = TRUE, pred = TRUE)
+EM3.cpp(
+  y,
+  X0 = NULL,
+  ZETA,
+  eigen.G = NULL,
+  eigen.SGS = NULL,
+  tol = NULL,
+  optimizer = "nlminb",
+  traceInside = 0,
+  n.thres = 450,
+  REML = TRUE,
+  pred = TRUE
+)
 }
 \arguments{
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}

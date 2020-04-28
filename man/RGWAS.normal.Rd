@@ -4,15 +4,38 @@
 \alias{RGWAS.normal}
 \title{Perform normal GWAS (test each single SNP)}
 \usage{
-RGWAS.normal(pheno, geno, ZETA = NULL, covariate = NULL,
-  covariate.factor = NULL, structure.matrix = NULL, n.PC = 0,
-  min.MAF = 0.02, P3D = TRUE, n.core = 1, sig.level = 0.05,
-  method.thres = "BH", plot.qq = TRUE, plot.Manhattan = TRUE,
-  plot.method = 1, plot.col1 = c("dark blue", "cornflowerblue"),
-  plot.col2 = 1, plot.type = "p", plot.pch = 16, saveName = NULL,
-  main.qq = NULL, main.man = NULL, plot.add.last = FALSE,
-  return.EMM.res = FALSE, optimizer = "nlminb", thres = TRUE,
-  verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE)
+RGWAS.normal(
+  pheno,
+  geno,
+  ZETA = NULL,
+  covariate = NULL,
+  covariate.factor = NULL,
+  structure.matrix = NULL,
+  n.PC = 0,
+  min.MAF = 0.02,
+  P3D = TRUE,
+  n.core = 1,
+  sig.level = 0.05,
+  method.thres = "BH",
+  plot.qq = TRUE,
+  plot.Manhattan = TRUE,
+  plot.method = 1,
+  plot.col1 = c("dark blue", "cornflowerblue"),
+  plot.col2 = 1,
+  plot.type = "p",
+  plot.pch = 16,
+  saveName = NULL,
+  main.qq = NULL,
+  main.man = NULL,
+  plot.add.last = FALSE,
+  return.EMM.res = FALSE,
+  optimizer = "nlminb",
+  thres = TRUE,
+  verbose = TRUE,
+  verbose2 = FALSE,
+  count = TRUE,
+  time = TRUE
+)
 }
 \arguments{
 \item{pheno}{Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.}

@@ -61,3 +61,5 @@ importFrom("stats", "cor", "deviance", "dist", "dnorm", "median",
            "rnorm", "sd", "smooth.spline", "var")
 importFrom("utils", "menu", "packageVersion", "setTxtProgressBar",
            "str", "txtProgressBar")
+importFrom("grDevices", "jpeg", "pdf", "tiff")
+importFrom("stats", "as.dist", "chisq.test", "cutree", "hclust", "kmeans")

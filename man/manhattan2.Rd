@@ -4,9 +4,19 @@
 \alias{manhattan2}
 \title{Draw manhattan plot (another method)}
 \usage{
-manhattan2(input, sig.level = 0.05, method.thres = "BH", cex = 1,
-  plot.col2 = 1, plot.type = "p", plot.pch = 16, cum.pos = NULL,
-  lwd.thres = 1, cex.lab = 1, cex.axis = 1)
+manhattan2(
+  input,
+  sig.level = 0.05,
+  method.thres = "BH",
+  cex = 1,
+  plot.col2 = 1,
+  plot.type = "p",
+  plot.pch = 16,
+  cum.pos = NULL,
+  lwd.thres = 1,
+  cex.lab = 1,
+  cex.axis = 1
+)
 }
 \arguments{
 \item{input}{Data frame of GWAS results where the first column is the marker names,

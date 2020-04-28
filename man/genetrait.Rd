@@ -4,12 +4,29 @@
 \alias{genetrait}
 \title{Generate pseudo phenotypic values}
 \usage{
-genetrait(x, sample.sets = NULL, candidate = NULL, pos = NULL,
-  x.par = NULL, ZETA = NULL, x2 = NULL, num.qtn = 3,
-  weight = c(2, 1, 1), qtn.effect = rep("A", num.qtn), prop = 1,
-  polygene.weight = 1, polygene = TRUE, h2 = 0.6,
-  h.correction = FALSE, seed = NULL, plot = TRUE, saveAt = NULL,
-  subpop = NULL, return.all = FALSE, seed.env = TRUE)
+genetrait(
+  x,
+  sample.sets = NULL,
+  candidate = NULL,
+  pos = NULL,
+  x.par = NULL,
+  ZETA = NULL,
+  x2 = NULL,
+  num.qtn = 3,
+  weight = c(2, 1, 1),
+  qtn.effect = rep("A", num.qtn),
+  prop = 1,
+  polygene.weight = 1,
+  polygene = TRUE,
+  h2 = 0.6,
+  h.correction = FALSE,
+  seed = NULL,
+  plot = TRUE,
+  saveAt = NULL,
+  subpop = NULL,
+  return.all = FALSE,
+  seed.env = TRUE
+)
 }
 \arguments{
 \item{x}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
