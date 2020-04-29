@@ -1,11 +1,11 @@
 # RAINBOWR
 ###   Reliable Association INference By Optimizing Weights with R
 #### Author : Kosuke Hamazaki (hamazaki@ut-biomet.org)
-#### Date : 2019/03/25 (Last update: 2019/10/21)
+#### Date : 2019/03/25 (Last update: 2020/04/29)
 
 ## NOTE!!!!
 ### The older version of `RAINBOWR` is `RAINBOW`, which is available at https://github.com/KosukeHamazaki/RAINBOW.
-##### We changed the package name from `RAINBOW` to `RAINBOWR` because the original package name `RAINBOW` conflicted with the package `rainbow` (https://cran.r-project.org/web/packages/rainbow/index.html) when we submitted our package to `CRAN` (https://cran.r-project.org/).
+##### We changed the package name from `RAINBOW` to `RAINBOWR` because the original package name `RAINBOW` conflicted with the package `rainbow` (https://cran.r-project.org/package=rainbow) when we submitted our package to `CRAN` (https://cran.r-project.org/).
 
 ----------
 
@@ -38,7 +38,7 @@ Finally, `RAINBOWR` offers other useful functions.
 - `SS_GWAS` function to summarize GWAS results (only for simulation study)
 
 ## Installation
-The stable version of `RAINBOWR` is now available at the [CRAN (Comprehensive R Archive Network)](https://cran.r-project.org/web/packages/RAINBOWR/index.html). The latest version of `RAINBOWR` is also available at the `KosukeHamazaki/RAINBOWR` repository in the [`GitHub`](https://github.com/KosukeHamazaki/RAINBOWR), so please run the following code in the R console.
+The stable version of `RAINBOWR` is now available at the [CRAN (Comprehensive R Archive Network)](https://cran.r-project.org/package=RAINBOWR). The latest version of `RAINBOWR` is also available at the `KosukeHamazaki/RAINBOWR` repository in the [`GitHub`](https://github.com/KosukeHamazaki/RAINBOWR), so please run the following code in the R console.
 
 ``` r
 #### Stable version of RAINBOWR ####

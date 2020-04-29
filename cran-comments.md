@@ -365,3 +365,43 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 #### There were 1 NOTE:
 ##### * checking CRAN incoming feasibility ... NOTE
+
+
+
+
+
+
+
+# Apr 29, 2020, RAINBOWR version 0.1.17
+## Major changes
+- In version 0.1.16, the following NOTE was shown:
+
+ ```
+ Found the following (possibly) invalid URLs:
+     URL: https://cran.r-project.org/web/packages/RAINBOWR/index.html
+       From: inst/doc/RAINBOWR.html
+            README.md
+       Status: 200
+       Message: OK
+       CRAN URL not in canonical form
+    The canonical URL of the CRAN page for a package is
+      https://CRAN.R-project.org/package=pkgname
+ ```
+ 
+ Then, we fixed this by using the canonical URL of the CRAN package "https://cran.r-project.org/package=RAINBOWR" in `inst/doc/RAINBOWR.html` and `README.md` files.
+ 
+ 
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.0.0
+* win-builder release, R version 4.0.0
+* win-builder oldrelease, R version 3.6.3
+
+## R CMD check results
+The same results as [those of the previous version 0.1.9](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#r-cmd-check-results-1) were obtained as follows.
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs:
+
+#### There were 1 NOTE:
+##### * checking CRAN incoming feasibility ... NOTE

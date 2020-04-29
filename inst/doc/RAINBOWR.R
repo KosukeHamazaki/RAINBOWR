@@ -1,11 +1,11 @@
-## ---- include = FALSE----------------------------------------------------
+## ---- include = FALSE---------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.dpi=96
 )
 
-## ---- include=TRUE-------------------------------------------------------
+## ---- include=TRUE------------------------------------------------------------
 ### Import RAINBOWR
 require(RAINBOWR)
 
@@ -20,23 +20,23 @@ See(Rice_geno_score)
 See(Rice_geno_map)
 See(Rice_pheno)
 
-## ---- include=TRUE-------------------------------------------------------
+## ---- include=TRUE------------------------------------------------------------
 ### Select one trait for example
 trait.name <- "Flowering.time.at.Arkansas"
 y <- Rice_pheno[, trait.name, drop = FALSE]
 
-## ---- include=TRUE-------------------------------------------------------
+## ---- include=TRUE------------------------------------------------------------
 ### Remove SNPs whose MAF <= 0.05
 x.0 <- t(Rice_geno_score)
 MAF.cut.res <- MAF.cut(x.0 = x.0, map.0 = Rice_geno_map)
 x <- MAF.cut.res$x
 map <- MAF.cut.res$map
 
-## ---- include=TRUE-------------------------------------------------------
+## ---- include=TRUE------------------------------------------------------------
 ### Estimate genetic relationship matrix 
 K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
 
-## ---- include=TRUE-------------------------------------------------------
+## ---- include=TRUE------------------------------------------------------------
 ### Modify data
 modify.data.res <- modify.data(pheno.mat = y, geno.mat = x, map = map,
                                return.ZETA = TRUE, return.GWAS.format = TRUE)
@@ -49,19 +49,19 @@ See(pheno.GWAS)
 See(geno.GWAS)
 str(ZETA)
 
-## ---- include=TRUE-------------------------------------------------------
+## ---- include=TRUE------------------------------------------------------------
 ### Perform single-SNP GWAS
 normal.res <- RGWAS.normal(pheno = pheno.GWAS, geno = geno.GWAS,
                            plot.qq = FALSE, plot.Manhattan = FALSE,
                            ZETA = ZETA, n.PC = 4, P3D = TRUE, count = FALSE)
 See(normal.res$D)  ### Column 4 contains -log10(p) values for markers
 
-## ---- echo=FALSE---------------------------------------------------------
+## ---- echo=FALSE--------------------------------------------------------------
 qq(normal.res$D[, 4])
 manhattan(normal.res$D)
 ### Automatically draw Q-Q plot and Manhattan if you set plot.qq = TRUE and plot.Manhattan = TRUE.
 
-## ---- include=TRUE, message=FALSE----------------------------------------
+## ---- include=TRUE, message=FALSE---------------------------------------------
 ### Perform SNP-set GWAS (by regarding 11 SNPs as one SNP-set, first 300 SNPs)
 SNP_set.res <- RGWAS.multisnp(pheno = pheno.GWAS, geno = geno.GWAS[1:300, ], ZETA = ZETA,
                               plot.qq = FALSE, plot.Manhattan = FALSE, count = FALSE,
@@ -70,11 +70,11 @@ SNP_set.res <- RGWAS.multisnp(pheno = pheno.GWAS, geno = geno.GWAS[1:300, ], ZET
 
 See(SNP_set.res$D)  ### Column 4 contains -log10(p) values for markers
 
-## ---- echo=FALSE---------------------------------------------------------
+## ---- echo=FALSE--------------------------------------------------------------
 qq(SNP_set.res$D[, 4])
 manhattan(SNP_set.res$D)
 ### Automatically draw Q-Q plot and Manhattan if you set plot.qq = TRUE and plot.Manhattan = TRUE.
 
-## ---- include=TRUE, eval=FALSE-------------------------------------------
+## ---- include=TRUE, eval=FALSE------------------------------------------------
 #  RGWAS.menu()
 
