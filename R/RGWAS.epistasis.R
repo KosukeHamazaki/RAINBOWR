@@ -309,7 +309,7 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariat
       LL0 <- EMM.res0$LL
 
       spectral.res <- spectralG.cpp(ZETA = ZETA.now, X = X.now, weights = weights,
-                                    return.G = TRUE, return.SGS = TRUE)
+                                    return.G = TRUE, return.SGS = TRUE, spectral.method = "eigen")
       eigen.G <- spectral.res[[1]]
       eigen.SGS <- spectral.res[[2]]
     }else{
