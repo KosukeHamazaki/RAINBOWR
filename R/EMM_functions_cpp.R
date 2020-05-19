@@ -972,7 +972,8 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
 
   if(is.null(eigen.G)){
     if(nrow(Z) <= n.thres){
-      return.SGS <- TRUE
+      # return.SGS <- TRUE
+      return.SGS <-  FALSE
     }else{
       return.SGS <- FALSE
     }
