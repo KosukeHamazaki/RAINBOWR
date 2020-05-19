@@ -60,6 +60,7 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
   if((lz + lw) != length(weights)){
     stop("Weights should have the same length as ZETA!")
   }
+  stopifnot(all(weights >= 0))
 
   if(is.null(X)){
     X <- as.matrix(rep(1, n))
@@ -88,12 +89,12 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
 
       diag(K.now) <- diag(K.now) + 1e-06
       B.now <- try(chol(K.now), silent = TRUE)
-      if (class(B.now) == "try-error") {
+      if ("try-error" %in% class(B.now)) {
         stop("K not positive semi-definite.")
       }
 
       ZBt.now <- tcrossprod(Z.now, B.now)
-      ZBt <- cbind(ZBt, weights[i] * ZBt.now)
+      ZBt <- cbind(ZBt, sqrt(weights[i]) * ZBt.now)
     }
 
     if(!is.null(ZWs)){
@@ -102,14 +103,14 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
         Bt.now <- ZWs[[j]]$W %*% ZWs[[j]]$Gamma
 
         ZBt.now <- Z.now %*% Bt.now
-        ZBt <- cbind(ZBt, weights[lz + j] * ZBt.now)
+        ZBt <- cbind(ZBt, sqrt(weights[lz + j]) * ZBt.now)
       }
     }
     spectral_G.res <- try(spectralG_cholesky(zbt = ZBt, x = X, return_G = return.G,
                                              return_SGS = return.SGS),
                           silent = TRUE)
 
-    if(class(spectral_G.res) != "try-error"){
+    if(!("try-error" %in% class(spectral_G.res))){
 
       if(return.G){
         U0 <- spectral_G.res$U

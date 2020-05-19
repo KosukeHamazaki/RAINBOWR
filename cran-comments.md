@@ -405,3 +405,11 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 #### There were 1 NOTE:
 ##### * checking CRAN incoming feasibility ... NOTE
+
+
+
+
+# Mar 19, 2020, RAINBOWR version 0.1.18
+## Major changes
+- Important error about `spectralG.cpp` function was fixed thanks to Dr. Ishimori.
+- `class(obj) == "try-error"` was modified to `try-error %in% class(obj)` in order to deal with the cases where the obj has more than one class (to avoid warnings).

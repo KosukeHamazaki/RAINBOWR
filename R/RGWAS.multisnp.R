@@ -541,7 +541,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
         }
         all.scores[[test.effect.no]][, pheno.no] <- scores[, test.effect.no]
         threshold <- try(CalcThreshold(cbind(map2, scores[, test.effect.no]), sig.level = sig.level, method = method.thres), silent = TRUE)
-        if(class(threshold) == "try-error"){
+        if("try-error" %in% class(threshold)){
           threshold <- NA
         }
         thresholds[test.effect.no, pheno.no] <- threshold
@@ -626,7 +626,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
       }
       all.scores[, pheno.no] <- scores
       threshold <- try(CalcThreshold(cbind(map2, scores), sig.level = sig.level, method = method.thres), silent = TRUE)
-      if(class(threshold) == "try-error"){
+      if("try-error" %in% class(threshold)){
         threshold <- NA
       }
       thresholds[, pheno.no] <- threshold

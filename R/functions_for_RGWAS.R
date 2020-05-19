@@ -456,7 +456,7 @@ manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
 
 
   threshold <- try(CalcThreshold(input, sig.level = sig.level, method = method.thres), silent = TRUE)
-  if((class(threshold) != "try-error") & (!is.na(threshold))){
+  if((!("try-error" %in% class(threshold))) & (!is.na(threshold))){
     lines(x = c(0, x.max), y = rep(threshold, 2), lty = 2, lwd = lwd.thres)
   }
   axis(side = 1, at = chrom.mid, labels = chroms, cex.axis = cex.axis.x)
@@ -561,7 +561,7 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", cex = 1, pl
        cex.lab = cex.lab, cex.axis = cex.axis, cex = cex)
 
   threshold <- try(CalcThreshold(input, sig.level = sig.level, method = method.thres), silent = TRUE)
-  if((class(threshold) != "try-error") & (!is.na(threshold))){
+  if((!("try-error" %in% class(threshold))) & (!is.na(threshold))){
     lines(x = c(0, max(cum.pos)), y = rep(threshold, 2), lty = 2, lwd = lwd.thres)
   }
 }
@@ -789,7 +789,7 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
       beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
                                    v1 = v1, v2 = v2, p = p), silent = TRUE)
 
-      if(class(beta.stat) != "try-error"){
+      if(!("try-error" %in% class(beta.stat))){
         scores[i] <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
       }
     }
@@ -890,7 +890,7 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRU
       beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
                                    v1 = v1, v2 = v2, p = p), silent = TRUE)
 
-      if(class(beta.stat) != "try-error"){
+      if(!("try-error" %in% class(beta.stat))){
         scores.now <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
       } else {
         scores.now <- NA
@@ -1281,7 +1281,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
                                          gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
                                          eigen.SGS = eigen.SGS, eigen.G = eigen.G,
                                          REML = TRUE, pred = FALSE), silent = TRUE)
-          if(class(EMM.res2) == "try-error"){
+          if("try-error" %in% class(EMM.res2)){
             ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
             EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, optimizer = optimizer,
                                     REML = TRUE, pred = FALSE), silent = TRUE)
@@ -1292,7 +1292,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
                                   REML = TRUE, pred = FALSE), silent = TRUE)
         }
 
-        if(class(EMM.res2) != "try-error"){
+        if(!("try-error" %in% class(EMM.res2))){
           LL2s <- EMM.res2$LL
         }else{
           LL2s <- LL0
@@ -1395,7 +1395,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
                                              REML = TRUE, pred = FALSE), silent = TRUE)
             }
 
-            if(class(EMM.res2) == "try-error"){
+            if("try-error" %in% class(EMM.res2)){
               if(1 %in% test.no){
                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
                 ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
@@ -1447,7 +1447,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
             }
           }
 
-          if(class(EMM.res2) != "try-error"){
+          if(!("try-error" %in% class(EMM.res2))){
             LL2 <- EMM.res2$LL
           }else{
             LL2 <- LL0
@@ -1814,7 +1814,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
                                          gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
                                          eigen.SGS = eigen.SGS, eigen.G = eigen.G,
                                          REML = TRUE, pred = FALSE), silent = TRUE)
-          if(class(EMM.res2) == "try-error"){
+          if("try-error" %in% class(EMM.res2)){
             ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
             EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, optimizer = optimizer,
                                     REML = TRUE, pred = FALSE), silent = TRUE)
@@ -1825,7 +1825,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
                                   REML = TRUE, pred = FALSE), silent = TRUE)
         }
 
-        if(class(EMM.res2) != "try-error"){
+        if(!("try-error" %in% class(EMM.res2))){
           LL2s <- EMM.res2$LL
         }else{
           LL2s <- LL0
@@ -1928,7 +1928,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
                                              REML = TRUE, pred = FALSE), silent = TRUE)
             }
 
-            if(class(EMM.res2) == "try-error"){
+            if("try-error" %in% class(EMM.res2)){
               if(1 %in% test.no){
                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
                 ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
@@ -1980,7 +1980,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
             }
           }
 
-          if(class(EMM.res2) != "try-error"){
+          if(!("try-error" %in% class(EMM.res2))){
             LL2 <- EMM.res2$LL
           }else{
             LL2 <- LL0
@@ -3438,7 +3438,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                                    REML = TRUE, pred = FALSE), silent = TRUE)
       }
 
-      if((class(EMM.res.null) != "try-error") & (class(EMM.res.alt) != "try-error")){
+      if(!("try-error" %in% c(class(EMM.res.null), class(EMM.res.alt)))){
         LL.null <- EMM.res.null$LL
         LL.alt <- EMM.res.alt$LL
 
@@ -3988,7 +3988,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                                         gammas.diag = gammas.diag, Gu = Gu, Ge = Ge,
                                         P0 = P0, chi0.mixture = chi0.mixture), silent = TRUE)
 
-      if((class(score.null) != "try-error") & (class(score.alt) != "try-error")){
+      if(!("try-error" %in% c(class(score.null), class(score.alt)))){
         stat.null <- qchisq(p = 10 ^ (-score.null) / (1 - chi0.mixture), df = df, lower.tail = FALSE)
         stat.alt <- qchisq(p = 10 ^ (-score.alt) / (1 - chi0.mixture), df = df, lower.tail = FALSE)
         deviance <- stat.alt - stat.null
