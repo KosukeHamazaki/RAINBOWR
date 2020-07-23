@@ -53,7 +53,7 @@ ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D))
 For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.}
 
 \item{x2}{A genotype matrix to calculate additive relationship matrix when Z.ETA = NULL.
-If Z.ETA = NULL & x2 = NULL, A.mat(x) will be calculated as kernel matrix.}
+If Z.ETA = NULL & x2 = NULL, calcGRM(x) will be calculated as kernel matrix.}
 
 \item{num.qtn}{The number of QTNs}
 

@@ -146,8 +146,8 @@ where \eqn{\beta} is a vector of fixed effects and \eqn{u} is a vector of random
   x <- MAF.cut.res$x
   map <- MAF.cut.res$map
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   ### Modify data
   modify.res <- modify.data(pheno.mat = y, geno.mat = x, return.ZETA = TRUE)
@@ -191,8 +191,8 @@ where \eqn{\beta} is a vector of fixed effects and \eqn{u} is a vector of random
   x <- MAF.cut.res$x
   map <- MAF.cut.res$map
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   ### Modify data
   modify.res <- modify.data(pheno.mat = y, geno.mat = x, return.ZETA = TRUE)

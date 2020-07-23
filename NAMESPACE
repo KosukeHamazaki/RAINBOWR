@@ -2,6 +2,7 @@
 useDynLib(RAINBOWR)
 
 export(CalcThreshold)
+export(calcGRM)
 export(cumsumPos)
 export(estPhylo)
 export(EM3.cpp)
@@ -50,6 +51,7 @@ import(tcltk)
 import(pbmcapply)
 import(optimx)
 import(ape)
+import(stringr)
 importFrom("grDevices", "dev.cur", "dev.new", "dev.next", "dev.off",
             "dev.set", "png", "rainbow")
 importFrom("graphics", "axis", "boxplot", "legend", "lines", "par",

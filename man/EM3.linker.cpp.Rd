@@ -128,8 +128,8 @@ This function can be used only when the kernels other than genomic relationship 
   map <- MAF.cut.res$map
   
   
-  ### Estimate additive genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate additive genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   
   ### Modify data
@@ -186,8 +186,8 @@ This function can be used only when the kernels other than genomic relationship 
   map <- MAF.cut.res$map
   
   
-  ### Estimate additive genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate additive genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   
   ### Modify data

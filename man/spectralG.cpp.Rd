@@ -21,7 +21,7 @@ spectralG.cpp(
 For example, ZETA = list(A = list(Z = Z, K = K))
 Please set names of list "Z" and "K"!}
 
-\item{ZWs}{A list of additional linear kernels other than genetic relationship matrix.
+\item{ZWs}{A list of additional linear kernels other than genomic relationship matrix (GRM).
 We utilize this argument in RGWAS.multisnp function, so you can ignore this.}
 
 \item{X}{\eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}

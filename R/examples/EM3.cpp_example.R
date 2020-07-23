@@ -20,8 +20,8 @@
   map <- MAF.cut.res$map
   
   
-  ### Estimate additive genetic relationship matrix & epistatic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate additive genomic relationship matrix (GRM) & epistatic relationship matrix
+  K.A <- calcGRM(genoMat = x)
   K.AA <- K.A * K.A   ### additive x additive epistatic effects
   
   
@@ -71,8 +71,8 @@
   map <- MAF.cut.res$map
   
   
-  ### Estimate additive genetic relationship matrix & epistatic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate additive genomic relationship matrix (GRM) & epistatic relationship matrix
+  K.A <- calcGRM(genoMat = x) 
   K.AA <- K.A * K.A   ### additive x additive epistatic effects
   
   

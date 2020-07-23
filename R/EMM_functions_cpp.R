@@ -5,7 +5,7 @@
 #' @param ZETA A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param ZWs A list of additional linear kernels other than genetic relationship matrix.
+#' @param ZWs A list of additional linear kernels other than genomic relationship matrix (GRM).
 #' We utilize this argument in RGWAS.multisnp function, so you can ignore this.
 #' @param X \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param weights If the length of ZETA >= 2, you should assign the ratio of variance components to this argument.

@@ -111,11 +111,11 @@ x <- MAF.cut.res$x
 map <- MAF.cut.res$map
 ```
 
-Next, we estimate additive genetic relationship matrix by using `rrBLUP` package.
+Next, we estimate additive genomic relationship matrix (GRM) by using `rrBLUP` package.
 
 ``` r
-### Estimate genetic relationship matrix 
-K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+### Estimate genomic relationship matrix (GRM) 
+K.A <- calcGRM(genoMat = x)
 ```
 
 Next, we modify these data into the GWAS format of `RAINBOWR` by `modify.data` function.
@@ -133,7 +133,7 @@ See(pheno.GWAS)
 See(geno.GWAS)
 str(ZETA)
 ```
-`ZETA` is a list of genetic relationship matrix and its design matrix.
+`ZETA` is a list of genomic relationship matrix (GRM) and its design matrix.
 
 Finally, we can perform `GWAS` using these data.
 First, we perform single-SNP GWAS by `RGWAS.normal` function as follows.

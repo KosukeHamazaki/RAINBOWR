@@ -226,8 +226,8 @@ Perform normal GWAS (genome-wide association studies) first, then check epistati
   map <- MAF.cut.res$map
   
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x) 
   
   
   ### Modify data
@@ -275,8 +275,8 @@ Perform normal GWAS (genome-wide association studies) first, then check epistati
   map <- MAF.cut.res$map
   
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x) 
   
   
   ### Modify data

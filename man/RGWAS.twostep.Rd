@@ -122,7 +122,7 @@ When P3D = FALSE, variance components are estimated by REML for each marker sepa
 \describe{
 \item{"gaussian"}{It is the default method. Gaussian kernel is calculated by distance matrix.}
 \item{"exponential"}{When this method is selected, exponential kernel is calculated by distance matrix.}
-\item{"linear"}{When this method is selected, linear kernel is calculated by A.mat.}
+\item{"linear"}{When this method is selected, linear kernel is calculated by NOIA methods for additive GRM.}
 }
 So local genomic relation matrix is regarded as kernel.}
 
@@ -263,8 +263,8 @@ Perform normal GWAS (genome-wide association studies) first, then perform SNP-se
   map <- MAF.cut.res$map
   
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   
   ### Modify data
@@ -316,8 +316,8 @@ Perform normal GWAS (genome-wide association studies) first, then perform SNP-se
   map <- MAF.cut.res$map
   
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   
   ### Modify data

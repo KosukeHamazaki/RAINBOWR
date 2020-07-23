@@ -26,7 +26,7 @@ estPhylo(
   groupingMethod = "kmedoids",
   nGrp = 4,
   nIterClustering = 100,
-  kernelType = "A.mat",
+  kernelType = "addNOIA",
   saveName = NULL,
   saveStyle = "png",
   pchBase = c(1, 16),
@@ -106,7 +106,8 @@ This argument specifies the number of classification performed by the function.}
 
 \item{kernelType}{In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
 This argument specifies the method to compute similarility matrix: 
-If this argument is `A.mat`, then the `A.mat` function in the `rrBLUP` package will be used,
+If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
+then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
 and if this argument is `dist`, the gaussian kernel will be computed from marker genotype.}
 
 \item{saveName}{When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.

@@ -106,7 +106,7 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
           }
           
           start.other <- 1
-          end.other <- narray
+          end.other <- pmin(rep(narray, n.array - 2), dim(data)[-c(1:2)])
           
           if (n.array == 1) {
             data.show <- data[start.row:end.row, drop = drop]
@@ -289,7 +289,8 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' This argument specifies the number of classification performed by the function.
 #' @param kernelType In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
 #' This argument specifies the method to compute similarility matrix: 
-#' If this argument is `A.mat`, then the `A.mat` function in the `rrBLUP` package will be used,
+#' If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
+#' then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
 #' and if this argument is `dist`, the gaussian kernel will be computed from marker genotype.
 #' @param saveName When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
 #' When saveName = NULL, the plot is not saved.
@@ -324,7 +325,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      chi2Test = TRUE, thresChi2Test = 5e-2,  plotTree = TRUE,
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
                      subpopInfo = NULL, groupingMethod = "kmedoids",
-                     nGrp = 4, nIterClustering = 100, kernelType = "A.mat",
+                     nGrp = 4, nIterClustering = 100, kernelType = "addNOIA",
                      saveName = NULL, saveStyle = "png",
                      pchBase = c(1, 16), colNodeBase = c(2, 4),
                      colTipBase = c(3, 5, 6, 7), cexMax = 2,
@@ -337,7 +338,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     lineNames <- rownames(M)
     
     if (is.null(ZETA)) {
-      K <- A.mat(M)
+      K <- calcGRM(M)
       Z <- diag(nLine)
       
       rownames(Z) <- colnames(Z) <- lineNames
@@ -514,7 +515,9 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     if (kernelType == "dist") {
       ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
     } else {
-      ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = A.mat(blockInterest))))
+      ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, 
+                                          K = calcGRM(blockInterest,
+                                                      methodGRM = kernelType))))
     }
     if (verbose) {
       print("Now estimating genotypic values...")
@@ -736,7 +739,9 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       if (kernelType == "dist") {
         ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
       } else {
-        ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = A.mat(blockInterestNow))))
+        ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart,
+                                            K = calcGRM(blockInterestNow,
+                                                        methodGRM = kernelType))))
       }
       if (verbose) {
         print("Now estimating genotypic values...")

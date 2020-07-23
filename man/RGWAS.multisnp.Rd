@@ -91,7 +91,7 @@ If a marker has a MAF less than min.MAF, it is assigned a zero score.}
 \describe{
 \item{"gaussian"}{It is the default method. Gaussian kernel is calculated by distance matrix.}
 \item{"exponential"}{When this method is selected, exponential kernel is calculated by distance matrix.}
-\item{"linear"}{When this method is selected, linear kernel is calculated by A.mat.}
+\item{"linear"}{When this method is selected, linear kernel is calculated by NOIA methods for additive GRM.}
 }
 So local genomic relation matrix is regarded as kernel.}
 
@@ -253,8 +253,8 @@ Then it performs the score test by using the fact that the score statistic follo
   map <- MAF.cut.res$map
   
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   
   ### Modify data
@@ -303,8 +303,8 @@ Then it performs the score test by using the fact that the score statistic follo
   map <- MAF.cut.res$map
   
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   
   ### Modify data

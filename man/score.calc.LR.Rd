@@ -70,7 +70,7 @@ the second and third column is the chromosome amd map position, and the forth co
 \describe{
 \item{"gaussian"}{It is the default method. Gaussian kernel is calculated by distance matrix.}
 \item{"exponential"}{When this method is selected, exponential kernel is calculated by distance matrix.}
-\item{"linear"}{When this method is selected, linear kernel is calculated by A.mat.}
+\item{"linear"}{When this method is selected, linear kernel is calculated by NOIA methods for additive GRM.}
 }}
 
 \item{kernel.h}{The hyper-parameter for gaussian or exponential kernel.

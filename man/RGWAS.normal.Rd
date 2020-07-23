@@ -197,8 +197,8 @@ the F distribution with the degree of freedom (\eqn{f},\eqn{n - p}).
   map <- MAF.cut.res$map
   
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   
   ### Modify data
@@ -244,8 +244,8 @@ the F distribution with the degree of freedom (\eqn{f},\eqn{n - p}).
   map <- MAF.cut.res$map
   
   
-  ### Estimate genetic relationship matrix
-  K.A <- rrBLUP::A.mat(x) ### rrBLUP package can be installed by install.packages("rrBLUP")
+  ### Estimate genomic relationship matrix (GRM)
+  K.A <- calcGRM(genoMat = x)
   
   
   ### Modify data

@@ -27,7 +27,7 @@
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
 #' @param x2 A genotype matrix to calculate additive relationship matrix when Z.ETA = NULL.
-#' If Z.ETA = NULL & x2 = NULL, A.mat(x) will be calculated as kernel matrix.
+#' If Z.ETA = NULL & x2 = NULL, calcGRM(x) will be calculated as kernel matrix.
 #' @param num.qtn The number of QTNs
 #' @param weight The weights for each QTN by their standard deviations. Negative value is also allowed.
 #' @param qtn.effect Additive of dominance for each marker effect. This argument should be the same length as num.qtn.
@@ -74,9 +74,9 @@ genetrait <- function(x, sample.sets = NULL, candidate = NULL, pos = NULL, x.par
 
   if (is.null(ZETA)) {
     if (is.null(x2)) {
-      K <- rrBLUP::A.mat(x)
+      K <- calcGRM(genoMat = x)
     } else {
-      K <- rrBLUP::A.mat(x2)
+      K <- calcGRM(genoMat = x2)
     }
     
     Z <- diag(nrow(K))
