@@ -436,3 +436,12 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 #### There were no WARNINGs.
 
 #### There were no NOTEs.
+
+
+
+
+# Aug 01, 2020, RAINBOWR version 0.1.20
+## Major changes
+- We added the `estNetwork` function to estimate and plot haplotype network. We also added `pegas` package in the `NAMESPACE` and `DESCRIPTION` files because this package is used in the `estNetwork` function.
+
+- We fixed some parts related to the estimation of haplotype effects in the `estPhylo` function. We also added the optimization part both in the `estPhylo` & `estNetwork` functions.
