@@ -801,22 +801,22 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
                                               rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
                                        "Node (gv:+)", "Node (gv:-)"),
-                 col = c(rep(sort(unique(colTip)), each = 2), colNodeBase),
+                 col = c(rep(colTipBase, each = 2), colNodeBase),
                  pch = rep(pchBase, nGrp + 1))
         } else {
           legend("topleft", legend = c("Tip (gv:+)", "Tip (gv:-)",
                                        "Node (gv:+)", "Node (gv:-)"),
-                 col = c(rep(sort(unique(colTip)), each = 2), colNodeBase),
+                 col = c(rep(colTipBase, each = 2), colNodeBase),
                  pch = rep(pchBase, 2))
         }
       } else {
         if (!is.null(subpopInfo)) {
           legend("topleft", legend = unique(subpopInfo),
-                 col = unique(colTip),
+                 col = colTipBase,
                  pch = pchTip)
         } else {
           legend("topleft", legend = "Tip",
-                 col = unique(colTip),
+                 col = colTipBase,
                  pch = pchTip)
         }   
       }
@@ -1231,7 +1231,13 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     
     namesBlockInterestComp <- rownames(blockInterestUniqueSorted)[matchString]
     nComp <- sum(is.na(namesBlockInterestComp))
-    compNames <- paste0("c", 1:nComp)
+    if (nComp >= 1){
+      plotComp <- TRUE
+      compNames <- paste0("c", 1:nComp)
+    } else {
+      plotComp <- FALSE
+      compNames <- NULL
+    }
     namesBlockInterestComp[is.na(namesBlockInterestComp)] <- compNames
     
     rownames(blockInterestCompSorted) <- namesBlockInterestComp
@@ -1373,23 +1379,19 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       minuslog10p <- - log10(pVal)
       
       
-      if (EM3Res$weights[2] <= 1e-06) {
+      if ((EM3Res$weights[2] <= 1e-06) | (!plotComp)) {
         warning("This block seems to have no effect on phenotype...")
-        plotComp <- FALSE
-        
         gvEstTotal <- rep(NA, nTotal)
         names(gvEstTotal) <- namesBlockInterestComp
         gvEstTotal[haploNames] <- gvEst
         
-        cexHaplo <- cexComp <- cexMax / 2
+        cexHaplo <- cexMax / 2
+        cexComp <- cexMax / 4
         pchHaplo <- pchComp <- pchBase[2]
         colComp <- colCompBase[2]
         EMMRes <- NA
         hOpt2 <- NA
       } else {
-        plotComp <- TRUE
-        
-        
         ZgKernel <- diag(nTotal)
         rownames(ZgKernel) <- colnames(ZgKernel) <- namesBlockInterestComp
         
@@ -1467,12 +1469,11 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
       }
     } else {
-      plotComp <- FALSE
-      
       gvEstTotal <- rep(NA, nTotal)
       minuslog10p <- NA
       
-      cexHaplo <- cexComp <- cexMax / 2
+      cexHaplo <- cexMax / 2
+      cexComp <- cexMax / 4
       pchHaplo <- pchComp <- pchBase[2]
       colComp <- colCompBase[2]
       EM3Res <- EMMRes <- EMMRes0 <- NA
@@ -1571,22 +1572,22 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
                                               rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
                                        "Complement (gv:+)", "Complement (gv:-)"),
-                 col = c(rep(sort(unique(colHaplo)), each = 2), colCompBase),
+                 col = c(rep(colHaploBase, each = 2), colCompBase),
                  pch = rep(pchBase, nGrp + 1))
         } else {
           legend("topleft", legend = c("Haplotype (gv:+)", "Haplotype (gv:-)",
                                        "Complement (gv:+)", "Complement (gv:-)"),
-                 col = c(rep(sort(unique(colHaplo)), each = 2), colNodeBase),
+                 col = c(rep(colHaploBase, each = 2), colCompBase),
                  pch = rep(pchBase, 2))
         }
       } else {
         if (!is.null(subpopInfo)) {
           legend("topleft", legend = unique(subpopInfo),
-                 col = unique(colHaplo),
+                 col = colHaploBase,
                  pch = pchHaplo)
         } else {
           legend("topleft", legend = "Haplotype",
-                 col = unique(colHaplo),
+                 col = colHaploBase,
                  pch = pchHaplo)
         }   
       }
