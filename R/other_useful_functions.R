@@ -1470,6 +1470,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
         } else {
           gvEstTotal <- gvEst
+          names(gvEstTotal) <- haploNames
+          
           gvCentered <- gvEstTotal - mean(gvEstTotal)
           gvScaled <- gvCentered / sd(gvCentered)
           gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
