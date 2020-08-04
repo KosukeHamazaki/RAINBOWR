@@ -1381,8 +1381,9 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         names(gvEstTotal) <- namesBlockInterestComp
         gvEstTotal[haploNames] <- gvEst
         
-        cexHaplo <- cexMax / 2
-        pchHaplo <- pchBase[2]
+        cexHaplo <- cexComp <- cexMax / 2
+        pchHaplo <- pchComp <- pchBase[2]
+        colComp <- colCompBase[2]
         EMMRes <- NA
         hOpt2 <- NA
       } else {
@@ -1471,8 +1472,9 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       gvEstTotal <- rep(NA, nTotal)
       minuslog10p <- NA
       
-      cexHaplo <- cexMax / 2
-      pchHaplo <- pchBase[2]
+      cexHaplo <- cexComp <- cexMax / 2
+      pchHaplo <- pchComp <- pchBase[2]
+      colComp <- colCompBase[2]
       EM3Res <- EMMRes <- EMMRes0 <- NA
       hOpt <- hOpt2 <- NA
     }
@@ -1531,7 +1533,9 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
            col = colHaplo,
            pch = pchHaplo, cex = cexHaplo,
            xlab = paste0("MDS", plotWhichMDS[1]),
-           ylab = paste0("MDS", plotWhichMDS[2]))
+           ylab = paste0("MDS", plotWhichMDS[2]),
+           xlim = range(mdsResComp$points),
+           ylim = range(mdsResComp$points))
       
       if (plotComp) {
         points(x = mdsResComp$points[compNames, plotWhichMDS[1]],
