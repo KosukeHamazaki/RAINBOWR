@@ -1534,8 +1534,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
            pch = pchHaplo, cex = cexHaplo,
            xlab = paste0("MDS", plotWhichMDS[1]),
            ylab = paste0("MDS", plotWhichMDS[2]),
-           xlim = range(mdsResComp$points),
-           ylim = range(mdsResComp$points))
+           xlim = range(mdsResComp$points[, plotWhichMDS[1]]),
+           ylim = range(mdsResComp$points[, plotWhichMDS[2]]))
       
       if (plotComp) {
         points(x = mdsResComp$points[compNames, plotWhichMDS[1]],
