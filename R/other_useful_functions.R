@@ -1379,7 +1379,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       minuslog10p <- - log10(pVal)
       
       
-      if ((EM3Res$weights[2] <= 1e-06) | (!plotComp)) {
+      if ((EM3Res$weights[2] <= 1e-06)) {
         warning("This block seems to have no effect on phenotype...")
         gvEstTotal <- rep(NA, nTotal)
         names(gvEstTotal) <- namesBlockInterestComp
@@ -1392,81 +1392,97 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         EMMRes <- NA
         hOpt2 <- NA
       } else {
-        ZgKernel <- diag(nTotal)
-        rownames(ZgKernel) <- colnames(ZgKernel) <- namesBlockInterestComp
-        
-        gvEst2 <- matrix(rep(NA, nTotal))
-        rownames(gvEst2) <- namesBlockInterestComp
-        gvEst2[haploNames, ] <- gvEst
-        if (hOpt2 == "optimized") {  
+        if (plotComp){
+          ZgKernel <- diag(nTotal)
+          rownames(ZgKernel) <- colnames(ZgKernel) <- namesBlockInterestComp
           
-          if (verbose) {
-            print("Now optimizing hyperparameter for estimating complemented haplotype effects...")
-          }
-          
-          maximizeFunc2 <- function(h) {
-            gKernel <- expm::expm(- h * L)
-            ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
+          gvEst2 <- matrix(rep(NA, nTotal))
+          rownames(gvEst2) <- namesBlockInterestComp
+          gvEst2[haploNames, ] <- gvEst
+          if (hOpt2 == "optimized") {  
             
-            EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-            LL <- EMMRes$LL
-            
-            return(-LL)
-          }
-          
-          
-          if (length(hStarts) >= 2) {
             if (verbose) {
-              solnList2 <- pbmcapply::pbmclapply(X = hStarts,
-                                                 FUN = function(h) {
-                                                   soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                                  lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                   
-                                                   return(soln)
-                                                 }, mc.cores = nCores)
-            } else {
-              solnList2 <- parallel::pblapply(X = hStarts,
-                                              FUN = function(h) {
-                                                soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                               lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                
-                                                return(soln)
-                                              }, mc.cores = nCores)
+              print("Now optimizing hyperparameter for estimating complemented haplotype effects...")
             }
-            solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
-            soln2 <- solnList2[[solnNo2]]
-          } else {
-            soln2 <- nlminb(start = hStarts[[1]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                            lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+            
+            maximizeFunc2 <- function(h) {
+              gKernel <- expm::expm(- h * L)
+              ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
+              
+              EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
+              LL <- EMMRes$LL
+              
+              return(-LL)
+            }
+            
+            
+            if (length(hStarts) >= 2) {
+              if (verbose) {
+                solnList2 <- pbmcapply::pbmclapply(X = hStarts,
+                                                   FUN = function(h) {
+                                                     soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                    lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                     
+                                                     return(soln)
+                                                   }, mc.cores = nCores)
+              } else {
+                solnList2 <- parallel::pblapply(X = hStarts,
+                                                FUN = function(h) {
+                                                  soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                 lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                  
+                                                  return(soln)
+                                                }, mc.cores = nCores)
+              }
+              solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
+              soln2 <- solnList2[[solnNo2]]
+            } else {
+              soln2 <- nlminb(start = hStarts[[1]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                              lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+            }
+            
+            hOpt2 <- soln2$par
+          } else if (hOpt2 == "tuned") {
+            hOpt2 <- h
+          } else if (!is.numeric(hOpt2)) {
+            stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
           }
           
-          hOpt2 <- soln2$par
-        } else if (hOpt2 == "tuned") {
-          hOpt2 <- h
-        } else if (!is.numeric(hOpt2)) {
-          stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
+          gKernel2 <- expm::expm(- hOpt2 * L)
+          ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel2))
+          
+          EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
+          
+          u <- EMMRes$u
+          names(u) <- namesBlockInterestComp
+          gvPlus <- u[compNames] + EMMRes$beta
+          gvEstTotal <- gvEst2[, 1]
+          gvEstTotal[compNames] <- gvPlus
+          gvCentered <- gvEstTotal - mean(gvEstTotal)
+          gvScaled <- gvCentered / sd(gvCentered)
+          gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
+          
+          cexComp <- abs(gvScaled4Cex)[compNames]
+          pchComp <- ifelse(gvScaled[compNames] > 0, pchBase[1], pchBase[2])
+          colComp <- ifelse(gvScaled[compNames] > 0, colCompBase[1], colCompBase[2])
+          
+          cexHaplo <- abs(gvScaled4Cex)[haploNames]
+          pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
+        } else {
+          gvEstTotal <- gvEst
+          gvCentered <- gvEstTotal - mean(gvEstTotal)
+          gvScaled <- gvCentered / sd(gvCentered)
+          gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
+          
+          cexHaplo <- abs(gvScaled4Cex)[haploNames]
+          pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
+          
+          
+          cexComp <- cexMax / 4
+          colComp <- colCompBase[2]
+          EMMRes <- NA
+          hOpt2 <- NA
         }
-        
-        gKernel2 <- expm::expm(- hOpt2 * L)
-        ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel2))
-        
-        EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-        
-        u <- EMMRes$u
-        names(u) <- namesBlockInterestComp
-        gvPlus <- u[compNames] + EMMRes$beta
-        gvEstTotal <- gvEst2[, 1]
-        gvEstTotal[compNames] <- gvPlus
-        gvCentered <- gvEstTotal - mean(gvEstTotal)
-        gvScaled <- gvCentered / sd(gvCentered)
-        gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
-        
-        cexComp <- abs(gvScaled4Cex)[compNames]
-        pchComp <- ifelse(gvScaled[compNames] > 0, pchBase[1], pchBase[2])
-        colComp <- ifelse(gvScaled[compNames] > 0, colCompBase[1], colCompBase[2])
-        
-        cexHaplo <- abs(gvScaled4Cex)[haploNames]
-        pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
       }
     } else {
       gvEstTotal <- rep(NA, nTotal)
