@@ -911,8 +911,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' If NULL, the distance matrix will be computed in this function.
 #' @param distMethod You can choose the method to calculate distance between accessions.
 #' This argument corresponds to the `method` argument in the `dist` function.
-#' @param evolutionDist If TRUE, the evolution distance will be used instead of the pure distance.
-#' The `distMat` will be converted to the distance matrix by the evolution distance.
+#' @param complementHaplo 
 #' @param subpopInfo The information of subpopulations. This argument should be a vector of factor. 
 #' @param groupingMethod If `subpopInfo` argument is NULL, this function estimates subpopulation information from marker genotype.
 #' You can choose the grouping method from `kmeans`, `kmedoids`, and `hclust`. 
@@ -993,7 +992,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                        indexRegion = 1:10, chrInterest = NULL, posRegion = NULL, blockName = NULL,
                        pheno = NULL, geno = NULL, ZETA = NULL, 
                        chi2Test = TRUE, thresChi2Test = 5e-2,  plotNetwork = TRUE,
-                       distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
+                       distMat = NULL, distMethod = "manhattan", complementHaplo = TRUE,
                        subpopInfo = NULL, groupingMethod = "kmedoids",
                        nGrp = 4, nIterClustering = 100, iterRmst = 100,
                        networkMethod = "rmst", autogamous = FALSE, kernelType = "addNOIA",
@@ -1183,40 +1182,42 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       stop("We only offer 'rmst', 'mst', and 'msn' for `networkMethod`!!")
     }
     
-    
-    blockInterestComp <- do.call(
-      what = rbind,
-      args = sapply(1:nrow(mstResAll), function(eachComb) {
-        
-        blocksNow <- blockInterestUniqueSorted[mstResAll[eachComb, 1:2], ]
-        diffBlocks <- diff(blocksNow)
-        whichDiff <- which(diffBlocks != 0)
-        nDiff <- length(whichDiff)
-        
-        blocksPart <- blocksNow[, whichDiff, drop = FALSE]
-        gridList <- lapply(apply(blocksPart, 2, function(eachMrk) {
-          gridCand <- min(eachMrk):max(eachMrk)
+    if (complementHaplo) {
+      blockInterestComp <- do.call(
+        what = rbind,
+        args = sapply(1:nrow(mstResAll), function(eachComb) {
           
-          if (autogamous) {
-            gridCand <- gridCand[gridCand != 0]
-          } 
+          blocksNow <- blockInterestUniqueSorted[mstResAll[eachComb, 1:2], ]
+          diffBlocks <- diff(blocksNow)
+          whichDiff <- which(diffBlocks != 0)
+          nDiff <- length(whichDiff)
           
-          return(list(gridCand))
-        }), function(x) x[[1]])
-        newBlocksPart <- as.matrix(expand.grid(gridList))
-        nNewBlocks <- nrow(newBlocksPart)
-        
-        newBlocks <- matrix(data = rep(blocksNow[1, ], nNewBlocks),
-                            nrow = nNewBlocks,
-                            ncol = ncol(blocksNow),
-                            byrow = TRUE)
-        colnames(newBlocks) <- colnames(blocksNow)
-        newBlocks[, whichDiff] <- newBlocksPart
-        
-        return(newBlocks)
-      }, simplify = FALSE)
-    )
-    
+          blocksPart <- blocksNow[, whichDiff, drop = FALSE]
+          gridList <- lapply(apply(blocksPart, 2, function(eachMrk) {
+            gridCand <- min(eachMrk):max(eachMrk)
+            
+            if (autogamous) {
+              gridCand <- gridCand[gridCand != 0]
+            } 
+            
+            return(list(gridCand))
+          }), function(x) x[[1]])
+          newBlocksPart <- as.matrix(expand.grid(gridList))
+          nNewBlocks <- nrow(newBlocksPart)
+          
+          newBlocks <- matrix(data = rep(blocksNow[1, ], nNewBlocks),
+                              nrow = nNewBlocks,
+                              ncol = ncol(blocksNow),
+                              byrow = TRUE)
+          colnames(newBlocks) <- colnames(blocksNow)
+          newBlocks[, whichDiff] <- newBlocksPart
+          
+          return(newBlocks)
+        }, simplify = FALSE)
+      )
+    } else {
+      blockInterestComp <- blockInterestUniqueSorted
+    }
     
     blockInterestComp <- blockInterestComp[!duplicated(blockInterestComp), ]
     stringBlockComp <- apply(blockInterestComp, 1, 
@@ -1232,10 +1233,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     namesBlockInterestComp <- rownames(blockInterestUniqueSorted)[matchString]
     nComp <- sum(is.na(namesBlockInterestComp))
     if (nComp >= 1){
-      plotComp <- TRUE
+      existComp <- TRUE
       compNames <- paste0("c", 1:nComp)
     } else {
-      plotComp <- FALSE
+      existComp <- FALSE
       compNames <- NULL
     }
     namesBlockInterestComp[is.na(namesBlockInterestComp)] <- compNames
@@ -1392,7 +1393,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         EMMRes <- NA
         hOpt2 <- NA
       } else {
-        if (plotComp){
+        if (existComp){
           ZgKernel <- diag(nTotal)
           rownames(ZgKernel) <- colnames(ZgKernel) <- namesBlockInterestComp
           
@@ -1556,7 +1557,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
            xlim = range(mdsResComp$points[, plotWhichMDS[1]]),
            ylim = range(mdsResComp$points[, plotWhichMDS[2]]))
       
-      if (plotComp) {
+      if (existComp) {
         points(x = mdsResComp$points[compNames, plotWhichMDS[1]],
                y = mdsResComp$points[compNames, plotWhichMDS[2]],
                col = colComp,
@@ -1585,7 +1586,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       title(main = paste0(paste(c(colnames(pheno)[2], 
                                   blockName), collapse = "_"),
                           " (-log10p: ", round(minuslog10p, 2), ")"))
-      if (plotComp) {
+      if (existComp) {
         if (!is.null(subpopInfo)) {
           legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
                                               rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
