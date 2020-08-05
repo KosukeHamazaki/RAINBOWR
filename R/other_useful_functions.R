@@ -312,7 +312,8 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' @param colNodeBase A vector of two integers or chracters specifying color of nodes for the positive and negative genotypic values respectively.
 #' @param colTipBase A vector of integers or chracters specifying color of tips for the positive and negative genotypic values respectively.
 #' The length of the vector should equal to the number of subpopulations.
-#' @param cexMax A numeric specifying the point size of the plot.
+#' @param cexMax A numeric specifying the maximum point size of the plot.
+#' @param cexMin A numeric specifying the minimum point size of the plot.
 #' @param edgeColoring If TRUE, the edge branch of phylogenetic tree wiil be colored.
 #' @param tipLabel If TRUE, lavels for tips will be shown.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
@@ -352,7 +353,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
                      saveName = NULL, saveStyle = "png",
                      pchBase = c(1, 16), colNodeBase = c(2, 4),
-                     colTipBase = c(3, 5, 6, 7), cexMax = 2,
+                     colTipBase = c(3, 5, 6, 7), cexMax = 2, cexMin = 0.2,
                      edgeColoring = TRUE, tipLabel = TRUE, verbose = TRUE) {
   if (!is.null(geno)) {
     M <- t(geno[, -c(1:3)])
@@ -712,13 +713,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         names(gvEstTotal) <- rownames(distNodes)
         gvCentered <- gvEstTotal - mean(gvEstTotal)
         gvScaled <- gvCentered / sd(gvCentered)
-        gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
+        gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
         
-        cexNode <- abs(gvScaled4Cex)[(nHaplo + 1):nTotal]
+        cexNode <- (abs(gvScaled4Cex) + cexMin)[(nHaplo + 1):nTotal]
         pchNode <- ifelse(gvScaled[(nHaplo + 1):nTotal] > 0, pchBase[1], pchBase[2])
         colNode <- ifelse(gvScaled[(nHaplo + 1):nTotal] > 0, colNodeBase[1], colNodeBase[2])
         
-        cexTip <- abs(gvScaled4Cex)[1:nHaplo]
+        cexTip <- (abs(gvScaled4Cex) + cexMin)[1:nHaplo]
         pchTip <- ifelse(gvScaled[1:nHaplo] > 0, pchBase[1], pchBase[2])
       }
     } else {
@@ -911,7 +912,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' If NULL, the distance matrix will be computed in this function.
 #' @param distMethod You can choose the method to calculate distance between accessions.
 #' This argument corresponds to the `method` argument in the `dist` function.
-#' @param complementHaplo 
+#' @param complementHaplo complement haplotypes or not
 #' @param subpopInfo The information of subpopulations. This argument should be a vector of factor. 
 #' @param groupingMethod If `subpopInfo` argument is NULL, this function estimates subpopulation information from marker genotype.
 #' You can choose the grouping method from `kmeans`, `kmedoids`, and `hclust`. 
@@ -926,6 +927,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' @param autogamous  Whether the plant is autogamous or not. If autogamous = TRUE, 
 #' complemented haplotype will consist of only homozygous sites ({-1, 1}). 
 #' If FALSE, complemented haplotype will consist of both homozygous & heterozygous sites ({-1, 0, 1}).
+#' @param nMaxHaplo The maximum number of haplotypes. If the number of total (complemented + original) haplotypes are larger than `nMaxHaplo`, 
+#' we will only show the results only for the original haplotypes to reduce the computational time.
 #' @param kernelType In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
 #' This argument specifies the method to compute similarity matrix: 
 #' If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
@@ -957,7 +960,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' @param colCompBase A vector of two integers or characters specifying color of complemented haplotypes for the positive and negative genotypic values respectively.
 #' @param colHaploBase A vector of integers or characters specifying color of original haplotypes for the positive and negative genotypic values respectively.
 #' The length of the vector should equal to the number of subpopulations.
-#' @param cexMax A numeric specifying the point size of the plot.
+#' @param cexMax A numeric specifying the maximum point size of the plot.
+#' @param cexMin A numeric specifying the minimum point size of the plot.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #'
 #' @return
@@ -993,16 +997,16 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                        pheno = NULL, geno = NULL, ZETA = NULL, 
                        chi2Test = TRUE, thresChi2Test = 5e-2,  plotNetwork = TRUE,
                        distMat = NULL, distMethod = "manhattan", complementHaplo = TRUE,
-                       subpopInfo = NULL, groupingMethod = "kmedoids",
-                       nGrp = 4, nIterClustering = 100, iterRmst = 100,
-                       networkMethod = "rmst", autogamous = FALSE, kernelType = "addNOIA",
+                       subpopInfo = NULL, groupingMethod = "kmedoids", nGrp = 4, 
+                       nIterClustering = 100, iterRmst = 100, networkMethod = "rmst",
+                       autogamous = FALSE, nMaxHaplo = 1000, kernelType = "addNOIA",
                        nCores = parallel::detectCores(), hOpt = "optimized",
                        hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
                        saveName = NULL, saveStyle = "png",
                        plotWhichMDS = 1:2, colConnection = c("grey40", "grey60"),
                        ltyConnection = c("solid", "dashed"), lwdConnection = c(1.5, 0.8),
                        pchBase = c(1, 16), colCompBase = c("grey20", "grey40"),
-                       colHaploBase = c(3, 5, 6, 7), cexMax = 2, verbose = TRUE) {
+                       colHaploBase = c(3, 5, 6, 7), cexMax = 2, cexMin = 0.5, verbose = TRUE) {
   
   if (!is.null(geno)) {
     M <- t(geno[, -c(1:3)])
@@ -1215,6 +1219,11 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           return(newBlocks)
         }, simplify = FALSE)
       )
+      
+      if (nrow(blockInterestComp) > nMaxHaplo) {
+        warning("There are too many complemented haplotypes... We will show the results only for the original haplotypes.")
+        blockInterestComp <- blockInterestUniqueSorted
+      }
     } else {
       blockInterestComp <- blockInterestUniqueSorted
     }
@@ -1461,13 +1470,13 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           gvEstTotal[compNames] <- gvPlus
           gvCentered <- gvEstTotal - mean(gvEstTotal)
           gvScaled <- gvCentered / sd(gvCentered)
-          gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
+          gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
           
-          cexComp <- abs(gvScaled4Cex)[compNames]
+          cexComp <- (abs(gvScaled4Cex) + cexMin)[compNames]
           pchComp <- ifelse(gvScaled[compNames] > 0, pchBase[1], pchBase[2])
           colComp <- ifelse(gvScaled[compNames] > 0, colCompBase[1], colCompBase[2])
           
-          cexHaplo <- abs(gvScaled4Cex)[haploNames]
+          cexHaplo <- (abs(gvScaled4Cex) + cexMin)[haploNames]
           pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
         } else {
           gvEstTotal <- gvEst
@@ -1475,14 +1484,15 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           
           gvCentered <- gvEstTotal - mean(gvEstTotal)
           gvScaled <- gvCentered / sd(gvCentered)
-          gvScaled4Cex <- gvScaled * cexMax / max(abs(gvScaled)) 
+          gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
           
-          cexHaplo <- abs(gvScaled4Cex)[haploNames]
+          cexHaplo <- (abs(gvScaled4Cex) + cexMin)[haploNames]
           pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
           
           
           cexComp <- cexMax / 4
           colComp <- colCompBase[2]
+          pchComp <- pchBase[2]
           EMMRes <- NA
           hOpt2 <- NA
         }
