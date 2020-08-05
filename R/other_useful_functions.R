@@ -1300,7 +1300,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       hStarts <- h * rangeHStart
       hStarts <- split(hStarts, factor(1:length(rangeHStart)))
       
-      if (kernelType %in% c("dist", "gaussian", "exponential")){
+      if (kernelType %in% c("dist", "gaussian", "exponential")) {
         if (hOpt == "optimized") {
           if (verbose) {
             print("Now optimizing hyperparameter for estimating haplotype effects...")
@@ -1608,6 +1608,17 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                        "Complement (gv:+)", "Complement (gv:-)"),
                  col = c(rep(colHaploBase, each = 2), colCompBase),
                  pch = rep(pchBase, 2))
+        }
+      } else if (!is.null(pheno)) {
+        if (!is.null(subpopInfo)) {
+          legend("topleft", legend = paste0(rep(unique(subpopInfo), each = 2),
+                                              rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
+                 col = rep(colHaploBase, each = 2),
+                 pch = rep(pchBase, nGrp))
+        } else {
+          legend("topleft", legend = c("Haplotype (gv:+)", "Haplotype (gv:-)"),
+                 col = rep(colHaploBase, each = 2),
+                 pch = pchBase)
         }
       } else {
         if (!is.null(subpopInfo)) {
