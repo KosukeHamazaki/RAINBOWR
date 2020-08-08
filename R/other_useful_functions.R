@@ -409,9 +409,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       } else {
         subpopInfo <- NULL
       }
-    } 
+    } else {
+      if (!is.factor(subpopInfo)) {
+        subpopInfo <- as.factor(subpopInfo)
+      }
+    }
     
-    nGrp <- length(unique(subpopInfo))
+    nGrp <- length(levels(subpopInfo))
     
     
     if (is.null(blockInterest)) {
@@ -750,7 +754,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         as.numeric(names(which.max(table(x) / sum(table(x)))))
       })[haploNames]
       
-      clusterNosForHaplotype <- tapply(colTipNo, INDEX = haploNames[haploClusterNow],
+      clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploNames[haploClusterNow],
                                        FUN = table)[haploNames]
       
       edgeCol <- as.numeric(colTip[njRes$edge[, 2]])
@@ -799,7 +803,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                           " (-log10p: ", round(minuslog10p, 2), ")"))
       if (plotNode) {
         if (!is.null(subpopInfo)) {
-          legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
+          legend("topleft", legend = c(paste0(rep(levels(subpopInfo), each = 2),
                                               rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
                                        "Node (gv:+)", "Node (gv:-)"),
                  col = c(rep(colTipBase, each = 2), colNodeBase),
@@ -812,7 +816,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         }
       } else {
         if (!is.null(subpopInfo)) {
-          legend("topleft", legend = unique(subpopInfo),
+          legend("topleft", legend = levels(subpopInfo),
                  col = colTipBase,
                  pch = pchTip)
         } else {
@@ -1062,9 +1066,13 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       } else {
         subpopInfo <- NULL
       }
-    } 
+    } else {
+      if (!is.factor(subpopInfo)) {
+        subpopInfo <- as.factor(subpopInfo)
+      }
+    }
     
-    nGrp <- length(unique(subpopInfo))
+    nGrp <- length(levels(subpopInfo))
     
     
     if (is.null(blockInterest)) {
@@ -1524,7 +1532,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           as.numeric(names(which.max(table(x) / sum(table(x)))))
         })[haploNames]
         
-        clusterNosForHaplotype <- tapply(colHaploNo, INDEX = haploNames[haploClusterNow],
+        clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploNames[haploClusterNow],
                                          FUN = table)[haploNames]
       } else {
         colHaplo <- rep("gray", nHaplo)
@@ -1598,7 +1606,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                           " (-log10p: ", round(minuslog10p, 2), ")"))
       if (existComp) {
         if (!is.null(subpopInfo)) {
-          legend("topleft", legend = c(paste0(rep(unique(subpopInfo), each = 2),
+          legend("topleft", legend = c(paste0(rep(levels(subpopInfo), each = 2),
                                               rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
                                        "Complement (gv:+)", "Complement (gv:-)"),
                  col = c(rep(colHaploBase, each = 2), colCompBase),
@@ -1611,8 +1619,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         }
       } else if (!is.null(pheno)) {
         if (!is.null(subpopInfo)) {
-          legend("topleft", legend = paste0(rep(unique(subpopInfo), each = 2),
-                                              rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
+          legend("topleft", legend = paste0(rep(levels(subpopInfo), each = 2),
+                                            rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
                  col = rep(colHaploBase, each = 2),
                  pch = rep(pchBase, nGrp))
         } else {
@@ -1622,7 +1630,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         }
       } else {
         if (!is.null(subpopInfo)) {
-          legend("topleft", legend = unique(subpopInfo),
+          legend("topleft", legend = levels(subpopInfo),
                  col = colHaploBase,
                  pch = pchHaplo)
         } else {
