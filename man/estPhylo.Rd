@@ -24,9 +24,9 @@ estPhylo(
   evolutionDist = FALSE,
   subpopInfo = NULL,
   groupingMethod = "kmedoids",
-  nGrp = 4,
+  nGrp = 3,
   nIterClustering = 100,
-  kernelType = "addNOIA",
+  kernelTypes = "addNOIA",
   nCores = parallel::detectCores(),
   hOpt = "optimized",
   hOpt2 = "optimized",
@@ -36,8 +36,9 @@ estPhylo(
   saveStyle = "png",
   pchBase = c(1, 16),
   colNodeBase = c(2, 4),
-  colTipBase = c(3, 5, 6, 7),
+  colTipBase = c(3, 5, 6),
   cexMax = 2,
+  cexMin = 0.7,
   edgeColoring = TRUE,
   tipLabel = TRUE,
   verbose = TRUE
@@ -109,11 +110,12 @@ If this argument is 0, the subpopulation information will not be estimated.}
 \item{nIterClustering}{If `groupingMethod` = `kmeans`, the clustering will be performed multiple times.
 This argument specifies the number of classification performed by the function.}
 
-\item{kernelType}{In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
+\item{kernelTypes}{In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
 This argument specifies the method to compute similarity matrix: 
 If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
 then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
-and if this argument is `dist`, the gaussian kernel based on phylogenetic distance will be computed from phylogenetic tree.}
+and if this argument is `phylo`, the gaussian kernel based on phylogenetic distance will be computed from phylogenetic tree.
+You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "phylo").}
 
 \item{nCores}{The number of cores used for optimization.}
 
@@ -145,7 +147,9 @@ The function offers `png`, `pdf`, `jpg`, and `tiff`.}
 \item{colTipBase}{A vector of integers or chracters specifying color of tips for the positive and negative genotypic values respectively.
 The length of the vector should equal to the number of subpopulations.}
 
-\item{cexMax}{A numeric specifying the point size of the plot.}
+\item{cexMax}{A numeric specifying the maximum point size of the plot.}
+
+\item{cexMin}{A numeric specifying the minimum point size of the plot.}
 
 \item{edgeColoring}{If TRUE, the edge branch of phylogenetic tree wiil be colored.}
 
@@ -158,6 +162,12 @@ The length of the vector should equal to the number of subpopulations.}
 \item{$haplotypeInfo}{\describe{A list of haplotype information with 
 \item{$haploCluster}{A vector indicating each individual belongs to which haplotypes.}
 \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
+}
+}
+\item{$distMats}{\describe{A list of distance matrix: 
+\item{$distMat}{Distance matrix between haplotypes.}
+\item{$distMatEvol}{Evolutionary distance matrix between haplotypes.}
+\item{$distMatNJ}{Phylogenetic distance matrix between haplotypes including nodes.}
 }
 }
 \item{$pValChi2Test}{A p-value of the chi-square test for the dependency between haplotypes & subpopulations.

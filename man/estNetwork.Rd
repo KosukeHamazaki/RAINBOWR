@@ -22,14 +22,16 @@ estNetwork(
   distMat = NULL,
   distMethod = "manhattan",
   evolutionDist = FALSE,
+  complementHaplo = "phylo",
   subpopInfo = NULL,
   groupingMethod = "kmedoids",
-  nGrp = 4,
+  nGrp = 3,
   nIterClustering = 100,
   iterRmst = 100,
   networkMethod = "rmst",
   autogamous = FALSE,
-  kernelType = "addNOIA",
+  nMaxHaplo = 1000,
+  kernelTypes = "addNOIA",
   nCores = parallel::detectCores(),
   hOpt = "optimized",
   hOpt2 = "optimized",
@@ -43,8 +45,9 @@ estNetwork(
   lwdConnection = c(1.5, 0.8),
   pchBase = c(1, 16),
   colCompBase = c("grey20", "grey40"),
-  colHaploBase = c(3, 5, 6, 7),
+  colHaploBase = c(3, 5, 6),
   cexMax = 2,
+  cexMin = 0.7,
   verbose = TRUE
 )
 }
@@ -101,7 +104,12 @@ If NULL, the distance matrix will be computed in this function.}
 This argument corresponds to the `method` argument in the `dist` function.}
 
 \item{evolutionDist}{If TRUE, the evolution distance will be used instead of the pure distance.
-The `distMat` will be converted to the distance matrix by the evolution distance.}
+The `distMat` will be converted to the distance matrix by the evolution distance when you use `complementHaplo = "phylo"`.}
+
+\item{complementHaplo}{how to complement unobserved haplotypes.
+When `complementHaplo = "all"`, all possible haplotypes will be complemented from the observed haplotypes.
+When `complementHaplo = "never"`, unobserved haplotypes will not be complemented.
+When `complementHaplo = "all"`, all possible haplotypes will be complemented from the observed haplotypes.}
 
 \item{subpopInfo}{The information of subpopulations. This argument should be a vector of factor.}
 
@@ -120,15 +128,20 @@ This argument specifies the number of classification performed by the function.}
 'msn' (minimum spanning network), and 'rmst' (randomized minimum spanning tree).
 'rmst' is recommended.}
 
-\item{autogamous}{Whether the plant is autogamous or not. If autogamous = TRUE, 
+\item{autogamous}{This argument will be valid only when you use `complementHaplo = "all"`
+This argument specifies whether the plant is autogamous or not. If autogamous = TRUE, 
 complemented haplotype will consist of only homozygous sites ({-1, 1}). 
 If FALSE, complemented haplotype will consist of both homozygous & heterozygous sites ({-1, 0, 1}).}
 
-\item{kernelType}{In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
+\item{nMaxHaplo}{The maximum number of haplotypes. If the number of total (complemented + original) haplotypes are larger than `nMaxHaplo`, 
+we will only show the results only for the original haplotypes to reduce the computational time.}
+
+\item{kernelTypes}{In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
 This argument specifies the method to compute similarity matrix: 
 If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
 then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
-and if this argument is `dist`, the diffusion kernel based on Laplacian matrix will be computed from network.}
+and if this argument is `diffusion`, the diffusion kernel based on Laplacian matrix will be computed from network.
+You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "diffusion").}
 
 \item{nCores}{The number of cores used for optimization.}
 
@@ -170,7 +183,9 @@ The first and second integers correspond to the horizontal and vertical axes, re
 \item{colHaploBase}{A vector of integers or characters specifying color of original haplotypes for the positive and negative genotypic values respectively.
 The length of the vector should equal to the number of subpopulations.}
 
-\item{cexMax}{A numeric specifying the point size of the plot.}
+\item{cexMax}{A numeric specifying the maximum point size of the plot.}
+
+\item{cexMin}{A numeric specifying the minimum point size of the plot.}
 
 \item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
 }
@@ -186,6 +201,12 @@ If `chi2Test = FALSE`, `NA` will be returned.}
 \item{$mstResults}{\describe{A list of estimated results of MST / MSN / RMST: 
 \item{$mstRes}{Estimated results of MST / MSN / RMST for the data including original haplotypes.}
 \item{$mstResComp}{Estimated results of MST / MSN / RMST for the data including both original and complemented haplotype.}
+}
+}
+\item{$distMats}{\describe{A list of distance matrix: 
+\item{$distMat}{Distance matrix between haplotypes.}
+\item{$distMatComp}{Distance matrix between haplotypes (including unobserved ones).}
+\item{$laplacianMat}{Laplacian matrix between haplotypes (including unobserved ones).}
 }
 }
 \item{$gvTotal}{Estimated genotypic values by kernel regression for each haplotype.}

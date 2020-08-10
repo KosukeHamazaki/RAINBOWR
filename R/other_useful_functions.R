@@ -287,11 +287,12 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' If this argument is 0, the subpopulation information will not be estimated.
 #' @param nIterClustering If `groupingMethod` = `kmeans`, the clustering will be performed multiple times.
 #' This argument specifies the number of classification performed by the function.
-#' @param kernelType In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
+#' @param kernelTypes In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
 #' This argument specifies the method to compute similarity matrix: 
 #' If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
 #' then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
-#' and if this argument is `dist`, the gaussian kernel based on phylogenetic distance will be computed from phylogenetic tree.
+#' and if this argument is `phylo`, the gaussian kernel based on phylogenetic distance will be computed from phylogenetic tree.
+#' You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "phylo").
 #' @param nCores The number of cores used for optimization.
 #' @param hOpt Optimized hyper parameter for constructing kernel when estimating haplotype effects.
 #'  If hOpt = "optimized", hyper parameter will be optimized in the function.
@@ -325,6 +326,12 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
 #' }
 #' }
+#' \item{$distMats}{\describe{A list of distance matrix: 
+#' \item{$distMat}{Distance matrix between haplotypes.}
+#' \item{$distMatEvol}{Evolutionary distance matrix between haplotypes.}
+#' \item{$distMatNJ}{Phylogenetic distance matrix between haplotypes including nodes.}
+#' }
+#' }
 #' \item{$pValChi2Test}{A p-value of the chi-square test for the dependency between haplotypes & subpopulations.
 #' If `chi2Test = FALSE`, `NA` will be returned.}
 #' \item{$njRes}{The result of phylogenetic tree by neighborhood-joining method}
@@ -348,12 +355,12 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      chi2Test = TRUE, thresChi2Test = 5e-2,  plotTree = TRUE,
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
                      subpopInfo = NULL, groupingMethod = "kmedoids",
-                     nGrp = 4, nIterClustering = 100, kernelType = "addNOIA",
+                     nGrp = 3, nIterClustering = 100, kernelTypes = "addNOIA",
                      nCores = parallel::detectCores(), hOpt = "optimized",
                      hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
                      saveName = NULL, saveStyle = "png",
                      pchBase = c(1, 16), colNodeBase = c(2, 4),
-                     colTipBase = c(3, 5, 6, 7), cexMax = 2, cexMin = 0.2,
+                     colTipBase = c(3, 5, 6), cexMax = 2, cexMin = 0.7,
                      edgeColoring = TRUE, tipLabel = TRUE, verbose = TRUE) {
   if (!is.null(geno)) {
     M <- t(geno[, -c(1:3)])
@@ -529,322 +536,344 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     }
     
     njRes <- nj(X = as.dist(dist4Nj))
+    distNodes <- dist.nodes(njRes) / nMrkInBlock
     
+    minuslog10ps <- c() 
+    gvEstTotals <- gvEstTotalForLines <- 
+      hOptsList <- EMMResultsList <- list()
     
-    if (!is.null(pheno)) {
-      distNodes <- dist.nodes(njRes) / nMrkInBlock
-      rownames(distNodes)[1:nHaplo] <- colnames(distNodes)[1:nHaplo] <- haploNames
-      
-      nTotal <- nrow(distNodes)
-      nNode <- nTotal - nHaplo
-      
-      ZgKernelPart <- as.matrix(Matrix::sparseMatrix(i = 1:nLine,
-                                                     j = haploClusterNow,
-                                                     x = rep(1, nLine),
-                                                     dims = c(nLine, nHaplo),
-                                                     dimnames = list(lineNames, haploNames)))
-      
-      hInv <- median(distNodes[upper.tri(distNodes)])
-      h <- 1 / hInv
-      hStarts <- h * rangeHStart
-      hStarts <- split(hStarts, factor(1:length(rangeHStart)))
-      
-      if (kernelType %in% c("dist", "gaussian", "exponential")){
-        if (hOpt == "optimized") {
-          if (verbose) {
-            print("Now optimizing hyperparameter for estimating haplotype effects...")
-          }
-          
-          maximizeFunc <- function(h) {
-            if (kernelType == "dist") {
-              gKernel <- exp(- h * distNodes)
-              
-              gKernelPart <- gKernel[1:nHaplo, 1:nHaplo]
-            } else {
-              gKernelPart <- calcGRM(blockInterestUniqueSorted,
-                                     methodGRM = kernelType,
-                                     kernel.h = h)
+    for (kernelType in kernelTypes){
+      if (!is.null(pheno)) {
+        rownames(distNodes)[1:nHaplo] <- colnames(distNodes)[1:nHaplo] <- haploNames
+        
+        nTotal <- nrow(distNodes)
+        nNode <- nTotal - nHaplo
+        
+        ZgKernelPart <- as.matrix(Matrix::sparseMatrix(i = 1:nLine,
+                                                       j = haploClusterNow,
+                                                       x = rep(1, nLine),
+                                                       dims = c(nLine, nHaplo),
+                                                       dimnames = list(lineNames, haploNames)))
+        
+        hInv <- median(distNodes[upper.tri(distNodes)])
+        h <- 1 / hInv
+        hStarts <- h * rangeHStart
+        hStarts <- split(hStarts, factor(1:length(rangeHStart)))
+        
+        if (kernelType %in% c("phylo", "gaussian", "exponential")){
+          if (hOpt == "optimized") {
+            if (verbose) {
+              print("Now optimizing hyperparameter for estimating haplotype effects...")
             }
             
-            ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-            EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-            LL <- EM3Res$LL
+            maximizeFunc <- function(h) {
+              if (kernelType == "phylo") {
+                gKernel <- exp(- h * distNodes)
+                
+                gKernelPart <- gKernel[1:nHaplo, 1:nHaplo]
+              } else {
+                gKernelPart <- calcGRM(blockInterestUniqueSorted,
+                                       methodGRM = kernelType,
+                                       kernel.h = h)
+              }
+              
+              ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+              EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
+              LL <- EM3Res$LL
+              
+              return(-LL)
+            }
             
-            return(-LL)
+            
+            if (length(hStarts) >= 2) {
+              if (verbose) {
+                solnList <- pbmcapply::pbmclapply(X = hStarts,
+                                                  FUN = function(h) {
+                                                    soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                                   lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                    
+                                                    return(soln)
+                                                  }, mc.cores = nCores)
+              } else {
+                solnList <- parallel::pblapply(X = hStarts,
+                                               FUN = function(h) {
+                                                 soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                                lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                 
+                                                 return(soln)
+                                               }, mc.cores = nCores)
+              }
+              solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
+              soln <- solnList[[solnNo]]
+            } else {
+              traceInside <- ifelse(verbose, 1, 0)
+              soln <- nlminb(start = hStarts[[1]], objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                             lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+            }
+            
+            hOpt <- soln$par
+          } else if (hOpt == "tuned") {
+            hOpt <- h
+          } else if (!is.numeric(hOpt)) {
+            stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
           }
           
           
-          if (length(hStarts) >= 2) {
+          if (kernelType == "phylo") {
+            gKernel <- exp(- hOpt * distNodes)
+            
+            gKernelPart <- gKernel[1:nHaplo, 1:nHaplo]
+          } else {
+            gKernelPart <- calcGRM(blockInterestUniqueSorted,
+                                   methodGRM = kernelType,
+                                   kernel.h = hOpt)
+          }
+        } else {
+          hOpt <- NA
+          gKernelPart <- calcGRM(blockInterestUniqueSorted,
+                                 methodGRM = kernelType)
+        }
+        
+        
+        if (verbose) {
+          print("Now estimating genotypic values...")
+        }
+        
+        ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
+        LL <- EM3Res$LL
+        gvEst <- EM3Res$u[(nLine + 1):(nLine + nHaplo), ]
+        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
+        LL0 <- EMMRes0$LL
+        
+        pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
+        minuslog10p <- - log10(pVal)
+        if (EM3Res$weights[2] <= 1e-06) {
+          warning("This block seems to have no effect on phenotype...")
+          plotNode <- FALSE
+          
+          gvEstTotal <- c(gvEst, rep(NA, nNode))
+          names(gvEstTotal) <- nrow(distNodes)
+          
+          cexTip <- cexMax / 2
+          pchTip <- pchBase[2]
+          EMMRes <- NA
+          hOpt2 <- NA
+        } else {
+          plotNode <- TRUE
+          
+          
+          
+          ZgKernel <- diag(nTotal)
+          rownames(ZgKernel) <- colnames(ZgKernel) <- rownames(distNodes)
+          
+          gvEst2 <- matrix(c(gvEst, rep(NA, nNode)))
+          rownames(gvEst2) <- rownames(distNodes)
+          
+          if (hOpt2 == "optimized") {   
             if (verbose) {
-              solnList <- pbmcapply::pbmclapply(X = hStarts,
+              print("Now optimizing hyperparameter for estimating haplotype effects of nodes...")
+            }
+            
+            maximizeFunc2 <- function(h) {
+              gKernel <- exp(- h * distNodes)
+              ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
+              
+              EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
+              LL <- EMMRes$LL
+              
+              return(-LL)
+            }
+            
+            
+            if (length(hStarts) >= 2) {
+              if (verbose) {
+                solnList2 <- pbmcapply::pbmclapply(X = hStarts,
+                                                   FUN = function(h) {
+                                                     soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                    lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                     
+                                                     return(soln)
+                                                   }, mc.cores = nCores)
+              } else {
+                solnList2 <- parallel::pblapply(X = hStarts,
                                                 FUN = function(h) {
-                                                  soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                  soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
                                                                  lower = 0, upper = 1e06, control = list(iter.max = maxIter))
                                                   
                                                   return(soln)
                                                 }, mc.cores = nCores)
+              }
+              solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
+              soln2 <- solnList2[[solnNo2]]
             } else {
-              solnList <- parallel::pblapply(X = hStarts,
-                                             FUN = function(h) {
-                                               soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                              lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                               
-                                               return(soln)
-                                             }, mc.cores = nCores)
+              soln2 <- nlminb(start = hStarts[[1]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                              lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
             }
-            solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
-            soln <- solnList[[solnNo]]
-          } else {
-            traceInside <- ifelse(verbose, 1, 0)
-            soln <- nlminb(start = hStarts[[1]], objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                           lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+            
+            hOpt2 <- soln2$par
+          } else if (hOpt2 == "tuned") {
+            hOpt2 <- h
+          } else if (!is.numeric(hOpt2)) {
+            stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
           }
           
-          hOpt <- soln$par
-        } else if (hOpt == "tuned") {
-          hOpt <- h
-        } else if (!is.numeric(hOpt)) {
-          stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
-        }
-        
-        
-        if (kernelType == "dist") {
-          gKernel <- exp(- hOpt * distNodes)
+          gKernel2 <- exp(- hOpt2 * distNodes)
+          ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel2))
           
-          gKernelPart <- gKernel[1:nHaplo, 1:nHaplo]
-        } else {
-          gKernelPart <- calcGRM(blockInterestUniqueSorted,
-                                 methodGRM = kernelType,
-                                 kernel.h = hOpt)
+          EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
+          
+          gvNode <- EMMRes$u[(nHaplo + 1):nTotal] + EMMRes$beta
+          gvEstTotal <- c(gvEst, gvNode)
+          names(gvEstTotal) <- rownames(distNodes)
+          gvCentered <- gvEstTotal - mean(gvEstTotal)
+          gvScaled <- gvCentered / sd(gvCentered)
+          gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
+          
+          cexNode <- (abs(gvScaled4Cex) + cexMin)[(nHaplo + 1):nTotal]
+          pchNode <- ifelse(gvScaled[(nHaplo + 1):nTotal] > 0, pchBase[1], pchBase[2])
+          colNode <- ifelse(gvScaled[(nHaplo + 1):nTotal] > 0, colNodeBase[1], colNodeBase[2])
+          
+          cexTip <- (abs(gvScaled4Cex) + cexMin)[1:nHaplo]
+          pchTip <- ifelse(gvScaled[1:nHaplo] > 0, pchBase[1], pchBase[2])
         }
       } else {
-        hOpt <- NA
-        gKernelPart <- calcGRM(blockInterestUniqueSorted,
-                               methodGRM = kernelType)
-      }
-      
-      
-      if (verbose) {
-        print("Now estimating genotypic values...")
-      }
-      
-      ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-      EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-      LL <- EM3Res$LL
-      gvEst <- EM3Res$u[(nLine + 1):(nLine + nHaplo), ]
-      EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
-      LL0 <- EMMRes0$LL
-      
-      pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
-      minuslog10p <- - log10(pVal)
-      if (EM3Res$weights[2] <= 1e-06) {
-        warning("This block seems to have no effect on phenotype...")
         plotNode <- FALSE
         
-        gvEstTotal <- c(gvEst, rep(NA, nNode))
-        names(gvEstTotal) <- nrow(distNodes)
+        nTip <- length(njRes$tip.label)
+        nNode <- njRes$Nnode
+        nTotal <- nNode + nTip
+        gvEstTotal <- rep(NA, nTotal)
+        minuslog10p <- NA
         
         cexTip <- cexMax / 2
         pchTip <- pchBase[2]
-        EMMRes <- NA
-        hOpt2 <- NA
+        EM3Res <- EMMRes <- EMMRes0 <- NA
+        hOpt <- hOpt2 <- NA
+      }
+      gvEstTotalForLine <- gvEstTotal[haploClusterNow]
+      names(gvEstTotalForLine) <- lineNames
+      
+      
+      hOpts <- c(hOpt = hOpt,
+                 hOpt2 = hOpt2)
+      EMMResults <- list(EM3Res = EM3Res,
+                         EMMRes = EMMRes,
+                         EMMRes0 = EMMRes0)
+      
+      
+      
+      gvEstTotals[[kernelType]] <- gvEstTotal 
+      gvEstTotalForLines[[kernelType]] <- gvEstTotalForLine 
+      minuslog10ps[kernelType] <- minuslog10p 
+      hOptsList[[kernelType]] <- hOpts 
+      EMMResultsList[[kernelType]] <- EMMResults
+      
+      if (!is.null(subpopInfo)) {
+        if (length(colTipBase) != nGrp) {
+          stop("The length of 'colTipBase' should be equal to 'nGrp' or the number of subpopulations!")
+        }
+        
+        colTipNo <- as.numeric(subpopInfo)
+        colTip <- colTipBase[colTipNo]
+        names(colTipNo) <- names(colTip) <- lineNames
+        
+        colTip <- tapply(colTip, INDEX = haploNames[haploClusterNow], FUN = function(x) {
+          as.numeric(names(which.max(table(x) / sum(table(x)))))
+        })[haploNames]
+        
+        clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploNames[haploClusterNow],
+                                         FUN = table)[haploNames]
+        
+        edgeCol <- as.numeric(colTip[njRes$edge[, 2]])
       } else {
-        plotNode <- TRUE
+        colTip <- rep("gray", nHaplo)
+        names(colTip) <- haploNames
         
-        
-        
-        ZgKernel <- diag(nTotal)
-        rownames(ZgKernel) <- colnames(ZgKernel) <- rownames(distNodes)
-        
-        gvEst2 <- matrix(c(gvEst, rep(NA, nNode)))
-        rownames(gvEst2) <- rownames(distNodes)
-        
-        if (hOpt2 == "optimized") {   
-          if (verbose) {
-            print("Now optimizing hyperparameter for estimating haplotype effects of nodes...")
-          }
-          
-          maximizeFunc2 <- function(h) {
-            gKernel <- exp(- h * distNodes)
-            ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
-            
-            EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-            LL <- EMMRes$LL
-            
-            return(-LL)
-          }
-          
-          
-          if (length(hStarts) >= 2) {
-            if (verbose) {
-              solnList2 <- pbmcapply::pbmclapply(X = hStarts,
-                                                 FUN = function(h) {
-                                                   soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                                  lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                   
-                                                   return(soln)
-                                                 }, mc.cores = nCores)
-            } else {
-              solnList2 <- parallel::pblapply(X = hStarts,
-                                              FUN = function(h) {
-                                                soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                               lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                
-                                                return(soln)
-                                              }, mc.cores = nCores)
-            }
-            solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
-            soln2 <- solnList2[[solnNo2]]
+        edgeCol <- colTip[njRes$edge[, 2]]
+        clusterNosForHaplotype <- NA
+      }
+      
+      edgeCol[is.na(edgeCol)] <- "gray"
+      
+      if (plotTree) {
+        if (!is.null(saveName)) {
+          savePlotNameBase <- paste0(paste(c(saveName, blockName, kernelType), collapse = "_"),
+                                     "_phylogenetic_tree")
+          if (saveStyle == "pdf") {
+            savePlotName <- paste0(savePlotNameBase, ".pdf")
+            pdf(file = savePlotName, width = 12, height = 9)
+          } else if (saveStyle == "jpg") {
+            savePlotName <- paste0(savePlotNameBase, ".jpg")  
+            jpeg(filename = savePlotName, width = 800, height = 600)
+          } else if (saveStyle == "tiff") {
+            savePlotName <- paste0(savePlotNameBase, ".tiff")
+            tiff(filename = savePlotName, width = 800, height = 600)
           } else {
-            soln2 <- nlminb(start = hStarts[[1]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                            lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+            savePlotName <- paste0(savePlotNameBase, ".png")
+            png(filename = savePlotName, width = 800, height = 600)
           }
-          
-          hOpt2 <- soln2$par
-        } else if (hOpt2 == "tuned") {
-          hOpt2 <- h
-        } else if (!is.numeric(hOpt2)) {
-          stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
         }
         
-        gKernel2 <- exp(- hOpt2 * distNodes)
-        ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel2))
-        
-        EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-        
-        gvNode <- EMMRes$u[(nHaplo + 1):nTotal] + EMMRes$beta
-        gvEstTotal <- c(gvEst, gvNode)
-        names(gvEstTotal) <- rownames(distNodes)
-        gvCentered <- gvEstTotal - mean(gvEstTotal)
-        gvScaled <- gvCentered / sd(gvCentered)
-        gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
-        
-        cexNode <- (abs(gvScaled4Cex) + cexMin)[(nHaplo + 1):nTotal]
-        pchNode <- ifelse(gvScaled[(nHaplo + 1):nTotal] > 0, pchBase[1], pchBase[2])
-        colNode <- ifelse(gvScaled[(nHaplo + 1):nTotal] > 0, colNodeBase[1], colNodeBase[2])
-        
-        cexTip <- (abs(gvScaled4Cex) + cexMin)[1:nHaplo]
-        pchTip <- ifelse(gvScaled[1:nHaplo] > 0, pchBase[1], pchBase[2])
-      }
-    } else {
-      plotNode <- FALSE
-      
-      nTip <- length(njRes$tip.label)
-      nNode <- njRes$Nnode
-      nTotal <- nNode + nTip
-      gvEstTotal <- rep(NA, nTotal)
-      minuslog10p <- NA
-      
-      cexTip <- cexMax / 2
-      pchTip <- pchBase[2]
-      EM3Res <- EMMRes <- EMMRes0 <- NA
-      hOpt <- hOpt2 <- NA
-    }
-    
-    if (!is.null(subpopInfo)) {
-      if (length(colTipBase) != nGrp) {
-        stop("The length of 'colTipBase' should be equal to 'nGrp' or the number of subpopulations!")
-      }
-      
-      colTipNo <- as.numeric(subpopInfo)
-      colTip <- colTipBase[colTipNo]
-      names(colTipNo) <- names(colTip) <- lineNames
-      
-      colTip <- tapply(colTip, INDEX = haploNames[haploClusterNow], FUN = function(x) {
-        as.numeric(names(which.max(table(x) / sum(table(x)))))
-      })[haploNames]
-      
-      clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploNames[haploClusterNow],
-                                       FUN = table)[haploNames]
-      
-      edgeCol <- as.numeric(colTip[njRes$edge[, 2]])
-    } else {
-      colTip <- rep("gray", nHaplo)
-      names(colTip) <- haploNames
-      
-      edgeCol <- colTip[njRes$edge[, 2]]
-      clusterNosForHaplotype <- NA
-    }
-    
-    edgeCol[is.na(edgeCol)] <- "gray"
-    
-    if (plotTree) {
-      if (!is.null(saveName)) {
-        savePlotNameBase <- paste0(paste(c(saveName, blockName), collapse = "_"),
-                                   "_phylogenetic_tree")
-        if (saveStyle == "pdf") {
-          savePlotName <- paste0(savePlotNameBase, ".pdf")
-          pdf(file = savePlotName, width = 12, height = 9)
-        } else if (saveStyle == "jpg") {
-          savePlotName <- paste0(savePlotNameBase, ".jpg")  
-          jpeg(filename = savePlotName, width = 800, height = 600)
-        } else if (saveStyle == "tiff") {
-          savePlotName <- paste0(savePlotNameBase, ".tiff")
-          tiff(filename = savePlotName, width = 800, height = 600)
+        if (edgeColoring) {
+          plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = edgeCol)
         } else {
-          savePlotName <- paste0(savePlotNameBase, ".png")
-          png(filename = savePlotName, width = 800, height = 600)
+          plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = "gray30")
         }
-      }
-      
-      if (edgeColoring) {
-        plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = edgeCol)
-      } else {
-        plot.phylo(njRes, type = "u", show.tip.label = F, edge.color = "gray30")
-      }
-      if (plotNode) {
-        nodelabels(pch = pchNode, cex = cexNode, col = colNode)
-      }
-      if (tipLabel) {
-        tiplabels(pch = pchTip, cex = cexTip, col = colTip)
-      }
-      title(main = paste0(paste(c(colnames(pheno)[2], 
-                                  blockName), collapse = "_"),
-                          " (-log10p: ", round(minuslog10p, 2), ")"))
-      if (plotNode) {
-        if (!is.null(subpopInfo)) {
-          legend("topleft", legend = c(paste0(rep(levels(subpopInfo), each = 2),
-                                              rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
-                                       "Node (gv:+)", "Node (gv:-)"),
-                 col = c(rep(colTipBase, each = 2), colNodeBase),
-                 pch = rep(pchBase, nGrp + 1))
-        } else {
-          legend("topleft", legend = c("Tip (gv:+)", "Tip (gv:-)",
-                                       "Node (gv:+)", "Node (gv:-)"),
-                 col = c(rep(colTipBase, each = 2), colNodeBase),
-                 pch = rep(pchBase, 2))
+        if (plotNode) {
+          nodelabels(pch = pchNode, cex = cexNode, col = colNode)
         }
-      } else {
-        if (!is.null(subpopInfo)) {
-          legend("topleft", legend = levels(subpopInfo),
-                 col = colTipBase,
-                 pch = pchTip)
+        if (tipLabel) {
+          tiplabels(pch = pchTip, cex = cexTip, col = colTip)
+        }
+        title(main = paste0(paste(c(colnames(pheno)[2], 
+                                    blockName), collapse = "_"),
+                            " (-log10p: ", round(minuslog10p, 2), ")"))
+        if (plotNode) {
+          if (!is.null(subpopInfo)) {
+            legend("topleft", legend = c(paste0(rep(levels(subpopInfo), each = 2),
+                                                rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
+                                         "Node (gv:+)", "Node (gv:-)"),
+                   col = c(rep(colTipBase, each = 2), colNodeBase),
+                   pch = rep(pchBase, nGrp + 1))
+          } else {
+            legend("topleft", legend = c("Tip (gv:+)", "Tip (gv:-)",
+                                         "Node (gv:+)", "Node (gv:-)"),
+                   col = c(rep(colTipBase, each = 2), colNodeBase),
+                   pch = rep(pchBase, 2))
+          }
         } else {
-          legend("topleft", legend = "Tip",
-                 col = colTipBase,
-                 pch = pchTip)
-        }   
-      }
-      if (!is.null(saveName)) {
-        dev.off()
+          if (!is.null(subpopInfo)) {
+            legend("topleft", legend = levels(subpopInfo),
+                   col = colTipBase,
+                   pch = pchTip)
+          } else {
+            legend("topleft", legend = "Tip",
+                   col = colTipBase,
+                   pch = pchTip)
+          }   
+        }
+        if (!is.null(saveName)) {
+          dev.off()
+        } else {
+          Sys.sleep(0.5)
+        }
       }
     }
     
-    gvEstTotalForLine <- gvEstTotal[haploClusterNow]
-    names(gvEstTotalForLine) <- lineNames
     
     
     return(list(haplotypeInfo = haplotypeInfo,
                 pValChi2Test = pValChi2Test,
+                distMats = list(distMat = distMat,
+                                distMatEvol = dist4Nj,
+                                distMatNJ = distNodes),
                 njRes = njRes,
-                gvTotal = gvEstTotal,
-                gvTotalForLine = gvEstTotalForLine,
-                minuslog10p = minuslog10p,
-                hOpts = c(hOpt = hOpt,
-                          hOpt2 = hOpt2),
-                EMMResults = list(EM3Res = EM3Res,
-                                  EMMRes = EMMRes,
-                                  EMMRes0 = EMMRes0),
+                gvTotal = gvEstTotals,
+                gvTotalForLine = gvEstTotalForLines,
+                minuslog10p = minuslog10ps,
+                hOpts = hOptsList,
+                EMMResults = EMMResultsList,
                 clusterNosForHaplotype = clusterNosForHaplotype))
   }
   
@@ -914,9 +943,14 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' @param plotNetwork If TRUE, the function will return the plot of haplotype network.
 #' @param distMat You can assign the distance matrix of the block of interest. 
 #' If NULL, the distance matrix will be computed in this function.
+#' @param evolutionDist If TRUE, the evolution distance will be used instead of the pure distance.
+#' The `distMat` will be converted to the distance matrix by the evolution distance when you use `complementHaplo = "phylo"`.
 #' @param distMethod You can choose the method to calculate distance between accessions.
 #' This argument corresponds to the `method` argument in the `dist` function.
-#' @param complementHaplo complement haplotypes or not
+#' @param complementHaplo how to complement unobserved haplotypes.
+#' When `complementHaplo = "all"`, all possible haplotypes will be complemented from the observed haplotypes.
+#' When `complementHaplo = "never"`, unobserved haplotypes will not be complemented.
+#' When `complementHaplo = "all"`, all possible haplotypes will be complemented from the observed haplotypes.
 #' @param subpopInfo The information of subpopulations. This argument should be a vector of factor. 
 #' @param groupingMethod If `subpopInfo` argument is NULL, this function estimates subpopulation information from marker genotype.
 #' You can choose the grouping method from `kmeans`, `kmedoids`, and `hclust`. 
@@ -928,16 +962,18 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' @param networkMethod Either one of 'mst' (minimum spanning tree),
 #'  'msn' (minimum spanning network), and 'rmst' (randomized minimum spanning tree).
 #'  'rmst' is recommended.
-#' @param autogamous  Whether the plant is autogamous or not. If autogamous = TRUE, 
+#' @param autogamous This argument will be valid only when you use `complementHaplo = "all"`
+#' This argument specifies whether the plant is autogamous or not. If autogamous = TRUE, 
 #' complemented haplotype will consist of only homozygous sites ({-1, 1}). 
 #' If FALSE, complemented haplotype will consist of both homozygous & heterozygous sites ({-1, 0, 1}).
 #' @param nMaxHaplo The maximum number of haplotypes. If the number of total (complemented + original) haplotypes are larger than `nMaxHaplo`, 
 #' we will only show the results only for the original haplotypes to reduce the computational time.
-#' @param kernelType In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
+#' @param kernelTypes In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
 #' This argument specifies the method to compute similarity matrix: 
 #' If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
 #' then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
-#' and if this argument is `dist`, the diffusion kernel based on Laplacian matrix will be computed from network.
+#' and if this argument is `diffusion`, the diffusion kernel based on Laplacian matrix will be computed from network.
+#' You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "diffusion").
 #' @param nCores The number of cores used for optimization.
 #' @param hOpt Optimized hyper parameter for constructing kernel when estimating haplotype effects.
 #'  If hOpt = "optimized", hyper parameter will be optimized in the function.
@@ -982,6 +1018,12 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' \item{$mstResComp}{Estimated results of MST / MSN / RMST for the data including both original and complemented haplotype.}
 #' }
 #' }
+#' \item{$distMats}{\describe{A list of distance matrix: 
+#' \item{$distMat}{Distance matrix between haplotypes.}
+#' \item{$distMatComp}{Distance matrix between haplotypes (including unobserved ones).}
+#' \item{$laplacianMat}{Laplacian matrix between haplotypes (including unobserved ones).}
+#' }
+#' }
 #' \item{$gvTotal}{Estimated genotypic values by kernel regression for each haplotype.}
 #' \item{$gvTotalForLine}{Estimated genotypic values by kernel regression for each individual.}
 #' \item{$minuslog10p}{\eqn{-log_{10}(p)} for haplotype block of interest.
@@ -998,19 +1040,19 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #'
 estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set = NULL,
                        indexRegion = 1:10, chrInterest = NULL, posRegion = NULL, blockName = NULL,
-                       pheno = NULL, geno = NULL, ZETA = NULL, 
-                       chi2Test = TRUE, thresChi2Test = 5e-2,  plotNetwork = TRUE,
-                       distMat = NULL, distMethod = "manhattan", complementHaplo = TRUE,
-                       subpopInfo = NULL, groupingMethod = "kmedoids", nGrp = 4, 
+                       pheno = NULL, geno = NULL, ZETA = NULL, chi2Test = TRUE, 
+                       thresChi2Test = 5e-2,  plotNetwork = TRUE, distMat = NULL,
+                       distMethod = "manhattan", evolutionDist = FALSE, complementHaplo = "phylo",
+                       subpopInfo = NULL, groupingMethod = "kmedoids", nGrp = 3, 
                        nIterClustering = 100, iterRmst = 100, networkMethod = "rmst",
-                       autogamous = FALSE, nMaxHaplo = 1000, kernelType = "addNOIA",
+                       autogamous = FALSE, nMaxHaplo = 1000, kernelTypes = "addNOIA",
                        nCores = parallel::detectCores(), hOpt = "optimized",
                        hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
                        saveName = NULL, saveStyle = "png",
                        plotWhichMDS = 1:2, colConnection = c("grey40", "grey60"),
                        ltyConnection = c("solid", "dashed"), lwdConnection = c(1.5, 0.8),
                        pchBase = c(1, 16), colCompBase = c("grey20", "grey40"),
-                       colHaploBase = c(3, 5, 6, 7), cexMax = 2, cexMin = 0.5, verbose = TRUE) {
+                       colHaploBase = c(3, 5, 6), cexMax = 2, cexMin = 0.7, verbose = TRUE) {
   
   if (!is.null(geno)) {
     M <- t(geno[, -c(1:3)])
@@ -1193,76 +1235,104 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     } else {
       stop("We only offer 'rmst', 'mst', and 'msn' for `networkMethod`!!")
     }
-    
-    if (complementHaplo) {
-      blockInterestComp <- do.call(
-        what = rbind,
-        args = sapply(1:nrow(mstResAll), function(eachComb) {
-          
-          blocksNow <- blockInterestUniqueSorted[mstResAll[eachComb, 1:2], ]
-          diffBlocks <- diff(blocksNow)
-          whichDiff <- which(diffBlocks != 0)
-          nDiff <- length(whichDiff)
-          
-          blocksPart <- blocksNow[, whichDiff, drop = FALSE]
-          gridList <- lapply(apply(blocksPart, 2, function(eachMrk) {
-            gridCand <- min(eachMrk):max(eachMrk)
+    if (complementHaplo %in% c("all", "never")) {
+      if (complementHaplo == "all") {
+        blockInterestComp <- do.call(
+          what = rbind,
+          args = sapply(1:nrow(mstResAll), function(eachComb) {
             
-            if (autogamous) {
-              gridCand <- gridCand[gridCand != 0]
-            } 
+            blocksNow <- blockInterestUniqueSorted[mstResAll[eachComb, 1:2], ]
+            diffBlocks <- diff(blocksNow)
+            whichDiff <- which(diffBlocks != 0)
+            nDiff <- length(whichDiff)
             
-            return(list(gridCand))
-          }), function(x) x[[1]])
-          newBlocksPart <- as.matrix(expand.grid(gridList))
-          nNewBlocks <- nrow(newBlocksPart)
-          
-          newBlocks <- matrix(data = rep(blocksNow[1, ], nNewBlocks),
-                              nrow = nNewBlocks,
-                              ncol = ncol(blocksNow),
-                              byrow = TRUE)
-          colnames(newBlocks) <- colnames(blocksNow)
-          newBlocks[, whichDiff] <- newBlocksPart
-          
-          return(newBlocks)
-        }, simplify = FALSE)
-      )
-      
-      if (nrow(blockInterestComp) > nMaxHaplo) {
-        warning("There are too many complemented haplotypes... We will show the results only for the original haplotypes.")
+            blocksPart <- blocksNow[, whichDiff, drop = FALSE]
+            gridList <- lapply(apply(blocksPart, 2, function(eachMrk) {
+              gridCand <- min(eachMrk):max(eachMrk)
+              
+              if (autogamous) {
+                gridCand <- gridCand[gridCand != 0]
+              } 
+              
+              return(list(gridCand))
+            }), function(x) x[[1]])
+            newBlocksPart <- as.matrix(expand.grid(gridList))
+            nNewBlocks <- nrow(newBlocksPart)
+            
+            newBlocks <- matrix(data = rep(blocksNow[1, ], nNewBlocks),
+                                nrow = nNewBlocks,
+                                ncol = ncol(blocksNow),
+                                byrow = TRUE)
+            colnames(newBlocks) <- colnames(blocksNow)
+            newBlocks[, whichDiff] <- newBlocksPart
+            
+            return(newBlocks)
+          }, simplify = FALSE)
+        )
+        
+        if (nrow(blockInterestComp) > nMaxHaplo) {
+          warning("There are too many complemented haplotypes... We will show the results only for the original haplotypes.")
+          blockInterestComp <- blockInterestUniqueSorted
+        }
+      } else if (complementHaplo == "never") {
         blockInterestComp <- blockInterestUniqueSorted
+      } 
+      
+      blockInterestComp <- blockInterestComp[!duplicated(blockInterestComp), ]
+      stringBlockComp <- apply(blockInterestComp, 1, 
+                               function(x) paste0(x, collapse = ""))
+      nHaploComp <- nrow(blockInterestComp)
+      
+      blockInterestCompSorted <- blockInterestComp[order(stringBlockComp), ]
+      stringBlockCompSorted <- apply(blockInterestCompSorted, 1, 
+                                     function(x) paste0(x, collapse = ""))
+      
+      matchString <- match(stringBlockCompSorted, stringBlockUniqueSorted)
+      
+      namesBlockInterestComp <- rownames(blockInterestUniqueSorted)[matchString]
+      nComp <- sum(is.na(namesBlockInterestComp))
+      if (nComp >= 1){
+        existComp <- TRUE
+        compNames <- paste0("c", 1:nComp)
+      } else {
+        existComp <- FALSE
+        compNames <- NULL
       }
-    } else {
-      blockInterestComp <- blockInterestUniqueSorted
+      namesBlockInterestComp[is.na(namesBlockInterestComp)] <- compNames
+      
+      rownames(blockInterestCompSorted) <- namesBlockInterestComp
+      
+      haplotypeInfo$haploBlockCompSorted <- blockInterestCompSorted
+      
+      distMatComp <- dist(blockInterestCompSorted, method = distMethod)
+    } else if (complementHaplo == "phylo") {
+      haplotypeInfo$haploBlockCompSorted <- NULL
+      
+      if (evolutionDist) {
+        inLog <- 1 - 4 * (distMat / (ncol(blockInterest) * 2)) / 3
+        
+        inLog[inLog <= 0] <- min(inLog[inLog > 0]) / 10
+        
+        dist4Nj <- - 3 * log(inLog) / 4
+      } else {
+        dist4Nj <- distMat
+      }
+      
+      njRes <- ape::nj(X = as.dist(dist4Nj))
+      
+      distMatComp <- dist.nodes(njRes)
+      nComp <- nrow(distMatComp) - nHaplo
+      
+      if (nComp >= 1){
+        existComp <- TRUE
+        compNames <- paste0("c", 1:nComp)
+      } else {
+        existComp <- FALSE
+        compNames <- NULL
+      }
+      namesBlockInterestComp <- c(haploNames, compNames)
+      rownames(distMatComp) <- colnames(distMatComp) <- namesBlockInterestComp
     }
-    
-    blockInterestComp <- blockInterestComp[!duplicated(blockInterestComp), ]
-    stringBlockComp <- apply(blockInterestComp, 1, 
-                             function(x) paste0(x, collapse = ""))
-    nHaploComp <- nrow(blockInterestComp)
-    
-    blockInterestCompSorted <- blockInterestComp[order(stringBlockComp), ]
-    stringBlockCompSorted <- apply(blockInterestCompSorted, 1, 
-                                   function(x) paste0(x, collapse = ""))
-    
-    matchString <- match(stringBlockCompSorted, stringBlockUniqueSorted)
-    
-    namesBlockInterestComp <- rownames(blockInterestUniqueSorted)[matchString]
-    nComp <- sum(is.na(namesBlockInterestComp))
-    if (nComp >= 1){
-      existComp <- TRUE
-      compNames <- paste0("c", 1:nComp)
-    } else {
-      existComp <- FALSE
-      compNames <- NULL
-    }
-    namesBlockInterestComp[is.na(namesBlockInterestComp)] <- compNames
-    
-    rownames(blockInterestCompSorted) <- namesBlockInterestComp
-    
-    haplotypeInfo$haploBlockCompSorted <- blockInterestCompSorted
-    
-    distMatComp <- dist(blockInterestCompSorted, method = "manhattan")
     
     if (networkMethod == "rmst") {
       mstResComp <- pegas::rmst(d = distMatComp, B = iterRmst)
@@ -1294,141 +1364,45 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     
     
     nTotal <- nrow(L)
-    nPlus <- nTotal - nHaplo
     plotPlus <- !is.null(mstResCompPlus)
     
-    if (!is.null(pheno)) {
-      ZgKernelPart <- as.matrix(Matrix::sparseMatrix(i = 1:nLine,
-                                                     j = haploClusterNow,
-                                                     x = rep(1, nLine),
-                                                     dims = c(nLine, nHaplo),
-                                                     dimnames = list(lineNames, haploNames)))
-      
-      h <- 1
-      hStarts <- h * rangeHStart
-      hStarts <- split(hStarts, factor(1:length(rangeHStart)))
-      
-      if (kernelType %in% c("dist", "gaussian", "exponential")) {
-        if (hOpt == "optimized") {
-          if (verbose) {
-            print("Now optimizing hyperparameter for estimating haplotype effects...")
-          }
-          
-          
-          maximizeFunc <- function(h) {
-            if (kernelType == "dist") {
-              gKernel <- expm::expm(- h * L)
-              
-              gKernelPart <- gKernel[haploNames, haploNames]
-            } else {
-              gKernelPart <- calcGRM(blockInterestUniqueSorted,
-                                     methodGRM = kernelType,
-                                     kernel.h = h)
-            }
-            
-            ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-            EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-            LL <- EM3Res$LL
-            
-            return(-LL)
-          }
-          
-          
-          if (length(hStarts) >= 2) {
+    
+    minuslog10ps <- c() 
+    gvEstTotals <- gvEstTotalForLines <- 
+      hOptsList <- EMMResultsList <- list()
+    
+    for (kernelType in kernelTypes){
+      if (!is.null(pheno)) {
+        ZgKernelPart <- as.matrix(Matrix::sparseMatrix(i = 1:nLine,
+                                                       j = haploClusterNow,
+                                                       x = rep(1, nLine),
+                                                       dims = c(nLine, nHaplo),
+                                                       dimnames = list(lineNames, haploNames)))
+        
+        h <- 1
+        hStarts <- h * rangeHStart
+        hStarts <- split(hStarts, factor(1:length(rangeHStart)))
+        if (kernelType %in% c("diffusion", "gaussian", "exponential")) {
+          if (hOpt == "optimized") {
             if (verbose) {
-              solnList <- pbmcapply::pbmclapply(X = hStarts,
-                                                FUN = function(h) {
-                                                  soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                                 lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                  
-                                                  return(soln)
-                                                }, mc.cores = nCores)
-            } else {
-              solnList <- parallel::pblapply(X = hStarts,
-                                             FUN = function(h) {
-                                               soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                              lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                               
-                                               return(soln)
-                                             }, mc.cores = nCores)
-            }
-            solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
-            soln <- solnList[[solnNo]]
-          } else {
-            traceInside <- ifelse(verbose, 1, 0)
-            soln <- nlminb(start = hStarts[[1]], objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                           lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
-          }
-          
-          hOpt <- soln$par
-        } else if (!is.numeric(hOpt)) {
-          stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
-        }
-        
-        
-        if (kernelType == "dist") {
-          gKernel <- expm::expm(- hOpt * L)
-          
-          gKernelPart <- gKernel[haploNames, haploNames]
-        } else {
-          gKernelPart <- calcGRM(blockInterestUniqueSorted,
-                                 methodGRM = kernelType,
-                                 kernel.h = hOpt)
-        }
-      } else {
-        hOpt <- NA
-        gKernelPart <- calcGRM(blockInterestUniqueSorted,
-                               methodGRM = kernelType)
-      }
-      
-      
-      if (verbose) {
-        print("Now estimating genotypic values...")
-      }
-      
-      ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-      EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-      gvEst <- EM3Res$u[(nLine + 1):(nLine + nHaplo), ]
-      LL <- EM3Res$LL
-      EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
-      LL0 <- EMMRes0$LL
-      
-      pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
-      minuslog10p <- - log10(pVal)
-      
-      
-      if ((EM3Res$weights[2] <= 1e-06)) {
-        warning("This block seems to have no effect on phenotype...")
-        gvEstTotal <- rep(NA, nTotal)
-        names(gvEstTotal) <- namesBlockInterestComp
-        gvEstTotal[haploNames] <- gvEst
-        
-        cexHaplo <- cexMax / 2
-        cexComp <- cexMax / 4
-        pchHaplo <- pchComp <- pchBase[2]
-        colComp <- colCompBase[2]
-        EMMRes <- NA
-        hOpt2 <- NA
-      } else {
-        if (existComp){
-          ZgKernel <- diag(nTotal)
-          rownames(ZgKernel) <- colnames(ZgKernel) <- namesBlockInterestComp
-          
-          gvEst2 <- matrix(rep(NA, nTotal))
-          rownames(gvEst2) <- namesBlockInterestComp
-          gvEst2[haploNames, ] <- gvEst
-          if (hOpt2 == "optimized") {  
-            
-            if (verbose) {
-              print("Now optimizing hyperparameter for estimating complemented haplotype effects...")
+              print("Now optimizing hyperparameter for estimating haplotype effects...")
             }
             
-            maximizeFunc2 <- function(h) {
-              gKernel <- expm::expm(- h * L)
-              ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
+            
+            maximizeFunc <- function(h) {
+              if (kernelType == "diffusion") {
+                gKernel <- expm::expm(- h * L)
+                
+                gKernelPart <- gKernel[haploNames, haploNames]
+              } else {
+                gKernelPart <- calcGRM(blockInterestUniqueSorted,
+                                       methodGRM = kernelType,
+                                       kernel.h = h)
+              }
               
-              EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-              LL <- EMMRes$LL
+              ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+              EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
+              LL <- EM3Res$LL
               
               return(-LL)
             }
@@ -1436,232 +1410,352 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
             
             if (length(hStarts) >= 2) {
               if (verbose) {
-                solnList2 <- pbmcapply::pbmclapply(X = hStarts,
-                                                   FUN = function(h) {
-                                                     soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                                    lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                     
-                                                     return(soln)
-                                                   }, mc.cores = nCores)
+                solnList <- pbmcapply::pbmclapply(X = hStarts,
+                                                  FUN = function(h) {
+                                                    soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                                   lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                    
+                                                    return(soln)
+                                                  }, mc.cores = nCores)
               } else {
-                solnList2 <- parallel::pblapply(X = hStarts,
-                                                FUN = function(h) {
-                                                  soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                                 lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                  
-                                                  return(soln)
-                                                }, mc.cores = nCores)
+                solnList <- parallel::pblapply(X = hStarts,
+                                               FUN = function(h) {
+                                                 soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                                lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                 
+                                                 return(soln)
+                                               }, mc.cores = nCores)
               }
-              solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
-              soln2 <- solnList2[[solnNo2]]
+              solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
+              soln <- solnList[[solnNo]]
             } else {
-              soln2 <- nlminb(start = hStarts[[1]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                              lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+              traceInside <- ifelse(verbose, 1, 0)
+              soln <- nlminb(start = hStarts[[1]], objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                             lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
             }
             
-            hOpt2 <- soln2$par
-          } else if (hOpt2 == "tuned") {
-            hOpt2 <- h
-          } else if (!is.numeric(hOpt2)) {
+            hOpt <- soln$par
+          } else if (!is.numeric(hOpt)) {
             stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
           }
           
-          gKernel2 <- expm::expm(- hOpt2 * L)
-          ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel2))
           
-          EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-          
-          u <- EMMRes$u
-          names(u) <- namesBlockInterestComp
-          gvPlus <- u[compNames] + EMMRes$beta
-          gvEstTotal <- gvEst2[, 1]
-          gvEstTotal[compNames] <- gvPlus
-          gvCentered <- gvEstTotal - mean(gvEstTotal)
-          gvScaled <- gvCentered / sd(gvCentered)
-          gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
-          
-          cexComp <- (abs(gvScaled4Cex) + cexMin)[compNames]
-          pchComp <- ifelse(gvScaled[compNames] > 0, pchBase[1], pchBase[2])
-          colComp <- ifelse(gvScaled[compNames] > 0, colCompBase[1], colCompBase[2])
-          
-          cexHaplo <- (abs(gvScaled4Cex) + cexMin)[haploNames]
-          pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
+          if (kernelType == "diffusion") {
+            gKernel <- expm::expm(- hOpt * L)
+            
+            gKernelPart <- gKernel[haploNames, haploNames]
+          } else {
+            gKernelPart <- calcGRM(blockInterestUniqueSorted,
+                                   methodGRM = kernelType,
+                                   kernel.h = hOpt)
+          }
         } else {
-          gvEstTotal <- gvEst
-          names(gvEstTotal) <- haploNames
+          hOpt <- NA
+          gKernelPart <- calcGRM(blockInterestUniqueSorted,
+                                 methodGRM = kernelType)
+        }
+        
+        
+        if (verbose) {
+          print("Now estimating genotypic values...")
+        }
+        
+        ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
+        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
+        gvEst <- EM3Res$u[(nLine + 1):(nLine + nHaplo), ]
+        LL <- EM3Res$LL
+        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
+        LL0 <- EMMRes0$LL
+        
+        pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
+        minuslog10p <- - log10(pVal)
+        
+        
+        if ((EM3Res$weights[2] <= 1e-06)) {
+          warning("This block seems to have no effect on phenotype...")
+          gvEstTotal <- rep(NA, nTotal)
+          names(gvEstTotal) <- namesBlockInterestComp
+          gvEstTotal[haploNames] <- gvEst
           
-          gvCentered <- gvEstTotal - mean(gvEstTotal)
-          gvScaled <- gvCentered / sd(gvCentered)
-          gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
-          
-          cexHaplo <- (abs(gvScaled4Cex) + cexMin)[haploNames]
-          pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
-          
-          
+          cexHaplo <- cexMax / 2
           cexComp <- cexMax / 4
+          pchHaplo <- pchComp <- pchBase[2]
           colComp <- colCompBase[2]
-          pchComp <- pchBase[2]
           EMMRes <- NA
           hOpt2 <- NA
-        }
-      }
-    } else {
-      gvEstTotal <- rep(NA, nTotal)
-      minuslog10p <- NA
-      
-      cexHaplo <- cexMax / 2
-      cexComp <- cexMax / 4
-      pchHaplo <- pchComp <- pchBase[2]
-      colComp <- colCompBase[2]
-      EM3Res <- EMMRes <- EMMRes0 <- NA
-      hOpt <- hOpt2 <- NA
-    }
-    
-    
-    if (plotNetwork) {
-      if (!is.null(subpopInfo)) {
-        if (length(colHaploBase) != nGrp) {
-          stop("The length of 'colHaploBase' should be equal to 'nGrp' or the number of subpopulations!")
-        }
-        
-        colHaploNo <- as.numeric(subpopInfo)
-        colHaplo <- colHaploBase[colHaploNo]
-        names(colHaploNo) <- names(colHaplo) <- lineNames
-        
-        colHaplo <- tapply(colHaplo, INDEX = haploNames[haploClusterNow], FUN = function(x) {
-          as.numeric(names(which.max(table(x) / sum(table(x)))))
-        })[haploNames]
-        
-        clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploNames[haploClusterNow],
-                                         FUN = table)[haploNames]
-      } else {
-        colHaplo <- rep("gray", nHaplo)
-        names(colHaplo) <- haploNames
-        
-        clusterNosForHaplotype <- NA
-      }
-      
-      
-      nDimMDS <- max(plotWhichMDS)
-      mdsResComp <- cmdscale(d = distMatComp,
-                             k = nDimMDS,
-                             eig = TRUE)
-      
-      
-      if (!is.null(saveName)) {
-        savePlotNameBase <- paste0(paste(c(saveName, blockName), collapse = "_"),
-                                   "_network")
-        if (saveStyle == "pdf") {
-          savePlotName <- paste0(savePlotNameBase, ".pdf")
-          pdf(file = savePlotName, width = 12, height = 9)
-        } else if (saveStyle == "jpg") {
-          savePlotName <- paste0(savePlotNameBase, ".jpg")  
-          jpeg(filename = savePlotName, width = 800, height = 600)
-        } else if (saveStyle == "tiff") {
-          savePlotName <- paste0(savePlotNameBase, ".tiff")
-          tiff(filename = savePlotName, width = 800, height = 600)
         } else {
-          savePlotName <- paste0(savePlotNameBase, ".png")
-          png(filename = savePlotName, width = 800, height = 600)
+          if (existComp){
+            ZgKernel <- diag(nTotal)
+            rownames(ZgKernel) <- colnames(ZgKernel) <- namesBlockInterestComp
+            
+            gvEst2 <- matrix(rep(NA, nTotal))
+            rownames(gvEst2) <- namesBlockInterestComp
+            gvEst2[haploNames, ] <- gvEst
+            if (hOpt2 == "optimized") {  
+              
+              if (verbose) {
+                print("Now optimizing hyperparameter for estimating complemented haplotype effects...")
+              }
+              
+              maximizeFunc2 <- function(h) {
+                gKernel <- expm::expm(- h * L)
+                ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
+                
+                EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
+                LL <- EMMRes$LL
+                
+                return(-LL)
+              }
+              
+              
+              if (length(hStarts) >= 2) {
+                if (verbose) {
+                  solnList2 <- pbmcapply::pbmclapply(X = hStarts,
+                                                     FUN = function(h) {
+                                                       soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                      lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                       
+                                                       return(soln)
+                                                     }, mc.cores = nCores)
+                } else {
+                  solnList2 <- parallel::pblapply(X = hStarts,
+                                                  FUN = function(h) {
+                                                    soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                   lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                    
+                                                    return(soln)
+                                                  }, mc.cores = nCores)
+                }
+                solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
+                soln2 <- solnList2[[solnNo2]]
+              } else {
+                soln2 <- nlminb(start = hStarts[[1]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+              }
+              
+              hOpt2 <- soln2$par
+            } else if (hOpt2 == "tuned") {
+              hOpt2 <- h
+            } else if (!is.numeric(hOpt2)) {
+              stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
+            }
+            
+            gKernel2 <- expm::expm(- hOpt2 * L)
+            ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel2))
+            
+            EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
+            
+            u <- EMMRes$u
+            names(u) <- namesBlockInterestComp
+            gvPlus <- u[compNames] + EMMRes$beta
+            gvEstTotal <- gvEst2[, 1]
+            gvEstTotal[compNames] <- gvPlus
+            gvCentered <- gvEstTotal - mean(gvEstTotal)
+            gvScaled <- gvCentered / sd(gvCentered)
+            gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
+            
+            cexComp <- (abs(gvScaled4Cex) + cexMin)[compNames]
+            pchComp <- ifelse(gvScaled[compNames] > 0, pchBase[1], pchBase[2])
+            colComp <- ifelse(gvScaled[compNames] > 0, colCompBase[1], colCompBase[2])
+            
+            cexHaplo <- (abs(gvScaled4Cex) + cexMin)[haploNames]
+            pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
+          } else {
+            gvEstTotal <- gvEst
+            names(gvEstTotal) <- haploNames
+            
+            gvCentered <- gvEstTotal - mean(gvEstTotal)
+            gvScaled <- gvCentered / sd(gvCentered)
+            gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
+            
+            cexHaplo <- (abs(gvScaled4Cex) + cexMin)[haploNames]
+            pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
+            
+            
+            cexComp <- cexMax / 4
+            colComp <- colCompBase[2]
+            pchComp <- pchBase[2]
+            EMMRes <- NA
+            hOpt2 <- NA
+          }
         }
+      } else {
+        gvEstTotal <- rep(NA, nTotal)
+        minuslog10p <- NA
+        
+        cexHaplo <- cexMax / 2
+        cexComp <- cexMax / 4
+        pchHaplo <- pchComp <- pchBase[2]
+        colComp <- colCompBase[2]
+        EM3Res <- EMMRes <- EMMRes0 <- NA
+        hOpt <- hOpt2 <- NA
       }
+      gvEstTotalForLine <- gvEstTotal[haploClusterNow]
+      names(gvEstTotalForLine) <- lineNames
       
-      plot(x = mdsResComp$points[haploNames, plotWhichMDS[1]],
-           y = mdsResComp$points[haploNames, plotWhichMDS[2]],
-           col = colHaplo,
-           pch = pchHaplo, cex = cexHaplo,
-           xlab = paste0("MDS", plotWhichMDS[1]),
-           ylab = paste0("MDS", plotWhichMDS[2]),
-           xlim = range(mdsResComp$points[, plotWhichMDS[1]]),
-           ylim = range(mdsResComp$points[, plotWhichMDS[2]]))
-      
-      if (existComp) {
-        points(x = mdsResComp$points[compNames, plotWhichMDS[1]],
-               y = mdsResComp$points[compNames, plotWhichMDS[2]],
-               col = colComp,
-               pch = pchComp, cex = cexComp)
-      }
-      
-      segments(x0 = mdsResComp$points[mstResComp[, 1], plotWhichMDS[1]],
-               y0 = mdsResComp$points[mstResComp[, 1], plotWhichMDS[2]],
-               x1 = mdsResComp$points[mstResComp[, 2], plotWhichMDS[1]],
-               y1 = mdsResComp$points[mstResComp[, 2], plotWhichMDS[2]],
-               col = colConnection[1],
-               lty = ltyConnection[1],
-               lwd = lwdConnection[1])
-      if (plotPlus) {
-        segments(x0 = mdsResComp$points[mstResCompPlus[, 1], plotWhichMDS[1]],
-                 y0 = mdsResComp$points[mstResCompPlus[, 1], plotWhichMDS[2]],
-                 x1 = mdsResComp$points[mstResCompPlus[, 2], plotWhichMDS[1]],
-                 y1 = mdsResComp$points[mstResCompPlus[, 2], plotWhichMDS[2]],
-                 col = colConnection[2],
-                 lty = ltyConnection[2],
-                 lwd = lwdConnection[2])
-      }
+      hOpts <- c(hOpt = hOpt,
+                 hOpt2 = hOpt2)
+      EMMResults <- list(EM3Res = EM3Res,
+                         EMMRes = EMMRes,
+                         EMMRes0 = EMMRes0)
       
       
       
-      title(main = paste0(paste(c(colnames(pheno)[2], 
-                                  blockName), collapse = "_"),
-                          " (-log10p: ", round(minuslog10p, 2), ")"))
-      if (existComp) {
+      gvEstTotals[[kernelType]] <- gvEstTotal 
+      gvEstTotalForLines[[kernelType]] <- gvEstTotalForLine 
+      minuslog10ps[kernelType] <- minuslog10p 
+      hOptsList[[kernelType]] <- hOpts 
+      EMMResultsList[[kernelType]] <- EMMResults
+      
+      
+      
+      
+      
+      if (plotNetwork) {
         if (!is.null(subpopInfo)) {
-          legend("topleft", legend = c(paste0(rep(levels(subpopInfo), each = 2),
+          if (length(colHaploBase) != nGrp) {
+            stop("The length of 'colHaploBase' should be equal to 'nGrp' or the number of subpopulations!")
+          }
+          
+          colHaploNo <- as.numeric(subpopInfo)
+          colHaplo <- colHaploBase[colHaploNo]
+          names(colHaploNo) <- names(colHaplo) <- lineNames
+          
+          colHaplo <- tapply(colHaplo, INDEX = haploNames[haploClusterNow], FUN = function(x) {
+            as.numeric(names(which.max(table(x) / sum(table(x)))))
+          })[haploNames]
+          
+          clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploNames[haploClusterNow],
+                                           FUN = table)[haploNames]
+        } else {
+          colHaplo <- rep("gray", nHaplo)
+          names(colHaplo) <- haploNames
+          
+          clusterNosForHaplotype <- NA
+        }
+        
+        
+        nDimMDS <- max(plotWhichMDS)
+        mdsResComp <- cmdscale(d = distMatComp,
+                               k = nDimMDS,
+                               eig = TRUE)
+        
+        
+        if (!is.null(saveName)) {
+          savePlotNameBase <- paste0(paste(c(saveName, blockName, kernelType), collapse = "_"),
+                                     "_network")
+          if (saveStyle == "pdf") {
+            savePlotName <- paste0(savePlotNameBase, ".pdf")
+            pdf(file = savePlotName, width = 12, height = 9)
+          } else if (saveStyle == "jpg") {
+            savePlotName <- paste0(savePlotNameBase, ".jpg")  
+            jpeg(filename = savePlotName, width = 800, height = 600)
+          } else if (saveStyle == "tiff") {
+            savePlotName <- paste0(savePlotNameBase, ".tiff")
+            tiff(filename = savePlotName, width = 800, height = 600)
+          } else {
+            savePlotName <- paste0(savePlotNameBase, ".png")
+            png(filename = savePlotName, width = 800, height = 600)
+          }
+        }
+        
+        plot(x = mdsResComp$points[haploNames, plotWhichMDS[1]],
+             y = mdsResComp$points[haploNames, plotWhichMDS[2]],
+             col = colHaplo,
+             pch = pchHaplo, cex = cexHaplo,
+             xlab = paste0("MDS", plotWhichMDS[1]),
+             ylab = paste0("MDS", plotWhichMDS[2]),
+             xlim = range(mdsResComp$points[, plotWhichMDS[1]]),
+             ylim = range(mdsResComp$points[, plotWhichMDS[2]]))
+        
+        if (existComp) {
+          points(x = mdsResComp$points[compNames, plotWhichMDS[1]],
+                 y = mdsResComp$points[compNames, plotWhichMDS[2]],
+                 col = colComp,
+                 pch = pchComp, cex = cexComp)
+        }
+        
+        segments(x0 = mdsResComp$points[mstResComp[, 1], plotWhichMDS[1]],
+                 y0 = mdsResComp$points[mstResComp[, 1], plotWhichMDS[2]],
+                 x1 = mdsResComp$points[mstResComp[, 2], plotWhichMDS[1]],
+                 y1 = mdsResComp$points[mstResComp[, 2], plotWhichMDS[2]],
+                 col = colConnection[1],
+                 lty = ltyConnection[1],
+                 lwd = lwdConnection[1])
+        if (plotPlus) {
+          segments(x0 = mdsResComp$points[mstResCompPlus[, 1], plotWhichMDS[1]],
+                   y0 = mdsResComp$points[mstResCompPlus[, 1], plotWhichMDS[2]],
+                   x1 = mdsResComp$points[mstResCompPlus[, 2], plotWhichMDS[1]],
+                   y1 = mdsResComp$points[mstResCompPlus[, 2], plotWhichMDS[2]],
+                   col = colConnection[2],
+                   lty = ltyConnection[2],
+                   lwd = lwdConnection[2])
+        }
+        
+        
+        
+        title(main = paste0(paste(c(colnames(pheno)[2], 
+                                    blockName), collapse = "_"),
+                            " (-log10p: ", round(minuslog10p, 2), ")"))
+        if (existComp) {
+          if (!is.null(subpopInfo)) {
+            legend("topleft", legend = c(paste0(rep(levels(subpopInfo), each = 2),
+                                                rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
+                                         "Complement (gv:+)", "Complement (gv:-)"),
+                   col = c(rep(colHaploBase, each = 2), colCompBase),
+                   pch = rep(pchBase, nGrp + 1))
+          } else {
+            legend("topleft", legend = c("Haplotype (gv:+)", "Haplotype (gv:-)",
+                                         "Complement (gv:+)", "Complement (gv:-)"),
+                   col = c(rep(colHaploBase, each = 2), colCompBase),
+                   pch = rep(pchBase, 2))
+          }
+        } else if (!is.null(pheno)) {
+          if (!is.null(subpopInfo)) {
+            legend("topleft", legend = paste0(rep(levels(subpopInfo), each = 2),
                                               rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
-                                       "Complement (gv:+)", "Complement (gv:-)"),
-                 col = c(rep(colHaploBase, each = 2), colCompBase),
-                 pch = rep(pchBase, nGrp + 1))
+                   col = rep(colHaploBase, each = 2),
+                   pch = rep(pchBase, nGrp))
+          } else {
+            legend("topleft", legend = c("Haplotype (gv:+)", "Haplotype (gv:-)"),
+                   col = rep(colHaploBase, each = 2),
+                   pch = pchBase)
+          }
         } else {
-          legend("topleft", legend = c("Haplotype (gv:+)", "Haplotype (gv:-)",
-                                       "Complement (gv:+)", "Complement (gv:-)"),
-                 col = c(rep(colHaploBase, each = 2), colCompBase),
-                 pch = rep(pchBase, 2))
+          if (!is.null(subpopInfo)) {
+            legend("topleft", legend = levels(subpopInfo),
+                   col = colHaploBase,
+                   pch = pchHaplo)
+          } else {
+            legend("topleft", legend = "Haplotype",
+                   col = colHaploBase,
+                   pch = pchHaplo)
+          }   
         }
-      } else if (!is.null(pheno)) {
-        if (!is.null(subpopInfo)) {
-          legend("topleft", legend = paste0(rep(levels(subpopInfo), each = 2),
-                                            rep(c(" (gv:+)",  " (gv:-)"), nGrp)),
-                 col = rep(colHaploBase, each = 2),
-                 pch = rep(pchBase, nGrp))
+        
+        
+        
+        if (!is.null(saveName)) {
+          dev.off()
         } else {
-          legend("topleft", legend = c("Haplotype (gv:+)", "Haplotype (gv:-)"),
-                 col = rep(colHaploBase, each = 2),
-                 pch = pchBase)
+          Sys.sleep(0.5)
         }
-      } else {
-        if (!is.null(subpopInfo)) {
-          legend("topleft", legend = levels(subpopInfo),
-                 col = colHaploBase,
-                 pch = pchHaplo)
-        } else {
-          legend("topleft", legend = "Haplotype",
-                 col = colHaploBase,
-                 pch = pchHaplo)
-        }   
-      }
-      
-      
-      
-      if (!is.null(saveName)) {
-        dev.off()
       }
     }
     
-    gvEstTotalForLine <- gvEstTotal[haploClusterNow]
-    names(gvEstTotalForLine) <- lineNames
     
     return(list(haplotypeInfo = haplotypeInfo,
                 mstResults = list(mstRes = mstRes,
                                   mstResComp = mstResComp),
+                distMats = list(distMat = distMat,
+                                distMatComp = distMatComp,
+                                laplacianMat = L),
                 pValChi2Test = pValChi2Test,
-                gvTotal = gvEstTotal,
-                gvTotalForLine = gvEstTotalForLine,
-                minuslog10p = minuslog10p,
-                hOpts = c(hOpt = hOpt,
-                          hOpt2 = hOpt2),
-                EMMResults = list(EM3Res = EM3Res,
-                                  EMMRes = EMMRes,
-                                  EMMRes0 = EMMRes0),
+                gvTotal = gvEstTotals,
+                gvTotalForLine = gvEstTotalForLines,
+                minuslog10p = minuslog10ps,
+                hOpts = hOptsList,
+                EMMResults = EMMResultsList,
                 clusterNosForHaplotype = clusterNosForHaplotype))
   }
   
