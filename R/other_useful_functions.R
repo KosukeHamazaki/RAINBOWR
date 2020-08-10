@@ -541,6 +541,9 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     minuslog10ps <- c() 
     gvEstTotals <- gvEstTotalForLines <- 
       hOptsList <- EMMResultsList <- list()
+    hOptBase <- hOpt
+    hOptBase2 <- hOpt2
+    
     
     for (kernelType in kernelTypes){
       if (!is.null(pheno)) {
@@ -561,7 +564,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         hStarts <- split(hStarts, factor(1:length(rangeHStart)))
         
         if (kernelType %in% c("phylo", "gaussian", "exponential")){
-          if (hOpt == "optimized") {
+          if (hOptBase == "optimized") {
             if (verbose) {
               print("Now optimizing hyperparameter for estimating haplotype effects...")
             }
@@ -612,9 +615,9 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
             }
             
             hOpt <- soln$par
-          } else if (hOpt == "tuned") {
+          } else if (hOptBase == "tuned") {
             hOpt <- h
-          } else if (!is.numeric(hOpt)) {
+          } else if (!is.numeric(hOptBase)) {
             stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
           }
           
@@ -670,7 +673,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           gvEst2 <- matrix(c(gvEst, rep(NA, nNode)))
           rownames(gvEst2) <- rownames(distNodes)
           
-          if (hOpt2 == "optimized") {   
+          if (hOptBase2 == "optimized") {   
             if (verbose) {
               print("Now optimizing hyperparameter for estimating haplotype effects of nodes...")
             }
@@ -712,10 +715,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
             }
             
             hOpt2 <- soln2$par
-          } else if (hOpt2 == "tuned") {
+          } else if (hOptBase2 == "tuned") {
             hOpt2 <- h
-          } else if (!is.numeric(hOpt2)) {
-            stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
+          } else if (!is.numeric(hOptBase2)) {
+            stop("`hOpt2` should be either one of 'optimized', 'tuned', or numeric!!")
           }
           
           gKernel2 <- exp(- hOpt2 * distNodes)
@@ -977,11 +980,9 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' @param nCores The number of cores used for optimization.
 #' @param hOpt Optimized hyper parameter for constructing kernel when estimating haplotype effects.
 #'  If hOpt = "optimized", hyper parameter will be optimized in the function.
-#'  If hOpt = "tuned", hyper parameter will be replaced by the median of off-diagonal of distance matrix.
 #'  If hOpt is numeric, that value will be directly used in the function.
 #' @param hOpt2 Optimized hyper parameter for constructing kernel when estimating complemented haplotype effects.
 #'  If hOpt2 = "optimized", hyper parameter will be optimized in the function.
-#'  If hOpt2 = "tuned", hyper parameter will be replaced by the median of off-diagonal of distance matrix.
 #'  If hOpt2 is numeric, that value will be directly used in the function. 
 #' @param maxIter Max number of iterations for optimization algorithm.
 #' @param rangeHStart The median of off-diagonal of distance matrix multiplied by rangeHStart will be used 
@@ -1371,6 +1372,9 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     gvEstTotals <- gvEstTotalForLines <- 
       hOptsList <- EMMResultsList <- list()
     
+    hOptBase <- hOpt
+    hOptBase2 <- hOpt2
+    
     for (kernelType in kernelTypes){
       if (!is.null(pheno)) {
         ZgKernelPart <- as.matrix(Matrix::sparseMatrix(i = 1:nLine,
@@ -1383,7 +1387,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         hStarts <- h * rangeHStart
         hStarts <- split(hStarts, factor(1:length(rangeHStart)))
         if (kernelType %in% c("diffusion", "gaussian", "exponential")) {
-          if (hOpt == "optimized") {
+          if (hOptBase == "optimized") {
             if (verbose) {
               print("Now optimizing hyperparameter for estimating haplotype effects...")
             }
@@ -1435,8 +1439,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
             }
             
             hOpt <- soln$par
-          } else if (!is.numeric(hOpt)) {
-            stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
+          } else if (!is.numeric(hOptBase)) {
+            stop("`hOpt` should be either one of 'optimized' or numeric!!")
           }
           
           
@@ -1491,7 +1495,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
             gvEst2 <- matrix(rep(NA, nTotal))
             rownames(gvEst2) <- namesBlockInterestComp
             gvEst2[haploNames, ] <- gvEst
-            if (hOpt2 == "optimized") {  
+            if (hOptBase2 == "optimized") {  
               
               if (verbose) {
                 print("Now optimizing hyperparameter for estimating complemented haplotype effects...")
@@ -1534,10 +1538,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
               }
               
               hOpt2 <- soln2$par
-            } else if (hOpt2 == "tuned") {
-              hOpt2 <- h
-            } else if (!is.numeric(hOpt2)) {
-              stop("`hOpt` should be either one of 'optimized', 'tuned', or numeric!!")
+            } else if (!is.numeric(hOptBase2)) {
+              stop("`hOpt2` should be either one of 'optimized' or numeric!!")
             }
             
             gKernel2 <- expm::expm(- hOpt2 * L)

@@ -147,12 +147,10 @@ You can assign more than one kernelTypes for this argument; for example, kernelT
 
 \item{hOpt}{Optimized hyper parameter for constructing kernel when estimating haplotype effects.
 If hOpt = "optimized", hyper parameter will be optimized in the function.
-If hOpt = "tuned", hyper parameter will be replaced by the median of off-diagonal of distance matrix.
 If hOpt is numeric, that value will be directly used in the function.}
 
 \item{hOpt2}{Optimized hyper parameter for constructing kernel when estimating complemented haplotype effects.
 If hOpt2 = "optimized", hyper parameter will be optimized in the function.
-If hOpt2 = "tuned", hyper parameter will be replaced by the median of off-diagonal of distance matrix.
 If hOpt2 is numeric, that value will be directly used in the function.}
 
 \item{maxIter}{Max number of iterations for optimization algorithm.}
