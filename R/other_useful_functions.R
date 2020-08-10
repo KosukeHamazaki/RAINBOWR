@@ -1322,7 +1322,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       njRes <- ape::nj(X = as.dist(dist4Nj))
       
       distMatComp <- dist.nodes(njRes)
-      nComp <- nrow(distMatComp) - nHaplo
+      nHaploComp <- nrow(distMatComp)
+      nComp <- nHaploComp - nHaplo
       
       if (nComp >= 1){
         existComp <- TRUE
