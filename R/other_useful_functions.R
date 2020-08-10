@@ -546,6 +546,11 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     
     
     for (kernelType in kernelTypes){
+      if (verbose) {
+        print(paste0("Now optimizing for kernelType: ", kernelType))
+      }
+      
+      
       if (!is.null(pheno)) {
         rownames(distNodes)[1:nHaplo] <- colnames(distNodes)[1:nHaplo] <- haploNames
         
@@ -1377,6 +1382,11 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     hOptBase2 <- hOpt2
     
     for (kernelType in kernelTypes){
+      if (verbose) {
+        print(paste0("Now optimizing for kernelType: ", kernelType))
+      }
+      
+      
       if (!is.null(pheno)) {
         ZgKernelPart <- as.matrix(Matrix::sparseMatrix(i = 1:nLine,
                                                        j = haploClusterNow,
