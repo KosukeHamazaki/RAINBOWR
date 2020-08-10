@@ -835,7 +835,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           tiplabels(pch = pchTip, cex = cexTip, col = colTip)
         }
         title(main = paste0(paste(c(colnames(pheno)[2], 
-                                    blockName), collapse = "_"),
+                                    blockName, kernelType), collapse = "_"),
                             " (-log10p: ", round(minuslog10p, 2), ")"))
         if (plotNode) {
           if (!is.null(subpopInfo)) {
@@ -1057,7 +1057,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                        saveName = NULL, saveStyle = "png",
                        plotWhichMDS = 1:2, colConnection = c("grey40", "grey60"),
                        ltyConnection = c("solid", "dashed"), lwdConnection = c(1.5, 0.8),
-                       pchBase = c(1, 16), colCompBase = c("grey20", "grey40"),
+                       pchBase = c(1, 16), colCompBase = c(2, 4),
                        colHaploBase = c(3, 5, 6), cexMax = 2, cexMin = 0.7, verbose = TRUE) {
   
   if (!is.null(geno)) {
@@ -1708,7 +1708,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         
         
         title(main = paste0(paste(c(colnames(pheno)[2], 
-                                    blockName), collapse = "_"),
+                                    blockName, kernelType), collapse = "_"),
                             " (-log10p: ", round(minuslog10p, 2), ")"))
         if (existComp) {
           if (!is.null(subpopInfo)) {
