@@ -317,7 +317,15 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' @param cexMin A numeric specifying the minimum point size of the plot.
 #' @param edgeColoring If TRUE, the edge branch of phylogenetic tree wiil be colored.
 #' @param tipLabel If TRUE, lavels for tips will be shown.
-#' @param verbose If this argument is TRUE, messages for the current steps will be shown.
+#' @param ggPlotTree If TRUE, the function will return the ggplot version of phylogenetic tree. 
+#' It offers the precise information on subgroups for each haplotype.
+#' @param cexMaxForGG A numeric specifying the maximum point size of the plot for ggtree,
+#'  relative to the range of x and y-axes (0 < cexMaxForGG <= 1).
+#' @param cexMinForGG A numeric specifying the minimum point size of the plot for ggtree,
+#'  relative to the range of x and y-axes (0 < cexMaxForGG <= 1).
+#' @param alphaBase alpha (parameter that indicates the opacity of a geom) for tip with positive / negative effects.
+#' alpha for node will be same as the alpha for tip with negative effects.
+#' @param verbose If this argument is TRUE, messages for the current step_s will be shown.
 #'
 #' @return
 #' \describe{A list / lists of 
@@ -359,9 +367,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      nCores = parallel::detectCores(), hOpt = "optimized",
                      hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
                      saveName = NULL, saveStyle = "png",
-                     pchBase = c(1, 16), colNodeBase = c(2, 4),
-                     colTipBase = c(3, 5, 6), cexMax = 2, cexMin = 0.7,
-                     edgeColoring = TRUE, tipLabel = TRUE, verbose = TRUE) {
+                     pchBase = c(1, 16), colNodeBase = c(2, 4), colTipBase = c(3, 5, 6),
+                     cexMax = 2, cexMin = 0.7, edgeColoring = TRUE, tipLabel = TRUE,
+                     ggPlotTree = FALSE, cexMaxForGG = 0.12, cexMinForGG = 0.06,
+                     alphaBase = c(0.9, 0.3), verbose = TRUE) {
   if (!is.null(geno)) {
     M <- t(geno[, -c(1:3)])
     map <- geno[, 1:3]
@@ -486,37 +495,39 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     haploNames <- paste0("haplo_", 1:nHaplo)
     rownames(blockInterestUniqueSorted) <- haploNames
     
-    tableRes <- table(haploCluster = haploNames[haploClusterNow],
-                      subpop = subpopInfo)[haploNames, ]
+    
+    if (!is.null(subpopInfo)) {
+      tableRes <- table(haploCluster = haploNames[haploClusterNow],
+                        subpop = subpopInfo)[haploNames, ]
+      
+      if (verbose) {
+        cat("Tabular for haplotype x subpopulation: \n")
+        print(head(tableRes))
+        cat("\nThe number of haplotypes: ", nHaplo, "\n")
+      }
+      
+      if (chi2Test) {
+        chi2TestRes <- chisq.test(tableRes)
+        pValChi2Test <- chi2TestRes$p.value
+        
+        if (verbose) {
+          cat("\n")
+          print(chi2TestRes)
+          
+          cat("Haplotypes & Subpopulations are: \n")
+          if (pValChi2Test <= thresChi2Test) {
+            cat("\tSiginificantly dependent\n")
+          } else {
+            cat("\tindependent\n")
+          }
+        }
+      } else {
+        pValChi2Test <- NA
+      }
+    }
     
     haplotypeInfo <- list(haploCluster = haploNames[haploClusterNow],
                           haploBlock = blockInterestUniqueSorted)
-    
-    if (verbose) {
-      cat("Tabular for haplotype x subpopulation: \n")
-      print(head(tableRes))
-      cat("\nThe number of haplotypes: ", nHaplo, "\n")
-    }
-    
-    if (chi2Test) {
-      chi2TestRes <- chisq.test(tableRes)
-      pValChi2Test <- chi2TestRes$p.value
-      
-      if (verbose) {
-        cat("\n")
-        print(chi2TestRes)
-        
-        cat("Haplotypes & Subpopulations are: \n")
-        if (pValChi2Test <= thresChi2Test) {
-          cat("\tSiginificantly dependent\n")
-        } else {
-          cat("\tindependent\n")
-        }
-      }
-    } else {
-      pValChi2Test <- NA
-    }
-    
     
     
     nMrkInBlock <- ncol(blockInterest)
@@ -667,10 +678,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           pchTip <- pchBase[2]
           EMMRes <- NA
           hOpt2 <- NA
+          
+          cexTipForGG <- rep(cexMaxForGG / sqrt(2), nHaplo)
         } else {
           plotNode <- TRUE
-          
-          
           
           ZgKernel <- diag(nTotal)
           rownames(ZgKernel) <- colnames(ZgKernel) <- rownames(distNodes)
@@ -744,22 +755,43 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           
           cexTip <- (abs(gvScaled4Cex) + cexMin)[1:nHaplo]
           pchTip <- ifelse(gvScaled[1:nHaplo] > 0, pchBase[1], pchBase[2])
+          
+          
+          colorForNodeFac <- factor(gvScaled[(nHaplo + 1):nTotal] > 0,
+                                    levels = c("TRUE", "FALSE"))
+          colorForNodeDF <- data.frame(model.matrix(~ colorForNodeFac - 1))
+          rownames(colorForNodeDF) <- names(colorForNodeFac)
+          colnames(colorForNodeDF) <- c("gvNode +", "gvNode -")
+          
+          colorForNodeDF$node <- rownames(colorForNodeDF)
+          
+          
+          gvScaled4CexForGG <- sign(gvScaled) * sqrt(abs(gvScaled)) * 
+            (cexMaxForGG - cexMinForGG) / max(sqrt(abs(gvScaled)))
+          
+          cexNodeForGG <- (abs(gvScaled4CexForGG) + cexMinForGG)[(nHaplo + 1):nTotal]
+          cexTipForGG <- (abs(gvScaled4CexForGG) + cexMinForGG)[1:nHaplo]
+          
+          alphaTip <- ifelse(gvScaled[1:nHaplo] > 0, alphaBase[1], alphaBase[2])
+          alphaNode <- alphaBase[2]
         }
       } else {
         plotNode <- FALSE
         
-        nTip <- length(njRes$tip.label)
         nNode <- njRes$Nnode
-        nTotal <- nNode + nTip
+        nTotal <- nNode + nHaplo
         gvEstTotal <- rep(NA, nTotal)
+        names(gvEstTotal) <- nrow(distNodes)
         minuslog10p <- NA
         
         cexTip <- cexMax / 2
         pchTip <- pchBase[2]
         EM3Res <- EMMRes <- EMMRes0 <- NA
         hOpt <- hOpt2 <- NA
+        
+        cexTipForGG <- rep(cexMaxForGG / sqrt(2), nHaplo)
       }
-      gvEstTotalForLine <- gvEstTotal[haploClusterNow]
+      gvEstTotalForLine <- (gvEstTotal[haploNames])[haploClusterNow]
       names(gvEstTotalForLine) <- lineNames
       
       
@@ -794,12 +826,27 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                          FUN = table)[haploNames]
         
         edgeCol <- as.numeric(colTip[njRes$edge[, 2]])
+        
+        clusterNosDF <- data.frame(do.call(what = rbind, 
+                                           args = clusterNosForHaplotype))
+        clusterNosRatioDF <- data.frame(t(apply(clusterNosDF, 1, 
+                                                function(x) x / sum(x))))
+        
+        clusterNosRatioDF$node <- 1:nHaplo
       } else {
         colTip <- rep("gray", nHaplo)
         names(colTip) <- haploNames
+        colTipBase <- "gray"
         
         edgeCol <- colTip[njRes$edge[, 2]]
         clusterNosForHaplotype <- NA
+        
+        clusterNosRatioDF <- data.frame(matrix(data = 1,
+                                               nrow = nHaplo,
+                                               ncol = 1))
+        rownames(clusterNosRatioDF) <- haploNames
+        colnames(clusterNosRatioDF) <- "Tip"
+        clusterNosRatioDF$node <- 1:nHaplo
       }
       
       edgeCol[is.na(edgeCol)] <- "gray"
@@ -867,6 +914,110 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           Sys.sleep(0.5)
         }
       }
+      
+      
+      
+      
+      
+      if (ggPlotTree) {
+        trPhylo41 <- as(njRes, 'phylo4')
+        
+        if (edgeColoring) {
+          dataForTipCol <- data.frame(color = colTip)
+        } else {
+          dataForTipCol <- data.frame(color = rep("gray30", nHaplo))
+        }
+        rownames(dataForTipCol) <- njRes$tip.label
+        trPhylo42 <- phylo4d(trPhylo41, dataForTipCol)
+        
+        nodeData <- data.frame(randomTrait = gvEstTotal[(nHaplo + 1):nTotal],
+                               color = rep("gray", nNodes(trPhylo41)),
+                               row.names = nodeId(trPhylo41, "internal"))
+        nodeData(trPhylo42) <- nodeData
+        
+        
+        plt <- ggtree::ggtree(tr = trPhylo42,
+                              aes(col = I(color)),
+                              layout = "equal_angle")
+        
+        
+        if (plotNode) {
+          piesNode <- nodepie(colorForNodeDF, cols = 1:2,
+                              color = colNodeBase,
+                              alpha　=　alphaNode)
+          
+          plt <- plt + geom_inset(insets = piesNode,
+                                  width = cexNodeForGG,
+                                  height = cexNodeForGG)
+        }
+        
+        if (tipLabel) {
+          if (!is.null(subpopInfo)) {
+            colTipBaseForPie <- colTipBase
+          } else {
+            colTipBaseForPie <- rep("gray", nGrp)
+          }
+          
+          if (!all(is.na(EMMRes))) {
+            piesPlus <- nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
+                                cols = 1:nGrp,
+                                color = colTipBaseForPie,
+                                alpha　=　alphaBase[1])
+            piesMinus <- nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
+                                 cols = 1:nGrp,
+                                 color = colTipBaseForPie,
+                                 alpha　=　alphaBase[2])
+            
+            plt <- plt + geom_inset(insets = piesPlus,
+                                    width = cexTipForGG[alphaTip == alphaBase[1]],
+                                    height = cexTipForGG[alphaTip == alphaBase[1]])
+            
+            plt <- plt + geom_inset(insets = piesMinus,
+                                    width = cexTipForGG[alphaTip == alphaBase[2]],
+                                    height = cexTipForGG[alphaTip == alphaBase[2]])
+          } else {
+            piesTip <- nodepie(clusterNosRatioDF,
+                               cols = 1:nGrp,
+                               color = colTipBaseForPie,
+                               alpha　=　mean(alphaBase)) 
+            
+            plt <- plt + geom_inset(insets = piesTip,
+                                    width = cexTipForGG,
+                                    height = cexTipForGG)
+          }
+        }
+        plt <- plt + ggtitle(label = paste0(paste(c(colnames(pheno)[2], 
+                                                    blockName, kernelType), collapse = "_"),
+                                            " (-log10p: ", round(minuslog10p, 2), ")"))
+        
+        
+        if (!is.null(saveName)) {
+          savePlotNameBase <- paste0(paste(c(saveName, blockName, kernelType), collapse = "_"),
+                                     "_phylogenetic_ggtree")
+          if (saveStyle == "pdf") {
+            savePlotName <- paste0(savePlotNameBase, ".pdf")
+            pdf(file = savePlotName, width = 12, height = 9)
+          } else if (saveStyle == "jpg") {
+            savePlotName <- paste0(savePlotNameBase, ".jpg")  
+            jpeg(filename = savePlotName, width = 800, height = 600)
+          } else if (saveStyle == "tiff") {
+            savePlotName <- paste0(savePlotNameBase, ".tiff")
+            tiff(filename = savePlotName, width = 800, height = 600)
+          } else {
+            savePlotName <- paste0(savePlotNameBase, ".png")
+            png(filename = savePlotName, width = 800, height = 600)
+          }
+        }
+        
+        print(plt)
+        
+        if (!is.null(saveName)) {
+          dev.off()
+        } else {
+          Sys.sleep(0.5)
+        }
+      }
+      
     }
     
     
@@ -907,6 +1058,12 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     return(allResultsList)
   }
 }
+
+
+
+
+
+
 
 
 
@@ -958,7 +1115,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' @param complementHaplo how to complement unobserved haplotypes.
 #' When `complementHaplo = "all"`, all possible haplotypes will be complemented from the observed haplotypes.
 #' When `complementHaplo = "never"`, unobserved haplotypes will not be complemented.
-#' When `complementHaplo = "all"`, all possible haplotypes will be complemented from the observed haplotypes.
+#' When `complementHaplo = "phylo"`, unobserved haplotypes will be complemented as nodes of phylogenetic tree.
+#' When `complementHaplo = "TCS"`, unobserved haplotypes will be complemented by TCS methods (Clement et al., 2002).
 #' @param subpopInfo The information of subpopulations. This argument should be a vector of factor. 
 #' @param groupingMethod If `subpopInfo` argument is NULL, this function estimates subpopulation information from marker genotype.
 #' You can choose the grouping method from `kmeans`, `kmedoids`, and `hclust`. 
@@ -970,10 +1128,14 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' @param networkMethod Either one of 'mst' (minimum spanning tree),
 #'  'msn' (minimum spanning network), and 'rmst' (randomized minimum spanning tree).
 #'  'rmst' is recommended.
-#' @param autogamous This argument will be valid only when you use `complementHaplo = "all"`
+#' @param autogamous This argument will be valid only when you use `complementHaplo = "all"` or `complementHaplo = "TCS"`.
 #' This argument specifies whether the plant is autogamous or not. If autogamous = TRUE, 
 #' complemented haplotype will consist of only homozygous sites ({-1, 1}). 
 #' If FALSE, complemented haplotype will consist of both homozygous & heterozygous sites ({-1, 0, 1}).
+#' @param probParsimony Equal to the argument `prob` in `haplotypes::parsimnet` function: 
+#' 
+#' A numeric vector of length one in the range [0.01, 0.99] giving the probability of parsimony as defined in Templeton et al. (1992). 
+#' In order to set maximum connection steps to Inf (to connect all the haplotypes in a single network), set the probability to NULL.
 #' @param nMaxHaplo The maximum number of haplotypes. If the number of total (complemented + original) haplotypes are larger than `nMaxHaplo`, 
 #' we will only show the results only for the original haplotypes to reduce the computational time.
 #' @param kernelTypes In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
@@ -1008,6 +1170,14 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' The length of the vector should equal to the number of subpopulations.
 #' @param cexMax A numeric specifying the maximum point size of the plot.
 #' @param cexMin A numeric specifying the minimum point size of the plot.
+#' @param ggPlotNetwork If TRUE, the function will return the ggplot version of haplotype network. 
+#' It offers the precise information on subgroups for each haplotype.
+#' @param cexMaxForGG A numeric specifying the maximum point size of the plot for the ggplot version of haplotype network,
+#'  relative to the range of x and y-axes (0 < cexMaxForGG <= 1).
+#' @param cexMinForGG A numeric specifying the minimum point size of the plot for the ggplot version of haplotype network,
+#'  relative to the range of x and y-axes (0 < cexMaxForGG <= 1).
+#' @param alphaBase alpha (parameter that indicates the opacity of a geom) for original haplotype with positive / negative effects.
+#' alpha for complemented haplotype will be same as the alpha for original haplotype with negative effects.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #'
 #' @return
@@ -1051,14 +1221,16 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                        distMethod = "manhattan", evolutionDist = FALSE, complementHaplo = "phylo",
                        subpopInfo = NULL, groupingMethod = "kmedoids", nGrp = 3, 
                        nIterClustering = 100, iterRmst = 100, networkMethod = "rmst",
-                       autogamous = FALSE, nMaxHaplo = 1000, kernelTypes = "addNOIA",
-                       nCores = parallel::detectCores(), hOpt = "optimized",
-                       hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
-                       saveName = NULL, saveStyle = "png",
+                       autogamous = FALSE, probParsimony = 0.95, nMaxHaplo = 1000,
+                       kernelTypes = "addNOIA", nCores = parallel::detectCores(),
+                       hOpt = "optimized", hOpt2 = "optimized", maxIter = 20,
+                       rangeHStart = 10 ^ c(-1:1), saveName = NULL, saveStyle = "png",
                        plotWhichMDS = 1:2, colConnection = c("grey40", "grey60"),
                        ltyConnection = c("solid", "dashed"), lwdConnection = c(1.5, 0.8),
                        pchBase = c(1, 16), colCompBase = c(2, 4),
-                       colHaploBase = c(3, 5, 6), cexMax = 2, cexMin = 0.7, verbose = TRUE) {
+                       colHaploBase = c(3, 5, 6), cexMax = 2, cexMin = 0.7,
+                       ggPlotNetwork = FALSE, cexMaxForGG = 0.2, cexMinForGG = 0.1,
+                       alphaBase = c(0.9, 0.3), verbose = TRUE) {
   
   if (!is.null(geno)) {
     M <- t(geno[, -c(1:3)])
@@ -1184,37 +1356,41 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     blockInterestUniqueSorted <- blockInterestUnique[order(unique(stringBlock)), ]
     haploNames <- paste0("h", 1:nHaplo)
     rownames(blockInterestUniqueSorted) <- haploNames
-    stringBlockUniqueSorted <- apply(blockInterestUniqueSorted, 1, function(x) paste0(x, collapse = ""))
-    tableRes <- table(haploCluster = haploNames[haploClusterNow],
-                      subpop = subpopInfo)[haploNames, ]
-    haplotypeInfo <- list(haploCluster = haploNames[haploClusterNow],
-                          haploBlock = blockInterestUniqueSorted)
+    stringBlockUniqueSorted <- apply(blockInterestUniqueSorted, 1,
+                                     function(x) paste0(x, collapse = ""))
     
-    if (verbose) {
-      cat("Tabular for haplotype x subpopulation: \n")
-      print(head(tableRes))
-      cat("\nThe number of haplotypes: ", nHaplo, "\n")
-    }
-    
-    if (chi2Test) {
-      chi2TestRes <- chisq.test(tableRes)
-      pValChi2Test <- chi2TestRes$p.value
+    if (!is.null(subpopInfo)) {
+      tableRes <- table(haploCluster = haploNames[haploClusterNow],
+                        subpop = subpopInfo)[haploNames, ]
       
       if (verbose) {
-        cat("\n")
-        print(chi2TestRes)
-        
-        cat("Haplotypes & Subpopulations are: \n")
-        if (pValChi2Test <= thresChi2Test) {
-          cat("\tSiginificantly dependent\n")
-        } else {
-          cat("\tindependent\n")
-        }
+        cat("Tabular for haplotype x subpopulation: \n")
+        print(head(tableRes))
+        cat("\nThe number of haplotypes: ", nHaplo, "\n")
       }
-    } else {
-      pValChi2Test <- NA
+      
+      if (chi2Test) {
+        chi2TestRes <- chisq.test(tableRes)
+        pValChi2Test <- chi2TestRes$p.value
+        
+        if (verbose) {
+          cat("\n")
+          print(chi2TestRes)
+          
+          cat("Haplotypes & Subpopulations are: \n")
+          if (pValChi2Test <= thresChi2Test) {
+            cat("\tSiginificantly dependent\n")
+          } else {
+            cat("\tindependent\n")
+          }
+        }
+      } else {
+        pValChi2Test <- NA
+      }
     }
     
+    haplotypeInfo <- list(haploCluster = haploNames[haploClusterNow],
+                          haploBlock = blockInterestUniqueSorted)
     
     
     nMrkInBlock <- ncol(blockInterest)
@@ -1338,6 +1514,93 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         compNames <- NULL
       }
       namesBlockInterestComp <- c(haploNames, compNames)
+      rownames(distMatComp) <- colnames(distMatComp) <- namesBlockInterestComp
+    } else if (complementHaplo == "TCS") {
+      extractParsimnetRes <- function (parsimnetRes) {
+        nHapEachNet <- parsimnetRes@nhap
+        distForEachNet <- parsimnetRes@d
+        nNet <- length(distForEachNet)
+        
+        nTotalEachNet <- unlist(lapply(distForEachNet, nrow))
+        nCompEachNet <- nTotalEachNet - nHapEachNet
+        
+        haploNamesByTCS <- unlist(sapply(1:nNet, function(netNo) {
+          distNow <- distForEachNet[[netNo]]
+          haploNamesNow <- rownames(distNow)
+          nHapNow <- nHapEachNet[netNo]
+          nTotalNow <- nTotalEachNet[netNo]
+          
+          if (nCompEachNet[netNo] >= 1) {
+            
+            for (compNo in (nHapNow + 1):nTotalNow) {
+              compNameNow <- haploNamesNow[compNo]
+              x <- stringr::str_split(string = compNameNow, pattern = "_")[[1]]
+              
+              haploNos <- as.numeric(x[1:2])
+              if (is.na(x[3])) {
+                compNameNew <- paste(haploNamesNow[haploNos],
+                                     collapse = "_")
+              } else {
+                compNameNew <- paste(c(haploNamesNow[haploNos],
+                                       x[3]), collapse = "_")
+              }
+              haploNamesNow[compNo] <- compNameNew 
+            }
+          }
+          
+          return(haploNamesNow)
+        }, simplify = FALSE))
+        
+        
+        return(list(nCompEachNet = nCompEachNet, 
+                    distForEachNet = distForEachNet,
+                    haploNamesByTCS = haploNamesByTCS))
+      }
+      
+      haplotypeInfo$haploBlockCompSorted <- NULL
+      
+      if (autogamous) {
+        parsimnetRes <- haplotypes::parsimnet(x = distMat / 2,
+                                              seqlength = nMrkInBlock,
+                                              prob = probParsimony)
+        parsimnetResAll <- haplotypes::parsimnet(x = distMat / 2,
+                                                 seqlength = nMrkInBlock,
+                                                 prob = NULL)
+      } else {
+        parsimnetRes <- haplotypes::parsimnet(x = distMat,
+                                              seqlength = nMrkInBlock)
+        parsimnetResAll <- haplotypes::parsimnet(x = distMat,
+                                                 seqlength = nMrkInBlock,
+                                                 prob = NULL)
+        
+      }
+      parsimnetResults <- list(parsimnetRes = parsimnetRes,
+                               parsimnetResForOneNet = parsimnetResAll)
+      haplotypeInfo$parsimnetResults <- parsimnetResults
+      
+      extractInfoByTCS <- extractParsimnetRes(parsimnetRes = parsimnetRes)
+      extractInfoByTCSAll <- extractParsimnetRes(parsimnetRes = parsimnetResAll)
+      haploNamesByTCS <- extractInfoByTCS$haploNamesByTCS
+      distMatByTCSAll <- extractInfoByTCSAll$distForEachNet$net1
+      distMatComp <- distMatByTCSAll[haploNamesByTCS, haploNamesByTCS]
+      
+      if (autogamous) {
+        distMatComp <- distMatComp * 2
+      }
+      
+      nComp <- sum(extractInfoByTCS$nCompEachNet)
+      nHaploComp <- nHaplo + nComp
+      
+      
+      if (nComp >= 1){
+        existComp <- TRUE
+        compNames <- paste0("c", 1:nComp)
+      } else {
+        existComp <- FALSE
+        compNames <- NULL
+      }
+      namesBlockInterestComp <- haploNamesByTCS
+      namesBlockInterestComp[!(namesBlockInterestComp %in% haploNames)] <- compNames
       rownames(distMatComp) <- colnames(distMatComp) <- namesBlockInterestComp
     }
     
@@ -1498,6 +1761,16 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           colComp <- colCompBase[2]
           EMMRes <- NA
           hOpt2 <- NA
+          
+          
+          cexHaploForGG <- cexMaxForGG / sqrt(2)
+          cexCompForGG <- cexMaxForGG / 2
+          cexAll <- rep(NA, nTotal)
+          names(cexAll) <- namesBlockInterestComp
+          cexAll[haploNames] <- cexHaploForGG
+          if (existComp) {
+            cexAll[compNames] <- cexCompForGG
+          }
         } else {
           if (existComp){
             ZgKernel <- diag(nTotal)
@@ -1573,6 +1846,14 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
             
             cexHaplo <- (abs(gvScaled4Cex) + cexMin)[haploNames]
             pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
+            
+            
+            
+            
+            gvScaled4CexForGG <- gvScaled * (cexMaxForGG - cexMinForGG) / max(abs(gvScaled))
+            cexAll <- abs(gvScaled4CexForGG) + cexMinForGG
+            cexHaploForGG <- cexAll[haploNames]
+            cexCompForGG <- cexAll[compNames]
           } else {
             gvEstTotal <- gvEst
             names(gvEstTotal) <- haploNames
@@ -1584,16 +1865,22 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
             cexHaplo <- (abs(gvScaled4Cex) + cexMin)[haploNames]
             pchHaplo <- ifelse(gvScaled[haploNames] > 0, pchBase[1], pchBase[2])
             
-            
             cexComp <- cexMax / 4
             colComp <- colCompBase[2]
             pchComp <- pchBase[2]
             EMMRes <- NA
             hOpt2 <- NA
+            
+            
+            gvScaled4CexForGG <- gvScaled * (cexMaxForGG - cexMinForGG) / max(abs(gvScaled))
+            cexAll <- abs(gvScaled4CexForGG) + cexMinForGG
+            cexHaploForGG <- cexAll[haploNames]
+            cexCompForGG <- cexMaxForGG / 2
           }
         }
       } else {
         gvEstTotal <- rep(NA, nTotal)
+        names(gvEstTotal) <- namesBlockInterestComp 
         minuslog10p <- NA
         
         cexHaplo <- cexMax / 2
@@ -1602,8 +1889,19 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         colComp <- colCompBase[2]
         EM3Res <- EMMRes <- EMMRes0 <- NA
         hOpt <- hOpt2 <- NA
+        
+        
+        cexHaploForGG <- cexMaxForGG / sqrt(2)
+        cexCompForGG <- cexMaxForGG / 2
+        cexAll <- rep(NA, nTotal)
+        names(cexAll) <- namesBlockInterestComp
+        cexAll[haploNames] <- cexHaploForGG
+        if (existComp) {
+          cexAll[compNames] <- cexCompForGG
+        }
+        
       }
-      gvEstTotalForLine <- gvEstTotal[haploClusterNow]
+      gvEstTotalForLine <- (gvEstTotal[haploNames])[haploClusterNow]
       names(gvEstTotalForLine) <- lineNames
       
       hOpts <- c(hOpt = hOpt,
@@ -1621,39 +1919,36 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       EMMResultsList[[kernelType]] <- EMMResults
       
       
+      if (!is.null(subpopInfo)) {
+        if (length(colHaploBase) != nGrp) {
+          stop("The length of 'colHaploBase' should be equal to 'nGrp' or the number of subpopulations!")
+        }
+        
+        colHaploNo <- as.numeric(subpopInfo)
+        colHaplo <- colHaploBase[colHaploNo]
+        names(colHaploNo) <- names(colHaplo) <- lineNames
+        
+        colHaplo <- tapply(colHaplo, INDEX = haploNames[haploClusterNow], FUN = function(x) {
+          as.numeric(names(which.max(table(x) / sum(table(x)))))
+        })[haploNames]
+        
+        clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploNames[haploClusterNow],
+                                         FUN = table)[haploNames]
+      } else {
+        colHaplo <- rep("gray", nHaplo)
+        names(colHaplo) <- haploNames
+        
+        clusterNosForHaplotype <- NA
+      }
       
+      
+      nDimMDS <- max(plotWhichMDS)
+      mdsResComp <- cmdscale(d = distMatComp,
+                             k = nDimMDS,
+                             eig = TRUE)
       
       
       if (plotNetwork) {
-        if (!is.null(subpopInfo)) {
-          if (length(colHaploBase) != nGrp) {
-            stop("The length of 'colHaploBase' should be equal to 'nGrp' or the number of subpopulations!")
-          }
-          
-          colHaploNo <- as.numeric(subpopInfo)
-          colHaplo <- colHaploBase[colHaploNo]
-          names(colHaploNo) <- names(colHaplo) <- lineNames
-          
-          colHaplo <- tapply(colHaplo, INDEX = haploNames[haploClusterNow], FUN = function(x) {
-            as.numeric(names(which.max(table(x) / sum(table(x)))))
-          })[haploNames]
-          
-          clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploNames[haploClusterNow],
-                                           FUN = table)[haploNames]
-        } else {
-          colHaplo <- rep("gray", nHaplo)
-          names(colHaplo) <- haploNames
-          
-          clusterNosForHaplotype <- NA
-        }
-        
-        
-        nDimMDS <- max(plotWhichMDS)
-        mdsResComp <- cmdscale(d = distMatComp,
-                               k = nDimMDS,
-                               eig = TRUE)
-        
-        
         if (!is.null(saveName)) {
           savePlotNameBase <- paste0(paste(c(saveName, blockName, kernelType), collapse = "_"),
                                      "_network")
@@ -1672,14 +1967,20 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           }
         }
         
+        rangeX <- range(mdsResComp$points[, plotWhichMDS[1]])
+        rangeY <- range(mdsResComp$points[, plotWhichMDS[2]])
+        
+        rangeX[1] <- rangeX[1] - abs(diff(rangeX)) / 4
+        rangeY[2] <- rangeY[2] + abs(diff(rangeY)) / 3
+        
         plot(x = mdsResComp$points[haploNames, plotWhichMDS[1]],
              y = mdsResComp$points[haploNames, plotWhichMDS[2]],
              col = colHaplo,
              pch = pchHaplo, cex = cexHaplo,
              xlab = paste0("MDS", plotWhichMDS[1]),
              ylab = paste0("MDS", plotWhichMDS[2]),
-             xlim = range(mdsResComp$points[, plotWhichMDS[1]]),
-             ylim = range(mdsResComp$points[, plotWhichMDS[2]]))
+             xlim = rangeX,
+             ylim = rangeY)
         
         if (existComp) {
           points(x = mdsResComp$points[compNames, plotWhichMDS[1]],
@@ -1754,6 +2055,216 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           Sys.sleep(0.5)
         }
       }
+      
+      
+      
+      if (ggPlotNetwork) {
+        mdsPoints <- data.frame(mdsResComp$points[, plotWhichMDS[1:2]])
+        colnames(mdsPoints) <- paste0("MDS", plotWhichMDS[1:2])
+        mdsPoints$name <- rownames(mdsPoints)
+        
+        if (!is.null(subpopInfo)) {
+          clusterNosDF <- data.frame(do.call(what = rbind, 
+                                             args = clusterNosForHaplotype))
+          clusterNosRatioDF <- data.frame(t(apply(clusterNosDF, 1, 
+                                                  function(x) x / sum(x))))
+          colHaploBaseForPie <- colHaploBase
+        } else {
+          nGrp <- 1
+          colHaploBaseForPie <- "gray"
+          
+          clusterNosRatioDF <- data.frame(matrix(data = 1,
+                                                 nrow = nHaplo,
+                                                 ncol = 1))
+          rownames(clusterNosRatioDF) <- haploNames
+          colnames(clusterNosRatioDF) <- "Haplotype"
+        }
+        
+        
+        
+        if (existComp) {
+          if (!all(is.na(EMMRes))) {
+            clusterNosRatioDF$`gvComp +` <- 0
+            clusterNosRatioDF$`gvComp -` <- 0
+            
+            
+            colorForCompFac <- factor(gvScaled[compNames] > 0,
+                                      levels = c("TRUE", "FALSE"))
+            colorForCompDF <- data.frame(model.matrix(~ colorForCompFac - 1))
+            rownames(colorForCompDF) <- names(colorForCompFac)
+            colnames(colorForCompDF) <- c("gvComp +", "gvComp -")
+            
+            alphaHaplo <- ifelse(gvScaled[haploNames] > 0, alphaBase[1], alphaBase[2])
+            alpha1 <- alphaBase[1]
+          } else {
+            clusterNosRatioDF$`Complement` <- 0
+            
+            
+            colorForCompDF <- data.frame(matrix(data = NA, 
+                                                nrow = nComp, ncol = 1))
+            rownames(colorForCompDF) <- compNames
+            colnames(colorForCompDF) <- "Complement"
+            
+            alpha1 <- mean(alphaBase)
+            alphaHaplo <- rep(alpha1, nHaplo)
+            names(alphaHaplo) <- haploNames
+            
+            colCompBase <- "gray60"
+          }
+          
+          
+          colorForCompDFComp <- data.frame(matrix(data = 0,
+                                                  nrow = nComp,
+                                                  ncol = nGrp,
+                                                  dimnames = list(rownames(colorForCompDF),
+                                                                  colnames(clusterNosRatioDF)[1:nGrp])))
+          colorForCompDF <- cbind(colorForCompDFComp,
+                                  colorForCompDF)
+          
+          colorForAllCompDF <- data.frame(matrix(data = 0,
+                                                 nrow = nTotal,
+                                                 ncol = ncol(colorForCompDF)))
+          rownames(colorForAllCompDF) <- rownames(mdsPoints)
+          colnames(colorForAllCompDF) <- colnames(colorForCompDF)
+          colorForAllCompDF[haploNames, ] <- clusterNosRatioDF
+          colorForAllCompDF[compNames, ] <- colorForCompDF
+          
+          
+          alphaAll <- rep(NA, nTotal)
+          names(alphaAll) <- rownames(mdsPoints)
+          alphaAll[haploNames] <- alphaHaplo
+          
+          alphaComp <- rep(alphaBase[2], nComp)
+          alphaAll[compNames] <- alphaComp
+        } else {
+          colorForAllCompDF <- clusterNosRatioDF
+          
+          if (EM3Res$weights[2] > 1e-06) {
+            alphaHaplo <- ifelse(gvScaled[haploNames] > 0, alphaBase[1], alphaBase[2])
+            alpha1 <- alphaBase[1]
+          } else {
+            alpha1 <- mean(alphaBase)
+            alphaHaplo <- rep(alpha1, nHaplo)
+            names(alphaHaplo) <- haploNames
+          }
+          
+          alphaAll <- alphaHaplo
+          
+          colCompBase <- NULL
+        }
+        alpha2 <- alphaBase[2]
+        
+        
+        
+        mdsPointsForPlotDF <- cbind(mdsPoints,
+                                    colorForAllCompDF)
+        colnames(mdsPointsForPlotDF)[1:2] <- paste0("MDS", 1:2)
+        mdsPointsForPlotDF$cex <- cexAll
+        
+        
+        plt <- ggplot(data = mdsPointsForPlotDF,
+                      aes(x = MDS1,
+                          y = MDS2)) 
+        if (any(alphaAll == alpha2)) {
+          plt <- plt +
+            geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
+                            aes(x = MDS1,
+                                y = MDS2,
+                                r = cex),
+                            cols = colnames(colorForAllCompDF),
+                            col = NA, alpha = alpha1) +
+            geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha2, ],
+                            aes(x = MDS1,
+                                y = MDS2,
+                                r = cex),
+                            cols = colnames(colorForAllCompDF),
+                            col = NA, alpha = alpha2) +
+            scale_fill_manual(values = c(colHaploBaseForPie,
+                                         colCompBase)) +
+            coord_equal() +
+            xlab(paste0("MDS", plotWhichMDS[1])) +
+            ylab(paste0("MDS", plotWhichMDS[2]))
+        } else {
+          plt <- plt +
+            geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
+                            aes(x = MDS1,
+                                y = MDS2,
+                                r = cex),
+                            cols = colnames(colorForAllCompDF),
+                            col = NA, alpha = alpha1) +
+            scale_fill_manual(values = c(colHaploBaseForPie,
+                                         colCompBase)) +
+            coord_equal() +
+            xlab(paste0("MDS", plotWhichMDS[1])) +
+            ylab(paste0("MDS", plotWhichMDS[2]))
+        }
+        
+        
+        
+        mdsSegmentsDF <- data.frame(x1 = mdsPoints[mstResComp[, 1], 1],
+                                    y1 = mdsPoints[mstResComp[, 1], 2],
+                                    x2 = mdsPoints[mstResComp[, 2], 1],
+                                    y2 = mdsPoints[mstResComp[, 2], 2])
+        
+        plt <- plt + geom_segment(aes(x = x1,
+                                      y = y1,
+                                      xend = x2,
+                                      yend = y2),
+                                  data = mdsSegmentsDF,
+                                  col = colConnection[1],
+                                  lty = ltyConnection[1],
+                                  lwd = lwdConnection[1])
+        if (plotPlus) {
+          mdsSegmentsPlusDF <- data.frame(x1 = mdsPoints[mstResCompPlus[, 1], 1],
+                                          y1 = mdsPoints[mstResCompPlus[, 1], 2],
+                                          x2 = mdsPoints[mstResCompPlus[, 2], 1],
+                                          y2 = mdsPoints[mstResCompPlus[, 2], 2])
+          
+          plt <- plt + geom_segment(aes(x = x1,
+                                        y = y1,
+                                        xend = x2,
+                                        yend = y2),
+                                    data = mdsSegmentsPlusDF,
+                                    col = colConnection[2],
+                                    lty = ltyConnection[2],
+                                    lwd = lwdConnection[2])
+        }
+        
+        
+        plt <- plt + ggtitle(label = paste0(paste(c(colnames(pheno)[2], 
+                                                    blockName, kernelType), collapse = "_"),
+                                            " (-log10p: ", round(minuslog10p, 2), ")"))
+        
+        
+        if (!is.null(saveName)) {
+          savePlotNameBase <- paste0(paste(c(saveName, blockName, kernelType), collapse = "_"),
+                                     "_network_ggplot")
+          if (saveStyle == "pdf") {
+            savePlotName <- paste0(savePlotNameBase, ".pdf")
+            pdf(file = savePlotName, width = 15.5, height = 9)
+          } else if (saveStyle == "jpg") {
+            savePlotName <- paste0(savePlotNameBase, ".jpg")  
+            jpeg(filename = savePlotName, width = 1300, height = 700)
+          } else if (saveStyle == "tiff") {
+            savePlotName <- paste0(savePlotNameBase, ".tiff")
+            tiff(filename = savePlotName, width = 1300, height = 700)
+          } else {
+            savePlotName <- paste0(savePlotNameBase, ".png")
+            png(filename = savePlotName, width = 1300, height = 700)
+          }
+        }
+        
+        print(plt)
+        
+        if (!is.null(saveName)) {
+          dev.off()
+        } else {
+          Sys.sleep(0.5)
+        }
+      }
+      
+      
+      
     }
     
     

@@ -41,6 +41,10 @@ estPhylo(
   cexMin = 0.7,
   edgeColoring = TRUE,
   tipLabel = TRUE,
+  ggPlotTree = FALSE,
+  cexMaxForGG = 0.12,
+  cexMinForGG = 0.06,
+  alphaBase = c(0.9, 0.3),
   verbose = TRUE
 )
 }
@@ -155,7 +159,19 @@ The length of the vector should equal to the number of subpopulations.}
 
 \item{tipLabel}{If TRUE, lavels for tips will be shown.}
 
-\item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
+\item{ggPlotTree}{If TRUE, the function will return the ggplot version of phylogenetic tree. 
+It offers the precise information on subgroups for each haplotype.}
+
+\item{cexMaxForGG}{A numeric specifying the maximum point size of the plot for ggtree,
+relative to the range of x and y-axes (0 < cexMaxForGG <= 1).}
+
+\item{cexMinForGG}{A numeric specifying the minimum point size of the plot for ggtree,
+relative to the range of x and y-axes (0 < cexMaxForGG <= 1).}
+
+\item{alphaBase}{alpha (parameter that indicates the opacity of a geom) for tip with positive / negative effects.
+alpha for node will be same as the alpha for tip with negative effects.}
+
+\item{verbose}{If this argument is TRUE, messages for the current step_s will be shown.}
 }
 \value{
 \describe{A list / lists of 

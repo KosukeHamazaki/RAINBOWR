@@ -445,3 +445,10 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 - We added the `estNetwork` function to estimate and plot haplotype network. We also added `pegas` package in the `NAMESPACE` and `DESCRIPTION` files because this package is used in the `estNetwork` function.
 
 - We fixed some parts related to the estimation of haplotype effects in the `estPhylo` function. We also added the optimization part both in the `estPhylo` & `estNetwork` functions.
+
+
+
+
+# Aug 18, 2020, RAINBOWR version 0.1.21
+## Major changes
+- We modified the `estPhylo` and `estNetwork` functions. Now, these functions can output the ggplot version of phylogenetic trees or haplotype networks. We also added `ggtree`, `ggplot2`, `scatterpie`, `phylobase`, and `haplotypes` packages in the `NAMESPACE` and `DESCRIPTION` files because these packages are used in the `estPhylo` and `estNetwork` functions.

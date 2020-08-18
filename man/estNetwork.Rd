@@ -30,6 +30,7 @@ estNetwork(
   iterRmst = 100,
   networkMethod = "rmst",
   autogamous = FALSE,
+  probParsimony = 0.95,
   nMaxHaplo = 1000,
   kernelTypes = "addNOIA",
   nCores = parallel::detectCores(),
@@ -44,10 +45,14 @@ estNetwork(
   ltyConnection = c("solid", "dashed"),
   lwdConnection = c(1.5, 0.8),
   pchBase = c(1, 16),
-  colCompBase = c("grey20", "grey40"),
+  colCompBase = c(2, 4),
   colHaploBase = c(3, 5, 6),
   cexMax = 2,
   cexMin = 0.7,
+  ggPlotNetwork = FALSE,
+  cexMaxForGG = 0.2,
+  cexMinForGG = 0.1,
+  alphaBase = c(0.9, 0.3),
   verbose = TRUE
 )
 }
@@ -109,7 +114,8 @@ The `distMat` will be converted to the distance matrix by the evolution distance
 \item{complementHaplo}{how to complement unobserved haplotypes.
 When `complementHaplo = "all"`, all possible haplotypes will be complemented from the observed haplotypes.
 When `complementHaplo = "never"`, unobserved haplotypes will not be complemented.
-When `complementHaplo = "all"`, all possible haplotypes will be complemented from the observed haplotypes.}
+When `complementHaplo = "phylo"`, unobserved haplotypes will be complemented as nodes of phylogenetic tree.
+When `complementHaplo = "TCS"`, unobserved haplotypes will be complemented by TCS methods (Clement et al., 2002).}
 
 \item{subpopInfo}{The information of subpopulations. This argument should be a vector of factor.}
 
@@ -128,10 +134,15 @@ This argument specifies the number of classification performed by the function.}
 'msn' (minimum spanning network), and 'rmst' (randomized minimum spanning tree).
 'rmst' is recommended.}
 
-\item{autogamous}{This argument will be valid only when you use `complementHaplo = "all"`
+\item{autogamous}{This argument will be valid only when you use `complementHaplo = "all"` or `complementHaplo = "TCS"`.
 This argument specifies whether the plant is autogamous or not. If autogamous = TRUE, 
 complemented haplotype will consist of only homozygous sites ({-1, 1}). 
 If FALSE, complemented haplotype will consist of both homozygous & heterozygous sites ({-1, 0, 1}).}
+
+\item{probParsimony}{Equal to the argument `prob` in `haplotypes::parsimnet` function: 
+
+A numeric vector of length one in the range [0.01, 0.99] giving the probability of parsimony as defined in Templeton et al. (1992). 
+In order to set maximum connection steps to Inf (to connect all the haplotypes in a single network), set the probability to NULL.}
 
 \item{nMaxHaplo}{The maximum number of haplotypes. If the number of total (complemented + original) haplotypes are larger than `nMaxHaplo`, 
 we will only show the results only for the original haplotypes to reduce the computational time.}
@@ -184,6 +195,18 @@ The length of the vector should equal to the number of subpopulations.}
 \item{cexMax}{A numeric specifying the maximum point size of the plot.}
 
 \item{cexMin}{A numeric specifying the minimum point size of the plot.}
+
+\item{ggPlotNetwork}{If TRUE, the function will return the ggplot version of haplotype network. 
+It offers the precise information on subgroups for each haplotype.}
+
+\item{cexMaxForGG}{A numeric specifying the maximum point size of the plot for the ggplot version of haplotype network,
+relative to the range of x and y-axes (0 < cexMaxForGG <= 1).}
+
+\item{cexMinForGG}{A numeric specifying the minimum point size of the plot for the ggplot version of haplotype network,
+relative to the range of x and y-axes (0 < cexMaxForGG <= 1).}
+
+\item{alphaBase}{alpha (parameter that indicates the opacity of a geom) for original haplotype with positive / negative effects.
+alpha for complemented haplotype will be same as the alpha for original haplotype with negative effects.}
 
 \item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
 }

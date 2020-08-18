@@ -53,6 +53,10 @@ import(pbmcapply)
 import(optimx)
 import(ape)
 import(stringr)
+import(ggtree)
+import(ggplot2)
+import(scatterpie)
+import(phylobase)
 importFrom("grDevices", "dev.cur", "dev.new", "dev.next", "dev.off",
             "dev.set", "png", "rainbow")
 importFrom("graphics", "axis", "boxplot", "legend", "lines", "par",
@@ -67,3 +71,4 @@ importFrom("utils", "menu", "packageVersion", "setTxtProgressBar",
 importFrom("grDevices", "jpeg", "pdf", "tiff")
 importFrom("stats", "as.dist", "chisq.test", "cutree", "hclust", "kmeans")
 importFrom("pegas", "mst", "msn", "rmst")
+importFrom("haplotypes", "parsimnet")
