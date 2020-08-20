@@ -50,8 +50,8 @@ estNetwork(
   cexMax = 2,
   cexMin = 0.7,
   ggPlotNetwork = FALSE,
-  cexMaxForGG = 0.2,
-  cexMinForGG = 0.1,
+  cexMaxForGG = 0.025,
+  cexMinForGG = 0.008,
   alphaBase = c(0.9, 0.3),
   verbose = TRUE
 )
@@ -217,6 +217,7 @@ alpha for complemented haplotype will be same as the alpha for original haplotyp
 \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
 }
 }
+\item{$subpopInfo}{The information of subpopulations.}
 \item{$pValChi2Test}{A p-value of the chi-square test for the dependency between haplotypes & subpopulations.
 If `chi2Test = FALSE`, `NA` will be returned.}
 \item{$mstResults}{\describe{A list of estimated results of MST / MSN / RMST: 

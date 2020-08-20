@@ -180,6 +180,7 @@ alpha for node will be same as the alpha for tip with negative effects.}
 \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
 }
 }
+\item{$subpopInfo}{The information of subpopulations.}
 \item{$distMats}{\describe{A list of distance matrix: 
 \item{$distMat}{Distance matrix between haplotypes.}
 \item{$distMatEvol}{Evolutionary distance matrix between haplotypes.}
