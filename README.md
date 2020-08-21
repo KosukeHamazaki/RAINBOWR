@@ -57,15 +57,23 @@ If you get some errors via installation, please check if the following packages 
 
 ``` r
 Rcpp,
-RcppEigen,
-rrBLUP,
 rgl,
 tcltk,
 Matrix,
 cluster,
 MASS,
 pbmcapply,
-Optima
+optimx,
+methods,
+ape,
+stringr,
+pegas,
+ggplot2,
+ggtree,
+scatterpie,
+phylobase,
+haplotypes,
+ggimage
 ```
 
 In `RAINBOWR`,  since part of the code is written in `Rcpp` (`C++` in `R`),  please check if you can use `C++` in `R`.

@@ -52,6 +52,7 @@ import(pbmcapply)
 import(optimx)
 import(stringr)
 import(ggplot2)
+import(ggimage)
 importFrom("grDevices", "dev.cur", "dev.new", "dev.next", "dev.off",
             "dev.set", "png", "rainbow")
 importFrom("graphics", "axis", "boxplot", "legend", "lines", "par",
