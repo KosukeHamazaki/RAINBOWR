@@ -728,6 +728,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
               solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
               soln2 <- solnList2[[solnNo2]]
             } else {
+              traceInside <- ifelse(verbose, 1, 0)
               soln2 <- nlminb(start = hStarts[[1]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
                               lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
             }
@@ -1823,6 +1824,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                 solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
                 soln2 <- solnList2[[solnNo2]]
               } else {
+                traceInside <- ifelse(verbose, 1, 0)
                 soln2 <- nlminb(start = hStarts[[1]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
                                 lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
               }
