@@ -2188,7 +2188,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                             cols = colnames(colorForAllCompDF),
                             col = NA, alpha = alpha2) +
             ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
-                                         colCompBase)) +
+                                         colCompBase)[order(colnames(colorForAllCompDF))]) +
             ggplot2::coord_equal() +
             ggplot2::xlab(paste0("MDS", plotWhichMDS[1])) +
             ggplot2::ylab(paste0("MDS", plotWhichMDS[2]))
@@ -2201,7 +2201,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                             cols = colnames(colorForAllCompDF),
                             col = NA, alpha = alpha1) +
             ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
-                                         colCompBase)) +
+                                         colCompBase)[order(colnames(colorForAllCompDF))]) +
             ggplot2::coord_equal() +
             ggplot2::xlab(paste0("MDS", plotWhichMDS[1])) +
             ggplot2::ylab(paste0("MDS", plotWhichMDS[2]))
@@ -3087,7 +3087,7 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                           cols = colnames(colorForAllCompDF),
                           col = NA, alpha = alpha2) +
           ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
-                                       colCompBase)) +
+                                       colCompBase)[order(colnames(colorForAllCompDF))]) +
           ggplot2::coord_equal() +
           ggplot2::xlab(paste0("MDS", plotWhichMDS[1])) +
           ggplot2::ylab(paste0("MDS", plotWhichMDS[2]))
@@ -3100,7 +3100,7 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                           cols = colnames(colorForAllCompDF),
                           col = NA, alpha = alpha1) +
           ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
-                                       colCompBase)) +
+                                       colCompBase)[order(colnames(colorForAllCompDF))]) +
           ggplot2::coord_equal() +
           ggplot2::xlab(paste0("MDS", plotWhichMDS[1])) +
           ggplot2::ylab(paste0("MDS", plotWhichMDS[2]))
