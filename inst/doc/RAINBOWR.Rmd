@@ -122,7 +122,7 @@ x <- MAF.cut.res$x
 map <- MAF.cut.res$map
 ```
 
-Next, we estimate additive genomic relationship matrix (GRM) by using `rrBLUP` package.
+Next, we estimate additive genomic relationship matrix (GRM) by using `calcGRM` function.
 
 ``` {r, include=TRUE}
 ### Estimate genomic relationship matrix (GRM) 

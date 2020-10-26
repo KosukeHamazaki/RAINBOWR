@@ -454,3 +454,19 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 - We modified the `estPhylo` and `estNetwork` functions. Now, these functions can output the ggplot version of phylogenetic trees or haplotype networks. We also added `ggtree`, `ggplot2`, `scatterpie`, `phylobase`, `haplotypes`, and `ggimage` packages in the `NAMESPACE` and `DESCRIPTION` files because these packages are used in the `estPhylo` and `estNetwork` functions.
 
 - We also added the `plotPhyloTree` and `plotHaploNetwork` functions to plot phylogenetic tree / haplotype network from the estimated results.
+
+
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.0.2
+* win-builder release, R version 4.0.3
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 3.6.3
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.

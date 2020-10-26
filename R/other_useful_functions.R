@@ -616,13 +616,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                                     return(soln)
                                                   }, mc.cores = nCores)
               } else {
-                solnList <- parallel::pblapply(X = hStarts,
-                                               FUN = function(h) {
-                                                 soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                                lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                 
-                                                 return(soln)
-                                               }, mc.cores = nCores)
+                solnList <- pbapply::pblapply(X = hStarts,
+                                              FUN = function(h) {
+                                                soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                               lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                
+                                                return(soln)
+                                              }, mc.cores = nCores)
               }
               solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
               soln <- solnList[[solnNo]]
@@ -717,13 +717,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                                      return(soln)
                                                    }, mc.cores = nCores)
               } else {
-                solnList2 <- parallel::pblapply(X = hStarts,
-                                                FUN = function(h) {
-                                                  soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                                 lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                  
-                                                  return(soln)
-                                                }, mc.cores = nCores)
+                solnList2 <- pbapply::pblapply(X = hStarts,
+                                               FUN = function(h) {
+                                                 soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                 
+                                                 return(soln)
+                                               }, mc.cores = nCores)
               }
               solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
               soln2 <- solnList2[[solnNo2]]
@@ -940,14 +940,14 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         
         
         plt <- ggtree::ggtree(tr = trPhylo42,
-                              ggtree::aes(col = I(color)),
+                              ggtree::aes(col = I(.data$color)),
                               layout = "equal_angle")
         
         
         if (plotNode) {
           piesNode <- ggtree::nodepie(colorForNodeDF, cols = 1:2,
                                       color = colNodeBase,
-                                      alpha　=　alphaNode)
+                                      alpha = alphaNode)
           
           plt <- plt + ggtree::geom_inset(insets = piesNode,
                                           width = cexNodeForGG,
@@ -965,11 +965,11 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
             piesPlus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
                                         cols = 1:nGrp,
                                         color = colTipBaseForPie,
-                                        alpha　=　alphaBase[1])
+                                        alpha = alphaBase[1])
             piesMinus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
                                          cols = 1:nGrp,
                                          color = colTipBaseForPie,
-                                         alpha　=　alphaBase[2])
+                                         alpha = alphaBase[2])
             
             plt <- plt + ggtree::geom_inset(insets = piesPlus,
                                             width = cexTipForGG[alphaTip == alphaBase[1]],
@@ -982,7 +982,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
             piesTip <- ggtree::nodepie(clusterNosRatioDF,
                                        cols = 1:nGrp,
                                        color = colTipBaseForPie,
-                                       alpha　=　mean(alphaBase)) 
+                                       alpha = mean(alphaBase)) 
             
             plt <- plt + ggtree::geom_inset(insets = piesTip,
                                             width = cexTipForGG,
@@ -1703,13 +1703,13 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                                     return(soln)
                                                   }, mc.cores = nCores)
               } else {
-                solnList <- parallel::pblapply(X = hStarts,
-                                               FUN = function(h) {
-                                                 soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                                lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                 
-                                                 return(soln)
-                                               }, mc.cores = nCores)
+                solnList <- pbapply::pblapply(X = hStarts,
+                                              FUN = function(h) {
+                                                soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                               lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                
+                                                return(soln)
+                                              }, mc.cores = nCores)
               }
               solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
               soln <- solnList[[solnNo]]
@@ -1813,13 +1813,13 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                                        return(soln)
                                                      }, mc.cores = nCores)
                 } else {
-                  solnList2 <- parallel::pblapply(X = hStarts,
-                                                  FUN = function(h) {
-                                                    soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                                   lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                    
-                                                    return(soln)
-                                                  }, mc.cores = nCores)
+                  solnList2 <- pbapply::pblapply(X = hStarts,
+                                                 FUN = function(h) {
+                                                   soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                  lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                   
+                                                   return(soln)
+                                                 }, mc.cores = nCores)
                 }
                 solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
                 soln2 <- solnList2[[solnNo2]]
@@ -2171,37 +2171,37 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         
         
         plt <- ggplot2::ggplot(data = mdsPointsForPlotDF,
-                               ggplot2::aes(x = MDS1,
-                          y = MDS2)) 
+                               ggplot2::aes(x = .data$MDS1,
+                                            y = .data$MDS2)) 
         if (any(alphaAll == alpha2)) {
           plt <- plt +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                        ggplot2::aes(x = MDS1,
-                                y = MDS2,
-                                r = cex),
-                            cols = colnames(colorForAllCompDF),
-                            col = NA, alpha = alpha1) +
+                                        ggplot2::aes(x = .data$MDS1,
+                                                     y = .data$MDS2,
+                                                     r = .data$cex),
+                                        cols = colnames(colorForAllCompDF),
+                                        col = NA, alpha = alpha1) +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha2, ],
-                                        ggplot2::aes(x = MDS1,
-                                y = MDS2,
-                                r = cex),
-                            cols = colnames(colorForAllCompDF),
-                            col = NA, alpha = alpha2) +
+                                        ggplot2::aes(x = .data$MDS1,
+                                                     y = .data$MDS2,
+                                                     r = .data$cex),
+                                        cols = colnames(colorForAllCompDF),
+                                        col = NA, alpha = alpha2) +
             ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
-                                         colCompBase)[order(colnames(colorForAllCompDF))]) +
+                                                  colCompBase)[order(colnames(colorForAllCompDF))]) +
             ggplot2::coord_equal() +
             ggplot2::xlab(paste0("MDS", plotWhichMDS[1])) +
             ggplot2::ylab(paste0("MDS", plotWhichMDS[2]))
         } else {
           plt <- plt +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                            ggplot2::aes(x = MDS1,
-                                y = MDS2,
-                                r = cex),
-                            cols = colnames(colorForAllCompDF),
-                            col = NA, alpha = alpha1) +
+                                        ggplot2::aes(x = .data$MDS1,
+                                                     y = .data$MDS2,
+                                                     r = .data$cex),
+                                        cols = colnames(colorForAllCompDF),
+                                        col = NA, alpha = alpha1) +
             ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
-                                         colCompBase)[order(colnames(colorForAllCompDF))]) +
+                                                  colCompBase)[order(colnames(colorForAllCompDF))]) +
             ggplot2::coord_equal() +
             ggplot2::xlab(paste0("MDS", plotWhichMDS[1])) +
             ggplot2::ylab(paste0("MDS", plotWhichMDS[2]))
@@ -2214,34 +2214,34 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                     x2 = mdsPoints[mstResComp[, 2], 1],
                                     y2 = mdsPoints[mstResComp[, 2], 2])
         
-        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = x1,
-                                      y = y1,
-                                      xend = x2,
-                                      yend = y2),
-                                  data = mdsSegmentsDF,
-                                  col = colConnection[1],
-                                  lty = ltyConnection[1],
-                                  lwd = lwdConnection[1])
+        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = .data$x1,
+                                                        y = .data$y1,
+                                                        xend = .data$x2,
+                                                        yend = .data$y2),
+                                           data = mdsSegmentsDF,
+                                           col = colConnection[1],
+                                           lty = ltyConnection[1],
+                                           lwd = lwdConnection[1])
         if (plotPlus) {
           mdsSegmentsPlusDF <- data.frame(x1 = mdsPoints[mstResCompPlus[, 1], 1],
                                           y1 = mdsPoints[mstResCompPlus[, 1], 2],
                                           x2 = mdsPoints[mstResCompPlus[, 2], 1],
                                           y2 = mdsPoints[mstResCompPlus[, 2], 2])
           
-          plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = x1,
-                                        y = y1,
-                                        xend = x2,
-                                        yend = y2),
-                                    data = mdsSegmentsPlusDF,
-                                    col = colConnection[2],
-                                    lty = ltyConnection[2],
-                                    lwd = lwdConnection[2])
+          plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = .data$x1,
+                                                          y = .data$y1,
+                                                          xend = .data$x2,
+                                                          yend = .data$y2),
+                                             data = mdsSegmentsPlusDF,
+                                             col = colConnection[2],
+                                             lty = ltyConnection[2],
+                                             lwd = lwdConnection[2])
         }
         
         
         plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(colnames(pheno)[2], 
-                                                    blockName, kernelType), collapse = "_"),
-                                            " (-log10p: ", round(minuslog10p, 2), ")"))
+                                                             blockName, kernelType), collapse = "_"),
+                                                     " (-log10p: ", round(minuslog10p, 2), ")"))
         
         
         if (!is.null(saveName)) {
@@ -2571,18 +2571,18 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
       
       
       plt <- ggtree::ggtree(tr = trPhylo42,
-                            ggtree::aes(col = I(color)),
+                            ggtree::aes(col = I(.data$color)),
                             layout = "equal_angle")
       
       
       if (plotNode) {
         piesNode <- ggtree::nodepie(colorForNodeDF, cols = 1:2,
-                            color = colNodeBase,
-                            alpha　=　alphaNode)
+                                    color = colNodeBase,
+                                    alpha = alphaNode)
         
         plt <- plt + ggtree::geom_inset(insets = piesNode,
-                                width = cexNodeForGG,
-                                height = cexNodeForGG)
+                                        width = cexNodeForGG,
+                                        height = cexNodeForGG)
       }
       
       if (tipLabel) {
@@ -2594,35 +2594,35 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
         
         if (!all(is.na(EMMRes))) {
           piesPlus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
-                              cols = 1:nGrp,
-                              color = colTipBaseForPie,
-                              alpha　=　alphaBase[1])
+                                      cols = 1:nGrp,
+                                      color = colTipBaseForPie,
+                                      alpha = alphaBase[1])
           piesMinus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
-                               cols = 1:nGrp,
-                               color = colTipBaseForPie,
-                               alpha　=　alphaBase[2])
+                                       cols = 1:nGrp,
+                                       color = colTipBaseForPie,
+                                       alpha = alphaBase[2])
           
           plt <- plt + ggtree::geom_inset(insets = piesPlus,
-                                  width = cexTipForGG[alphaTip == alphaBase[1]],
-                                  height = cexTipForGG[alphaTip == alphaBase[1]])
+                                          width = cexTipForGG[alphaTip == alphaBase[1]],
+                                          height = cexTipForGG[alphaTip == alphaBase[1]])
           
           plt <- plt + ggtree::geom_inset(insets = piesMinus,
-                                  width = cexTipForGG[alphaTip == alphaBase[2]],
-                                  height = cexTipForGG[alphaTip == alphaBase[2]])
+                                          width = cexTipForGG[alphaTip == alphaBase[2]],
+                                          height = cexTipForGG[alphaTip == alphaBase[2]])
         } else {
           piesTip <- ggtree::nodepie(clusterNosRatioDF,
-                             cols = 1:nGrp,
-                             color = colTipBaseForPie,
-                             alpha　=　mean(alphaBase)) 
+                                     cols = 1:nGrp,
+                                     color = colTipBaseForPie,
+                                     alpha = mean(alphaBase)) 
           
           plt <- plt + ggtree::geom_inset(insets = piesTip,
-                                  width = cexTipForGG,
-                                  height = cexTipForGG)
+                                          width = cexTipForGG,
+                                          height = cexTipForGG)
         }
       }
       plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(traitName[2], 
-                                                  blockName, kernelType), collapse = "_"),
-                                          " (-log10p: ", round(minuslog10p, 2), ")"))
+                                                           blockName, kernelType), collapse = "_"),
+                                                   " (-log10p: ", round(minuslog10p, 2), ")"))
       
       
       if (!is.null(saveName)) {
@@ -3070,37 +3070,37 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
       
       
       plt <- ggplot2::ggplot(data = mdsPointsForPlotDF,
-                             ggplot2::aes(x = MDS1,
-                        y = MDS2)) 
+                             ggplot2::aes(x = .data$MDS1,
+                                          y = .data$MDS2)) 
       if (any(alphaAll == alpha2)) {
         plt <- plt +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                          ggplot2::aes(x = MDS1,
-                              y = MDS2,
-                              r = cex),
-                          cols = colnames(colorForAllCompDF),
-                          col = NA, alpha = alpha1) +
+                                      ggplot2::aes(x = .data$MDS1,
+                                                   y = .data$MDS2,
+                                                   r = .data$cex),
+                                      cols = colnames(colorForAllCompDF),
+                                      col = NA, alpha = alpha1) +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha2, ],
-                          ggplot2::aes(x = MDS1,
-                              y = MDS2,
-                              r = cex),
-                          cols = colnames(colorForAllCompDF),
-                          col = NA, alpha = alpha2) +
+                                      ggplot2::aes(x = .data$MDS1,
+                                                   y = .data$MDS2,
+                                                   r = .data$cex),
+                                      cols = colnames(colorForAllCompDF),
+                                      col = NA, alpha = alpha2) +
           ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
-                                       colCompBase)[order(colnames(colorForAllCompDF))]) +
+                                                colCompBase)[order(colnames(colorForAllCompDF))]) +
           ggplot2::coord_equal() +
           ggplot2::xlab(paste0("MDS", plotWhichMDS[1])) +
           ggplot2::ylab(paste0("MDS", plotWhichMDS[2]))
       } else {
         plt <- plt +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                      ggplot2::aes(x = MDS1,
-                              y = MDS2,
-                              r = cex),
-                          cols = colnames(colorForAllCompDF),
-                          col = NA, alpha = alpha1) +
+                                      ggplot2::aes(x = .data$MDS1,
+                                                   y = .data$MDS2,
+                                                   r = .data$cex),
+                                      cols = colnames(colorForAllCompDF),
+                                      col = NA, alpha = alpha1) +
           ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
-                                       colCompBase)[order(colnames(colorForAllCompDF))]) +
+                                                colCompBase)[order(colnames(colorForAllCompDF))]) +
           ggplot2::coord_equal() +
           ggplot2::xlab(paste0("MDS", plotWhichMDS[1])) +
           ggplot2::ylab(paste0("MDS", plotWhichMDS[2]))
@@ -3113,34 +3113,34 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                                   x2 = mdsPoints[mstResComp[, 2], 1],
                                   y2 = mdsPoints[mstResComp[, 2], 2])
       
-      plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = x1,
-                                    y = y1,
-                                    xend = x2,
-                                    yend = y2),
-                                data = mdsSegmentsDF,
-                                col = colConnection[1],
-                                lty = ltyConnection[1],
-                                lwd = lwdConnection[1])
+      plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = .data$x1,
+                                                      y = .data$y1,
+                                                      xend = .data$x2,
+                                                      yend = .data$y2),
+                                         data = mdsSegmentsDF,
+                                         col = colConnection[1],
+                                         lty = ltyConnection[1],
+                                         lwd = lwdConnection[1])
       if (plotPlus) {
         mdsSegmentsPlusDF <- data.frame(x1 = mdsPoints[mstResCompPlus[, 1], 1],
                                         y1 = mdsPoints[mstResCompPlus[, 1], 2],
                                         x2 = mdsPoints[mstResCompPlus[, 2], 1],
                                         y2 = mdsPoints[mstResCompPlus[, 2], 2])
         
-        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = x1,
-                                      y = y1,
-                                      xend = x2,
-                                      yend = y2),
-                                  data = mdsSegmentsPlusDF,
-                                  col = colConnection[2],
-                                  lty = ltyConnection[2],
-                                  lwd = lwdConnection[2])
+        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = .data$x1,
+                                                        y = .data$y1,
+                                                        xend = .data$x2,
+                                                        yend = .data$y2),
+                                           data = mdsSegmentsPlusDF,
+                                           col = colConnection[2],
+                                           lty = ltyConnection[2],
+                                           lwd = lwdConnection[2])
       }
       
       
       plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(traitName, 
-                                                  blockName, kernelType), collapse = "_"),
-                                          " (-log10p: ", round(minuslog10p, 2), ")"))
+                                                           blockName, kernelType), collapse = "_"),
+                                                   " (-log10p: ", round(minuslog10p, 2), ")"))
       
       
       if (!is.null(saveName)) {

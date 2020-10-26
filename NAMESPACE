@@ -57,15 +57,16 @@ importFrom("grDevices", "dev.cur", "dev.new", "dev.next", "dev.off",
             "dev.set", "png", "rainbow")
 importFrom("graphics", "axis", "boxplot", "legend", "lines", "par",
             "plot", "points", "segments", "text", "title")
-importFrom("methods", "getPackageName")
+importFrom("methods", "getPackageName", "as")
 importFrom("stats", "cor", "deviance", "dist", "dnorm", "median",
            "model.matrix", "nlminb", "optim", "optimize", "pbeta",
            "pchisq", "ppoints", "predict", "qchisq", "quantile",
            "rnorm", "sd", "smooth.spline", "var")
 importFrom("utils", "menu", "packageVersion", "setTxtProgressBar",
-           "str", "txtProgressBar")
+           "str", "txtProgressBar", "head")
 importFrom("grDevices", "jpeg", "pdf", "tiff")
-importFrom("stats", "as.dist", "chisq.test", "cutree", "hclust", "kmeans")
+importFrom("stats", "as.dist", "chisq.test", "cutree",
+           "hclust", "kmeans", "cmdscale")
 importFrom("Matrix", "sparseMatrix")
 importFrom("pegas", "mst", "msn", "rmst")
 importFrom("haplotypes", "parsimnet")
@@ -74,3 +75,6 @@ importFrom("ape", "nj", "dist.nodes", "plot.phylo", "nodelabels", "tiplabels")
 importFrom("ggtree", "ggtree", "aes", "nodepie", "geom_inset")
 importFrom("phylobase", "phylo4", "phylo4d", "nodeId", "nodeData", "nNodes")
 importFrom("scatterpie", "geom_scatterpie")
+importFrom("rrBLUP", "A.mat")
+importFrom("expm", "expm")
+importFrom("pbapply", "pblapply")

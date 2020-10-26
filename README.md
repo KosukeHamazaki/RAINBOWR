@@ -1,9 +1,15 @@
 # RAINBOWR
 ###   Reliable Association INference By Optimizing Weights with R
 #### Author : Kosuke Hamazaki (hamazaki@ut-biomet.org)
-#### Date : 2019/03/25 (Last update: 2020/04/29)
+#### Date : 2019/03/25 (Last update: 2020/10/26)
 
 ## NOTE!!!!
+### The paper for `RAINBOWR` has been published in PLOS Computational Biology (https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1007663). If you use this `RAINBOWR` in your paper, please cite `RAINBOWR` as follows:
+#### Hamazaki, K. and Iwata, H. (2020) RAINBOW: Haplotype-based genome-wide association study using a novel SNP-set method. PLOS Computational Biology, 16(2): e1007663.
+
+
+### The stable version for `RAINBOWR` package is now available at the [CRAN (Comprehensive R Archive Network)](https://cran.r-project.org/package=RAINBOWR).
+
 ### The older version of `RAINBOWR` is `RAINBOW`, which is available at https://github.com/KosukeHamazaki/RAINBOW.
 ##### We changed the package name from `RAINBOW` to `RAINBOWR` because the original package name `RAINBOW` conflicted with the package `rainbow` (https://cran.r-project.org/package=rainbow) when we submitted our package to `CRAN` (https://cran.r-project.org/).
 
@@ -36,6 +42,7 @@ Finally, `RAINBOWR` offers other useful functions.
 - `See` function to see a brief view of data (like `head` function, but more useful)
 - `genetrait` function to generate pseudo phenotypic values from marker genotype
 - `SS_GWAS` function to summarize GWAS results (only for simulation study)
+- `estPhylo` and `estNetwork` functions to estimate phylogenetic tree or haplotype network and haplotype effects with non-linear kernels for haplotype blocks of interest.
 
 ## Installation
 The stable version of `RAINBOWR` is now available at the [CRAN (Comprehensive R Archive Network)](https://cran.r-project.org/package=RAINBOWR). The latest version of `RAINBOWR` is also available at the `KosukeHamazaki/RAINBOWR` repository in the [`GitHub`](https://github.com/KosukeHamazaki/RAINBOWR), so please run the following code in the R console.
@@ -56,8 +63,8 @@ devtools::install_github("KosukeHamazaki/RAINBOWR")
 If you get some errors via installation, please check if the following packages are correctly installed.
 
 ``` r
-Rcpp,
-rgl,
+Rcpp,      # install `Rtools` for Windows user
+rgl,       # for Linux user, please install required libralies in terminal
 tcltk,
 Matrix,
 cluster,
@@ -69,11 +76,15 @@ ape,
 stringr,
 pegas,
 ggplot2,
-ggtree,
+ggtree,      # install from Bioconducter with `BiocManager::install("ggtree")`
 scatterpie,
 phylobase,
 haplotypes,
 ggimage
+rrBLUP,
+expm,
+parallel,
+pbapply
 ```
 
 In `RAINBOWR`,  since part of the code is written in `Rcpp` (`C++` in `R`),  please check if you can use `C++` in `R`.
@@ -119,7 +130,7 @@ x <- MAF.cut.res$x
 map <- MAF.cut.res$map
 ```
 
-Next, we estimate additive genomic relationship matrix (GRM) by using `rrBLUP` package.
+Next, we estimate additive genomic relationship matrix (GRM) by using `calcGRM` function.
 
 ``` r
 ### Estimate genomic relationship matrix (GRM) 
@@ -216,3 +227,5 @@ Listgarten, J. et al. (2013) A powerful and efficient set test for genetic marke
 Lippert, C. et al. (2014) Greater power and computational efficiency for kernel-based association testing of sets of genetic variants. Bioinformatics. 30(22): 3206-3214.
 
 Jiang, Y. and Reif, J.C. (2015) Modeling epistasis in genomic selection. Genetics. 201(2): 759-768.
+
+Hamazaki, K. and Iwata, H. (2020) RAINBOW: Haplotype-based genome-wide association study using a novel SNP-set method. PLOS Computational Biology, 16(2): e1007663.

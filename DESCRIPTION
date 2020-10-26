@@ -29,7 +29,11 @@ Imports: Rcpp,
          scatterpie,
          phylobase,
          haplotypes,
-         ggimage
+         ggimage,
+         rrBLUP,
+         expm,
+         parallel,
+         pbapply
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.1.1
 Suggests: 
