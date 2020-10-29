@@ -15,6 +15,7 @@ EM3.linker.cpp(
   X.fix = TRUE,
   eigen.SGS = NULL,
   eigen.G = NULL,
+  n.core = NA,
   tol = NULL,
   bounds = c(1e-06, 1e+06),
   optimizer = "nlminb",
@@ -65,6 +66,8 @@ We recommend you assign the result of the eigen decomposition beforehand for tim
 The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
 We recommend you assign the result of the eigen decomposition beforehand for time saving.}
+
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}
 
 \item{tol}{The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
 Eigen vectors whose eigen values are less than "tol" argument will be omitted from results.

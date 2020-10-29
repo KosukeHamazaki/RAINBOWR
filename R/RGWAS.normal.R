@@ -330,12 +330,14 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
 
     #### Calculating the value of -log10(p) for each SNPs ####
     if ((n.core > 1) & requireNamespace("parallel", quietly = TRUE)) {
-      scores <- score.calc.MC(M.now = M.now, ZETA.now = ZETA.now, y = y,
-                   X.now = X.now, Hinv = Hinv, P3D = P3D, eigen.G = eigen.G,
-                   optimizer = optimizer, min.MAF = min.MAF, count = count)
+      scores <- score.calc.MC(M.now = M.now, ZETA.now = ZETA.now, y = y, 
+                              X.now = X.now, Hinv = Hinv, P3D = P3D, eigen.G = eigen.G,
+                              n.core = n.core, optimizer = optimizer, 
+                              min.MAF = min.MAF, count = count)
     } else {
-      scores <- score.calc(M.now, ZETA.now = ZETA.now, y = y, X.now = X.now, Hinv = Hinv,
-                           optimizer = optimizer, P3D = P3D, eigen.G = eigen.G, min.MAF = min.MAF, count = count)
+      scores <- score.calc(M.now, ZETA.now = ZETA.now, y = y, X.now = X.now,
+                           Hinv = Hinv, n.core = n.core, optimizer = optimizer,
+                           P3D = P3D, eigen.G = eigen.G, min.MAF = min.MAF, count = count)
     }
 
     if (plot.qq) {

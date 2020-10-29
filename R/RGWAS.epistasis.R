@@ -338,13 +338,13 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariat
       warning("Sorry. n.core > 1 options have not been implemented yet. We will use n.core = 1 instead.")
       if(test.method == "LR"){
         scores.epi <- score.calc.epistasis.LR(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now,
-                                              eigen.SGS = eigen.SGS, eigen.G = eigen.G, map = map,
+                                              eigen.SGS = eigen.SGS, eigen.G = eigen.G, map = map, n.core = n.core,
                                               haplotype = haplotype, num.hap = num.hap, window.size.half = window.size.half,
                                               window.slide = window.slide, chi0.mixture = chi0.mixture,
                                               gene.set = gene.set,  dominance.eff = dominance.eff, optimizer = optimizer,
                                               min.MAF = min.MAF, count = count)
       }else{
-        scores.epi <- score.calc.epistasis.score(M.now = M.now, ZETA.now = ZETA.now, y = y,
+        scores.epi <- score.calc.epistasis.score(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now,
                                                  Gu = Gu, Ge = Ge, P0 = P0, map = map, haplotype = haplotype,
                                                  num.hap = num.hap, window.size.half = window.size.half,
                                                  window.slide = window.slide, chi0.mixture = chi0.mixture,
@@ -354,13 +354,13 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariat
     }else {
       if(test.method == "LR"){
         scores.epi <- score.calc.epistasis.LR(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now,
-                                              eigen.SGS = eigen.SGS, eigen.G = eigen.G, map = map,
+                                              eigen.SGS = eigen.SGS, eigen.G = eigen.G, map = map, n.core = n.core,
                                               haplotype = haplotype, num.hap = num.hap, window.size.half = window.size.half,
                                               window.slide = window.slide, chi0.mixture = chi0.mixture,
                                               gene.set = gene.set,  dominance.eff = dominance.eff, optimizer = optimizer,
                                               min.MAF = min.MAF, count = count)
       }else{
-        scores.epi <- score.calc.epistasis.score(M.now = M.now, ZETA.now = ZETA.now, y = y,
+        scores.epi <- score.calc.epistasis.score(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now,
                                                  Gu = Gu, Ge = Ge, P0 = P0, map = map, haplotype = haplotype,
                                                  num.hap = num.hap, window.size.half = window.size.half,
                                                  window.slide = window.slide, chi0.mixture = chi0.mixture,

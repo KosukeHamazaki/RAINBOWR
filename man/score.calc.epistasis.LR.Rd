@@ -11,6 +11,7 @@ score.calc.epistasis.LR(
   ZETA.now,
   eigen.SGS = NULL,
   eigen.G = NULL,
+  n.core = NA,
   optimizer = "nlminb",
   map,
   haplotype = TRUE,
@@ -53,6 +54,8 @@ We recommend you assign the result of the eigen decomposition beforehand for tim
 The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
 We recommend you assign the result of the eigen decomposition beforehand for time saving.}
+
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}
 
 \item{optimizer}{The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.}
 

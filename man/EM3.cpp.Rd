@@ -11,6 +11,7 @@ EM3.cpp(
   eigen.G = NULL,
   eigen.SGS = NULL,
   tol = NULL,
+  n.core = NA,
   optimizer = "nlminb",
   traceInside = 0,
   n.thres = 450,
@@ -49,6 +50,8 @@ We recommend you assign the result of the eigen decomposition beforehand for tim
 \item{tol}{The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
 Eigen vectors whose eigen values are less than "tol" argument will be omitted from results.
 If tol is NULL, top 'n' eigen values will be effective.}
+
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}
 
 \item{optimizer}{The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.}
 

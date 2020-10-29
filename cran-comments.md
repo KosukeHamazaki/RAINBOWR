@@ -470,3 +470,10 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 #### There were no WARNINGs.
 
 #### There were no NOTEs.
+
+
+
+
+# Oct 29, 2020, RAINBOWR version 0.1.22
+## Major changes
+- To deal with the error for the Windows user, we modified the package so that the user can select the number of cores even for solving the mixed-effects model with GEMMA (`EMM1.cpp` function). We also added the argument `n.core` for the functions that includes the mixed-effects model by `EMM1.cpp`.

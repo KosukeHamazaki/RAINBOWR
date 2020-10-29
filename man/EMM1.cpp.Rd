@@ -9,6 +9,7 @@ EMM1.cpp(
   X = NULL,
   ZETA,
   eigen.G = NULL,
+  n.core = NA,
   lam.len = 4,
   init.range = c(1e-04, 100),
   init.one = 0.5,
@@ -40,6 +41,8 @@ Please set names of list "Z" and "K"!}
 The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
 We recommend you assign the result of the eigen decomposition beforehand for time saving.}
+
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}
 
 \item{lam.len}{The number of initial values you set. If this number is large, the estimation will be more accurate,
 but computational cost will be large. We recommend setting this value 3 <= lam.len <= 6.}

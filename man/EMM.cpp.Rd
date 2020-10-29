@@ -12,6 +12,7 @@ EMM.cpp(
   eigen.SGS = NULL,
   n.thres = 450,
   reestimation = FALSE,
+  n.core = NA,
   lam.len = 4,
   init.range = c(1e-06, 100),
   init.one = 0.5,
@@ -59,6 +60,8 @@ We recommend you assign the result of the eigen decomposition beforehand for tim
 \item{n.thres}{If \eqn{n >= n.thres}, perform EMM1.cpp. Else perform EMM2.cpp.}
 
 \item{reestimation}{If TRUE, EMM2.cpp is performed when the estimation by EMM1.cpp may not be accurate.}
+
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}
 
 \item{lam.len}{The number of initial values you set. If this number is large, the estimation will be more accurate,
 but computational cost will be large. We recommend setting this value 3 <= lam.len <= 6.}
