@@ -283,12 +283,12 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariat
     S <- spI - tcrossprod(X.now %*% solve(crossprod(X.now)), X.now)
 
     if(length(ZETA) > 1){
-      EMM.res0 <- EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now,
+      EMM.res0 <- EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now, n.core = n.core,
                           n.thres = 450, REML = TRUE, pred = FALSE)
 
       weights <- EMM.res0$weights
     }else{
-      EMM.res0 <- EMM.cpp(y = y, X = X.now, ZETA = ZETA.now,
+      EMM.res0 <- EMM.cpp(y = y, X = X.now, ZETA = ZETA.now, n.core = n.core,
                            n.thres = 450, REML = TRUE)
       weights <- 1
     }

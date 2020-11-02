@@ -298,10 +298,10 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
     #### Calculate Hinv at first ####
     if(P3D){
       if(length(ZETA) > 1){
-        EMM.res0 <- EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now,
+        EMM.res0 <- EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now, n.core = n.core,
                             n.thres = 450, REML = TRUE, pred = FALSE)
       }else{
-        EMM.res0 <- EMM.cpp(y = y, X = X.now, ZETA = ZETA.now,
+        EMM.res0 <- EMM.cpp(y = y, X = X.now, ZETA = ZETA.now, n.core = n.core,
                             n.thres = 450, REML = TRUE)
       }
 
