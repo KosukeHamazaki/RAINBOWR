@@ -175,8 +175,11 @@ RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covari
   trait.names <- colnames(GWAS.res.first)[4:(4 + n.pheno - 1)]
   map <- geno[, 1:3]
   chr <- map[, 2]
+  if (!is.numeric(chr)) {
+    stop("Chromosome numbers should be `numeric` (not `character`) !!")
+  }
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   pos <- map[,3]
   cum.pos <- pos

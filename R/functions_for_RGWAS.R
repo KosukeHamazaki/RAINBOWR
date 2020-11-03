@@ -419,10 +419,13 @@ modify.data <- function(pheno.mat, geno.mat, pheno.labels = NULL, geno.names = N
 cumsumPos <- function(map) {
   marker <- as.character(map[, 1])
   chr <- map[, 2]
+  if (!is.numeric(chr)) {
+    stop("Chromosome numbers should be `numeric` (not `character`) !!")
+  }
   pos <- map[, 3]
   
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   cum.pos <- pos
   if (length(chr.tab) != 1) {
@@ -456,10 +459,13 @@ cumsumPos <- function(map) {
 genesetmap <- function(map, gene.set, cumulative = FALSE) {
   marker <- as.character(map[, 1])
   chr <- map[, 2]
+  if (!is.numeric(chr)) {
+    stop("Chromosome numbers should be `numeric` (not `character`) !!")
+  }
   pos <- map[, 3]
   
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   cum.pos <- cumsumPos(map)
   
@@ -653,7 +659,7 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", cex = 1, pl
   chrom.start <- rep(0, n.chrom)
   chrom.mid <- rep(0, n.chrom)
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   if(is.null(cum.pos)){
     cum.pos <- pos
@@ -1145,7 +1151,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
   
   chr <- map[, 2]
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
@@ -1685,7 +1691,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
   
   chr <- map[, 2]
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
@@ -2203,7 +2209,7 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
                              gene.set = NULL, min.MAF = 0.02, count = TRUE){
   chr <- map[, 2]
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
@@ -2602,7 +2608,7 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
                                 gene.set = NULL, min.MAF = 0.02, count = TRUE){
   chr <- map[, 2]
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
@@ -2994,7 +3000,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                                     min.MAF = 0.02, count = TRUE){
   chr <- map[, 2]
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
@@ -3596,7 +3602,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                                        min.MAF = 0.02, count = TRUE){
   chr <- map[, 2]
   chr.tab <- table(chr)
-  chr.max <- max(chr)
+  chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)

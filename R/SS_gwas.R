@@ -62,7 +62,7 @@ SS_gwas <- function(res, x, map.x, qtn.candidate, gene.set = NULL, n.top.false.b
     pos <- res[, 3]
 
     chr.tab <- table(chr)
-    chr.max <- max(chr)
+    chr.max <- length(chr.tab)
     chr.cum <- cumsum(chr.tab)
     cum.pos <- pos
     if (length(chr.tab) != 1) {
@@ -286,7 +286,7 @@ SS_gwas <- function(res, x, map.x, qtn.candidate, gene.set = NULL, n.top.false.b
     pos <- map.x[, 3]
 
     chr.tab <- table(chr)
-    chr.max <- max(chr)
+    chr.max <- length(chr.tab)
     chr.cum <- cumsum(chr.tab)
     cum.pos <- pos
     if (length(chr.tab) != 1) {
