@@ -549,7 +549,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     }
     
     njRes <- ape::nj(X = as.dist(dist4Nj))
-    distNodes <- ape::dist.nodes(njRes) / nMrkInBlock
+    distNodes <- ape::dist.nodes(njRes) / sqrt(nMrkInBlock)
     
     minuslog10ps <- c() 
     gvEstTotals <- gvEstTotalForLines <- 
@@ -589,7 +589,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
             
             maximizeFunc <- function(h) {
               if (kernelType == "phylo") {
-                gKernel <- exp(- h * distNodes)
+                gKernel <- exp(- h * distNodes ^ 2)
                 
                 gKernelPart <- gKernel[1:nHaplo, 1:nHaplo]
               } else {
@@ -697,7 +697,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
             }
             
             maximizeFunc2 <- function(h) {
-              gKernel <- exp(- h * distNodes)
+              gKernel <- exp(- h * distNodes ^ 2)
               ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
               
               EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
@@ -740,7 +740,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
             stop("`hOpt2` should be either one of 'optimized', 'tuned', or numeric!!")
           }
           
-          gKernel2 <- exp(- hOpt2 * distNodes)
+          gKernel2 <- exp(- hOpt2 * distNodes ^ 2)
           ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel2))
           
           EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)

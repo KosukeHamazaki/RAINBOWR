@@ -483,3 +483,8 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 # Nov 03, 2020, RAINBOWR version 0.1.23
 ## Major changes
 - To deal with the error for the case where the chromosome numbers do not start from chromosome 1, we fix the scripts related to the treatment for genetic map. 
+
+
+# Nov 11, 2020, RAINBOWR version 0.1.24
+## Major changes
+- We fixed an error on computing a Gaussian kernel for phylogenetic relationship in `estPhylo` function.
