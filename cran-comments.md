@@ -488,3 +488,4 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 # Nov 11, 2020, RAINBOWR version 0.1.24
 ## Major changes
 - We fixed an error on computing a Gaussian kernel for phylogenetic relationship in `estPhylo` function.
+- We also fixed an error in `genesetmap` function related to the case where the markers in haplotype block list are not included in the marker genotype.

@@ -481,6 +481,7 @@ genesetmap <- function(map, gene.set, cumulative = FALSE) {
     id <- mark.id[gene.names == gene.name[k]]
     ids[k, ] <- c(as.character(id[1]), as.character(id[length(id)]))
     num.sel <- match(id, map[, 1])
+    num.sel <- num.sel[!is.na(num.sel)]
     chr.sel <- map[num.sel, 2]
     pos.sel <- map[num.sel, 3]
     cum.pos.sel <- cum.pos[num.sel]
