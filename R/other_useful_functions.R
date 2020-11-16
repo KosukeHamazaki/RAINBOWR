@@ -576,7 +576,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                                        dims = c(nLine, nHaplo),
                                                        dimnames = list(lineNames, haploNames)))
         
-        hInv <- median(distNodes[upper.tri(distNodes)])
+        hInv <- median((distNodes ^ 2)[upper.tri(distNodes ^ 2)])
         h <- 1 / hInv
         hStarts <- h * rangeHStart
         hStarts <- split(hStarts, factor(1:length(rangeHStart)))
