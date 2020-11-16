@@ -599,9 +599,12 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
               }
               
               ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-              EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-              LL <- EM3Res$LL
-              
+              EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow), silent = TRUE)
+              if (!("try-error" %in% class(EM3Res))) {
+                LL <- EM3Res$LL
+              } else {
+                LL <- -1e12
+              }
               return(-LL)
             }
             
@@ -700,8 +703,12 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
               gKernel <- exp(- h * distNodes ^ 2)
               ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
               
-              EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-              LL <- EMMRes$LL
+              EMMRes <- try(EMM.cpp(y = gvEst2, ZETA = ZETA2), silent = TRUE)
+              if (!("try-error" %in% class(EMMRes))) {
+                LL <- EMMRes$LL
+              } else {
+                LL <- -1e12
+              }
               
               return(-LL)
             }
@@ -1686,8 +1693,12 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
               }
               
               ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-              EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-              LL <- EM3Res$LL
+              EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow), silent = TRUE)
+              if (!("try-error" %in% class(EM3Res))) {
+                LL <- EM3Res$LL
+              } else {
+                LL <- -1e12
+              }
               
               return(-LL)
             }
@@ -1796,8 +1807,12 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                 gKernel <- expm::expm(- h * L)
                 ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
                 
-                EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
-                LL <- EMMRes$LL
+                EMMRes <- try(EMM.cpp(y = gvEst2, ZETA = ZETA2), silent = TRUE)
+                if (!("try-error" %in% class(EMMRes))) {
+                  LL <- EMMRes$LL
+                } else {
+                  LL <- -1e12
+                }
                 
                 return(-LL)
               }
