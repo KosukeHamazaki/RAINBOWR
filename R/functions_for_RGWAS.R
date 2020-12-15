@@ -683,8 +683,11 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", cex = 1, pl
 #' Draw the effects of epistasis (3d plot and 2d plot)
 #'
 #'
-#' @param input Data frame of GWAS results where the first column is the marker names,
-#' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
+#' @param input List of results of RGWAS.epistasis / RGWAS.twostep.epi. If the output of `RGWAS.epistasis` is `res`, 
+#' `input` corresponds to `res$scores`. If the output of `RGWAS.twostep.epi.` is `res`, 
+#' `input` corresponds to `res$epistasis$scores`. See: Value of \link[RAINBOWR]{RGWAS.epistasis}
+#' @param map Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
+#' This is map information for SNPs which are tested epistatic effects.
 #' @param cum.pos Cumulative position (over chromosomes) of each marker
 #' @param plot.epi.3d If TRUE, draw 3d plot
 #' @param plot.epi.2d If TRUE, draw 2d plot
@@ -698,13 +701,13 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", cex = 1, pl
 #'
 #'
 
-manhattan3 <- function(input, cum.pos, plot.epi.3d = TRUE,
+manhattan3 <- function(input, map, cum.pos, plot.epi.3d = TRUE,
                        plot.epi.2d = TRUE, main.epi.3d = NULL,
                        main.epi.2d = NULL, saveName = NULL){
   x <- input[[2]]
   y <- input[[3]]
   z <- input[[4]]
-  col.id <- rainbow(7)
+  col.id <- rainbow(n = 7, alpha = 1)
   quan <- seq(0, max(z, na.rm = TRUE), length = 8)
   col.num <- rep(NA, length(z))
   for(j in 1:length(z)){
@@ -715,63 +718,107 @@ manhattan3 <- function(input, cum.pos, plot.epi.3d = TRUE,
     }
   }
   
-  if(plot.epi.3d){
-    rgl::rgl.open()
-    rgl::par3d(cex = 0.6)
-    rgl::plot3d(x, y, z, col = col.id[col.num], type = "h", lwd = 3,
-                xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)),
-                xlab = "Position (bp)", ylab = "Position (bp)", zlab = "-log10(p)")
-    rgl::legend3d("topright", legend = paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1)),
-                  pch = 16, col = rev(rainbow(7)), cex = 0.6, inset = c(0.02))
+  if (plot.epi.3d) {
+    xPlotly <- rep(x, each = 3)
+    xPlotly[(1:length(xPlotly)) %% 3 == 0] <- NA
+    yPlotly <- rep(y, each = 3)
+    yPlotly[(1:length(yPlotly)) %% 3 == 0] <- NA
+    zPlotly <- rep(z, each = 3)
+    zPlotly[(1:length(zPlotly)) %% 3 == 0] <- NA
+    zPlotly[(1:length(zPlotly)) %% 2 == 0] <- 0
+    colPlotly <- factor(rep(col.num, each = 3),
+                        levels = 1:7,
+                        labels = rev(paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1))))
     
-    rgl::title3d(main = main.epi.3d)
+    mrkNamesPlotlyX0 <- rep(map[, 1], nrow(map))
+    mrkNamesPlotlyX <- rep(mrkNamesPlotlyX0, each = 3)
+    mrkNamesPlotlyX[(1:length(mrkNamesPlotlyX)) %% 3 == 0] <- NA
+    
+    mrkNamesPlotlyY0 <- rep(map[, 1], each = nrow(map))
+    mrkNamesPlotlyY <- rep(mrkNamesPlotlyY0, each = 3)
+    mrkNamesPlotlyY[(1:length(mrkNamesPlotlyY)) %% 3 == 0] <- NA
+    
+    chrPlotlyX0 <- rep(map[, 2], nrow(map))
+    chrPlotlyX <- rep(chrPlotlyX0, each = 3)
+    chrPlotlyX[(1:length(chrPlotlyX)) %% 3 == 0] <- NA
+    
+    chrPlotlyY0 <- rep(map[, 2], each = nrow(map))
+    chrPlotlyY <- rep(chrPlotlyY0, each = 3)
+    chrPlotlyY[(1:length(chrPlotlyY)) %% 3 == 0] <- NA
+    
+    
+    posPlotlyX0 <- rep(map[, 3], nrow(map))
+    posPlotlyX <- rep(posPlotlyX0, each = 3)
+    posPlotlyX[(1:length(posPlotlyX)) %% 3 == 0] <- NA
+    
+    posPlotlyY0 <- rep(map[, 3], each = nrow(map))
+    posPlotlyY <- rep(posPlotlyY0, each = 3)
+    posPlotlyY[(1:length(posPlotlyY)) %% 3 == 0] <- NA
+    
+    
+    
+    
+    dataPlotly <- data.frame(minuslog10p = zPlotly,
+                             markerNameX = mrkNamesPlotlyX,
+                             chrX = chrPlotlyX,
+                             posX = posPlotlyX,
+                             cumsumPosX = xPlotly,
+                             markerNameY = mrkNamesPlotlyY,
+                             chrY = chrPlotlyY,
+                             posY = posPlotlyY,
+                             cumsumPosY = yPlotly,
+                             col = colPlotly)
+    dataPlotly$minuslog10p <- round(dataPlotly$minuslog10p, 2)
+    
+    plt <- plotly::plot_ly(data = dataPlotly,
+                           color = ~ col, 
+                           colors = col.id,
+                           hoverinfo = "text",
+                           text = paste0(apply(dataPlotly[, - ncol(dataPlotly)], 1, function(l) {
+                             paste(names(l), ":", l, collapse = "\n")
+                           }))) %>%
+      plotly::add_paths(data = dataPlotly,
+                        x = ~ cumsumPosX, 
+                        y = ~ cumsumPosY, 
+                        z = ~ minuslog10p) %>%
+      plotly::layout(title = list(text = main.epi.3d))
+    
+    if (!is.null(saveName)) {
+      saveFileEpistasis3d <- here::here(paste0(saveName, "_epistasis_3d_plotly"))
+      saveFileEpistasis3dHtml <- paste0(saveFileEpistasis3d, ".html")
+      saveFileEpistasis3dFiles <- paste0(saveFileEpistasis3d, "_files")
+      htmlwidgets::saveWidget(widget = plotly::partial_bundle(plt), 
+                              file = saveFileEpistasis3dHtml)
+      
+      unlink(x = saveFileEpistasis3dFiles,
+             recursive = TRUE)
+    } else {
+      print(plt)
+    }
   }
   
-  pl.size <- 10 * z / max(z)
-  if(!is.null(saveName)){
-    if(plot.epi.3d){
-      rgl.snapshot(paste(saveName, "_epistasis_3d_snapshot.png", sep = ""))
-      if(length(grep("/", saveName)) != 0){
-        spr <- strsplit(saveName, "/")[[1]]
-        dir <- paste(spr[-length(spr)], collapse = "/")
-        file_name <- spr[length(spr)]
-      }else{
-        dir <- ""
-        file_name <- saveName
-      }
-      writeWebGL(dir = dir, filename = file.path(dir, paste(file_name, "_epistasis_3d_webplot.html")),
-                 width = 1000, height = 1000)
-      rgl.close()
+  if (plot.epi.2d) {
+    pl.size <- 10 * z / max(z)
+    
+    if(!is.null(saveName)){
+      png(paste0(saveName, "_epistasis_2d_plot.png"), width = 600, height = 500)
     }
     
-    if(plot.epi.2d){
-      png(paste(saveName, "_epistasis_2d_plot.png", ""), width = 600, height = 500)
-      oldpar <- par(no.readonly = TRUE)
-      on.exit(par(oldpar))
-      par(mar = c(3, 3, 3, 6), xpd = T)
-      plot(x, y, cex = pl.size, xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)), col = col.id[col.num], pch = 1)
-      segments(0, 0, max(cum.pos), max(cum.pos), lty = "dotted")
-      legend(oldpar$usr[2], oldpar$usr[4],
-             legend = paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1)),
-             pch = 1, col = rev(rainbow(7)), cex = 1)
-      title(main = main.epi.2d)
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+    par(mar = c(3, 3, 3, 6), xpd = T)
+    plot(x, y, cex = pl.size, xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)), col = col.id[col.num], pch = 1)
+    segments(0, 0, max(cum.pos), max(cum.pos), lty = "dotted")
+    legend(oldpar$usr[2], oldpar$usr[4],
+           legend = paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1)),
+           pch = 1, col = rev(col.id), cex = 1)
+    title(main = main.epi.2d)
+    
+    if(!is.null(saveName)){
       dev.off()
-    }
-  }else{
-    if(plot.epi.2d){
-      oldpar <- par(no.readonly = TRUE)
-      on.exit(par(oldpar))
-      par(mar = c(3, 3, 3, 6), xpd = T)
-      plot(x, y, cex = pl.size, xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)), col = col.id[col.num], pch = 1)
-      segments(0, 0, max(cum.pos), max(cum.pos), lty = "dotted")
-      legend(oldpar$usr[2], oldpar$usr[4],
-             legend = paste(round(rev(quan)[-1], 1), "~", round(rev(quan[-1]), 1)),
-             pch = 1, col = rev(rainbow(7)), cex = 1)
-      title(main = main.epi.2d)
     }
   }
 }
-
 
 
 #' Draw qq plot

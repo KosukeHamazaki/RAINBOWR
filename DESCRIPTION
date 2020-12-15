@@ -1,7 +1,7 @@
 Package: RAINBOWR
 Type: Package
 Title: Genome-Wide Association Study with SNP-Set Methods
-Version: 0.1.24
+Version: 0.1.25
 Authors@R: c(
   person("Kosuke", "Hamazaki", email = "hamazaki@ut-biomet.org", role = c("aut", "cre")),
   person("Hiroyoshi", "Iwata", email = "aiwata@mail.ecc.u-tokyo.ac.jp", role = c("aut", "ctb"))
@@ -13,7 +13,7 @@ Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.5.0)
 Imports: Rcpp,
-         rgl,
+         plotly,
          tcltk,
          Matrix,
          cluster,
@@ -25,18 +25,20 @@ Imports: Rcpp,
          stringr,
          pegas,
          ggplot2,
-         ggtree,
          scatterpie,
          phylobase,
          haplotypes,
-         ggimage,
          rrBLUP,
          expm,
          parallel,
-         pbapply
+         pbapply,
+         here,
+         htmlwidgets
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.1.1
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    ggtree,
+    ggimage
 VignetteBuilder: knitr

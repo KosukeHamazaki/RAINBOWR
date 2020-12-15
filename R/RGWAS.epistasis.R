@@ -68,7 +68,7 @@
 #' \item{$scores}{\describe{
 #' \item{$scores}{This is the matrix which contains -log10(p) calculated by the test about epistasis effects.}
 #' \item{$x, $y}{The information of the positions of SNPs detected by regular GWAS.
-#'  These vectors are used when drawing plots. Each output correspond to the repliction of row and column of scores.}
+#'  These vectors are used when drawing plots. Each output correspond to the replication of row and column of scores.}
 #' \item{$z}{This is a vector of $scores.  This vector is also used when drawing plots.}
 #' }
 #' }
@@ -406,7 +406,7 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariat
     if (verbose) {
       print("Now Plotting (3d plot for epistasis). Please Wait.")
     }
-    manhattan3(input = epi.res, cum.pos = cum.pos, plot.epi.3d = plot.epi.3d,
+    manhattan3(input = epi.res, map = map2, cum.pos = cum.pos, plot.epi.3d = plot.epi.3d,
                plot.epi.2d = plot.epi.2d,  main.epi.3d = main.epi.3d,
                main.epi.2d = main.epi.2d, saveName = saveName)
 

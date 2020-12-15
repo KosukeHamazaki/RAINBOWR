@@ -6,6 +6,7 @@
 \usage{
 manhattan3(
   input,
+  map,
   cum.pos,
   plot.epi.3d = TRUE,
   plot.epi.2d = TRUE,
@@ -15,8 +16,12 @@ manhattan3(
 )
 }
 \arguments{
-\item{input}{Data frame of GWAS results where the first column is the marker names,
-the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.}
+\item{input}{List of results of RGWAS.epistasis / RGWAS.twostep.epi. If the output of `RGWAS.epistasis` is `res`, 
+`input` corresponds to `res$scores`. If the output of `RGWAS.twostep.epi.` is `res`, 
+`input` corresponds to `res$epistasis$scores`. See: Value of \link[RAINBOWR]{RGWAS.epistasis}}
+
+\item{map}{Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
+This is map information for SNPs which are tested epistatic effects.}
 
 \item{cum.pos}{Cumulative position (over chromosomes) of each marker}
 

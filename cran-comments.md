@@ -489,3 +489,8 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 ## Major changes
 - We fixed an error on computing a Gaussian kernel for phylogenetic relationship in `estPhylo` function.
 - We also fixed an error in `genesetmap` function related to the case where the markers in haplotype block list are not included in the marker genotype.
+
+
+# Dec 15, 2020, RAINBOWR version 0.1.25
+## Major changes
+- We removed a dependency on `rgl` package since the future of the `rgl` package is unstable. Instead, we used `plot_ly` function in `plotly` package to draw 3d plots for results of epistasis GWAS. We added dependency on `plotly`, `here`, and `htmlwidgets` packages.

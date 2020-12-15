@@ -185,13 +185,13 @@ When saveName = NULL, the plot is not saved.}
 \value{
 \describe{
 \item{$first}{The results of first normal GWAS will be returned.}
+\item{$map.epi}{Map information for SNPs which are tested epistatic effects.}
 \item{$epistasis}{
 \describe{
-\item{$map}{Map information for SNPs which are tested epistatic effects.}
 \item{$scores}{\describe{
 \item{$scores}{This is the matrix which contains -log10(p) calculated by the test about epistasis effects.}
 \item{$x, $y}{The information of the positions of SNPs detected by regular GWAS.
- These vectors are used when drawing plots. Each output correspond to the repliction of row and column of scores.}
+ These vectors are used when drawing plots. Each output correspond to the replication of row and column of scores.}
 \item{$z}{This is a vector of $scores.  This vector is also used when drawing plots.}
 }
 }
