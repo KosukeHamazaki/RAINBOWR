@@ -14,7 +14,6 @@ LazyData: true
 Depends: R (>= 3.5.0)
 Imports: Rcpp,
          plotly,
-         tcltk,
          Matrix,
          cluster,
          MASS,
@@ -25,6 +24,7 @@ Imports: Rcpp,
          stringr,
          pegas,
          ggplot2,
+         ggtree,
          scatterpie,
          phylobase,
          haplotypes,
@@ -38,7 +38,5 @@ LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.1.1
 Suggests: 
     knitr,
-    rmarkdown,
-    ggtree,
-    ggimage
+    rmarkdown
 VignetteBuilder: knitr

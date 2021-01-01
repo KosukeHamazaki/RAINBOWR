@@ -67,7 +67,6 @@ If you get some errors via installation, please check if the following packages 
 ``` r
 Rcpp,      # install `Rtools` for Windows user
 plotly,
-tcltk,
 Matrix,
 cluster,
 MASS,
@@ -82,7 +81,6 @@ ggtree,      # install from Bioconducter with `BiocManager::install("ggtree")`
 scatterpie,
 phylobase,
 haplotypes,
-ggimage
 rrBLUP,
 expm,
 parallel,

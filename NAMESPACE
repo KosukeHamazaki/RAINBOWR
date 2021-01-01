@@ -46,11 +46,9 @@ export(spectralG.cpp)
 export(welcome_to_RGWAS)
 import(Rcpp)
 import(plotly)
-import(tcltk)
 import(pbmcapply)
 import(optimx)
 import(stringr)
-import(ggimage)
 importFrom("grDevices", "dev.cur", "dev.new", "dev.next", "dev.off",
             "dev.set", "png", "rainbow")
 importFrom("graphics", "axis", "boxplot", "legend", "lines", "par",

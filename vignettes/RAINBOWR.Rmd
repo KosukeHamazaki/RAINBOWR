@@ -80,7 +80,6 @@ If you get some errors via installation, please check if the following packages 
 - Rcpp      # install `Rtools` for Windows user
 - RcppEigen
 - plotly
-- tcltk
 - Matrix
 - cluster
 - MASS
@@ -95,7 +94,6 @@ If you get some errors via installation, please check if the following packages 
 - scatterpie
 - phylobase
 - haplotypes
-- ggimage
 - rrBLUP
 - expm
 - parallel
