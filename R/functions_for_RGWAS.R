@@ -422,7 +422,7 @@ cumsumPos <- function(map) {
   if (!is.numeric(chr)) {
     stop("Chromosome numbers should be `numeric` (not `character`) !!")
   }
-  pos <- map[, 3]
+  pos <- as.double(map[, 3])
   
   chr.tab <- table(chr)
   chr.max <- length(chr.tab)
@@ -462,7 +462,7 @@ genesetmap <- function(map, gene.set, cumulative = FALSE) {
   if (!is.numeric(chr)) {
     stop("Chromosome numbers should be `numeric` (not `character`) !!")
   }
-  pos <- map[, 3]
+  pos <- as.double(map[, 3])
   
   chr.tab <- table(chr)
   chr.max <- length(chr.tab)

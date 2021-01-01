@@ -198,7 +198,7 @@ RGWAS.normal <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.f
   chr.tab <- table(chr)
   chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
-  pos <- map[, 3]
+  pos <- as.double(map[, 3])
   cum.pos <- pos
   if(length(chr.tab) != 1){
     for(i in 1:(chr.max - 1)){
