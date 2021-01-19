@@ -410,10 +410,12 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           maxNoNow <- sample(maxNo, 1)
           clusterNos <- match(kmResList[[maxNoNow]]$cluster, unique(kmResList[[maxNoNow]]$cluster))
         } else if (groupingMethod == "kmedoids") {
-          kmResNow <- cluster::pam(x = M, k = nGrp)
+          kmResNow <- cluster::pam(x = M, k = nGrp, pamonce = 5)
           clusterNos <- match(kmResNow$clustering, unique(kmResNow$clustering))
         } else if (groupingMethod == "hclust") {
-          tre <- hclust(dist(M, method = distMethod))
+          distMat <- Rfast::Dist(x = M, method = distMethod)
+          rownames(distMat) <- colnames(distMat) <- rownames(M)
+          tre <- hclust(as.dist(m = distMat))
           cutreeRes <- cutree(tree = tre, k = nGrp)
           clusterNos <- match(cutreeRes, unique(cutreeRes))
         } else {
@@ -535,7 +537,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     nMrkInBlock <- ncol(blockInterest)
     
     if (is.null(distMat)) {
-      distMat <- as.matrix(dist(blockInterestUniqueSorted, method = distMethod))
+      distMat <- Rfast::Dist(x = blockInterestUniqueSorted, method = distMethod)
+      rownames(distMat) <- colnames(distMat) <- rownames(blockInterestUniqueSorted)
     }
     
     if (evolutionDist) {
@@ -1282,10 +1285,12 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           maxNoNow <- sample(maxNo, 1)
           clusterNos <- match(kmResList[[maxNoNow]]$cluster, unique(kmResList[[maxNoNow]]$cluster))
         } else if (groupingMethod == "kmedoids") {
-          kmResNow <- cluster::pam(x = M, k = nGrp)
+          kmResNow <- cluster::pam(x = M, k = nGrp, pamonce = 5)
           clusterNos <- match(kmResNow$clustering, unique(kmResNow$clustering))
         } else if (groupingMethod == "hclust") {
-          tre <- hclust(dist(M, method = distMethod))
+          distMat <- Rfast::Dist(x = M, method = distMethod)
+          rownames(distMat) <- colnames(distMat) <- rownames(M)
+          tre <- hclust(as.dist(m = distMat))
           cutreeRes <- cutree(tree = tre, k = nGrp)
           clusterNos <- match(cutreeRes, unique(cutreeRes))
         } else {
@@ -1410,7 +1415,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     nMrkInBlock <- ncol(blockInterest)
     
     if (is.null(distMat)) {
-      distMat <- as.matrix(dist(blockInterestUniqueSorted, method = distMethod))
+      distMat <- Rfast::Dist(x = blockInterestUniqueSorted, method = distMethod)
+      rownames(distMat) <- colnames(distMat) <- rownames(blockInterestUniqueSorted)
     }
     
     if (networkMethod == "rmst") {
@@ -1500,7 +1506,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       
       haplotypeInfo$haploBlockCompSorted <- blockInterestCompSorted
       
-      distMatComp <- dist(blockInterestCompSorted, method = distMethod)
+      distMatComp <- Rfast::Dist(x = blockInterestCompSorted, method = distMethod)
+      rownames(distMatComp) <- colnames(distMatComp) <- rownames(blockInterestCompSorted)
     } else if (complementHaplo == "phylo") {
       haplotypeInfo$haploBlockCompSorted <- NULL
       

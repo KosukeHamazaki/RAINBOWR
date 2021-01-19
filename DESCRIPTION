@@ -1,7 +1,7 @@
 Package: RAINBOWR
 Type: Package
 Title: Genome-Wide Association Study with SNP-Set Methods
-Version: 0.1.25
+Version: 0.1.26
 Authors@R: c(
   person("Kosuke", "Hamazaki", email = "hamazaki@ut-biomet.org", role = c("aut", "cre")),
   person("Hiroyoshi", "Iwata", email = "aiwata@mail.ecc.u-tokyo.ac.jp", role = c("aut", "ctb"))
@@ -33,7 +33,8 @@ Imports: Rcpp,
          parallel,
          pbapply,
          here,
-         htmlwidgets
+         htmlwidgets,
+         Rfast
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.1.1
 Suggests: 

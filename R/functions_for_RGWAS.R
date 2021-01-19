@@ -250,7 +250,8 @@ calcGRM = function(genoMat,
     HHt <- tcrossprod(genoMat)
     GRM <- HHt * nInd / sum(diag(HHt))
   } else if (methodGRM == "gaussian") {
-    distMat <- as.matrix(dist(genoMat)) / sqrt(ncol(genoMat))
+    distMat <- Rfast::Dist(x = genoMat) / sqrt(ncol(genoMat))
+    rownames(distMat) <- colnames(distMat) <- rownames(genoMat)
     if ("character" %in% class(kernel.h)) {
       hinv <- median((distMat ^ 2)[upper.tri(distMat ^ 2)])
       h <- 1 / hinv
@@ -260,7 +261,8 @@ calcGRM = function(genoMat,
     
     GRM <- exp(- h * distMat ^ 2)
   } else if (methodGRM == "exponential") {
-    distMat <- as.matrix(dist(genoMat)) / sqrt(ncol(genoMat))
+    distMat <- Rfast::Dist(x = genoMat) / sqrt(ncol(genoMat))
+    rownames(distMat) <- colnames(distMat) <- rownames(genoMat)
     if ("character" %in% class(kernel.h)) {
       hinv <- median((distMat ^ 2)[upper.tri(distMat ^ 2)])
       h <- 1 / hinv
@@ -1339,7 +1341,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
             }
           }
         }else{
-          kmed.res <- cluster::pam(Mis.0, k = num.hap)
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
           if(any(MAF.cut.D)){
@@ -1858,12 +1860,12 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
             }
           }
         }else{
-          kmed.res <- cluster::pam(Mis.0, k = num.hap)
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
           if(any(MAF.cut.D)){
             if(any(test.effect %in% c("dominance", "additive+dominance"))){
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
+              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
             }
@@ -2396,12 +2398,12 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
             }
           }
         }else{
-          kmed.res <- cluster::pam(Mis.0, k = num.hap)
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
           if(any(MAF.cut.D)){
             if(any(test.effect %in% c("dominance", "additive+dominance"))){
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
+              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
             }
@@ -2775,12 +2777,12 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
             }
           }
         }else{
-          kmed.res <- cluster::pam(Mis.0, k = num.hap)
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
           if(any(MAF.cut.D)){
             if(any(test.effect %in% c("dominance", "additive+dominance"))){
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
+              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
             }
@@ -3174,12 +3176,12 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
             }
           }
         }else{
-          kmed.res <- cluster::pam(Mis.0, k = num.hap)
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
           if(any(MAF.cut.D)){
             if(dominance.eff){
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
+              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
             }
@@ -3774,12 +3776,12 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
             }
           }
         }else{
-          kmed.res <- cluster::pam(Mis.0, k = num.hap)
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
           if(any(MAF.cut.D)){
             if(dominance.eff){
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
+              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
             }

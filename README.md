@@ -86,7 +86,8 @@ expm,
 parallel,
 pbapply,
 here,
-htmlwidgets
+htmlwidgets,
+Rfast
 ```
 
 In `RAINBOWR`,  since part of the code is written in `Rcpp` (`C++` in `R`),  please check if you can use `C++` in `R`.

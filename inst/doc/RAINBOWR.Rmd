@@ -100,6 +100,7 @@ If you get some errors via installation, please check if the following packages 
 - pbapply
 - here
 - htmlwidgets
+- Rfast
 
 
 In `RAINBOWR`,  since part of the code is written in `Rcpp` (`C++` in `R`),  please check if you can use `C++` in `R`.
