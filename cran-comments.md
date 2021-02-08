@@ -494,3 +494,8 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 # Dec 15, 2020, RAINBOWR version 0.1.25
 ## Major changes
 - We removed a dependency on `rgl` package since the future of the `rgl` package is unstable. Instead, we used `plot_ly` function in `plotly` package to draw 3d plots for results of epistasis GWAS. We added dependency on `plotly`, `here`, and `htmlwidgets` packages.
+
+
+# Jan 19, 2021, RAINBOWR version 0.1.26
+## Major changes
+- We added a dependency on `Rfast` package to perform the faster computation of distance matrix. We also added an option of `pamonce = 5` in `cluster::pam` function to save the cost of performing k-medoids analysis.

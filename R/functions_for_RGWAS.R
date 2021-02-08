@@ -1341,7 +1341,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
             }
           }
         }else{
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5, pamonce = 5)
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
           if(any(MAF.cut.D)){
