@@ -13,7 +13,6 @@ Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.5.0)
 Imports: Rcpp,
-         plotly,
          Matrix,
          cluster,
          MASS,
@@ -30,8 +29,6 @@ Imports: Rcpp,
          haplotypes,
          rrBLUP,
          expm,
-         parallel,
-         pbapply,
          here,
          htmlwidgets,
          Rfast
@@ -39,5 +36,6 @@ LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.1.1
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    plotly
 VignetteBuilder: knitr

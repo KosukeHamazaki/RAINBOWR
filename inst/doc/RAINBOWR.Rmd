@@ -96,8 +96,6 @@ If you get some errors via installation, please check if the following packages 
 - haplotypes
 - rrBLUP
 - expm
-- parallel
-- pbapply
 - here
 - htmlwidgets
 - Rfast

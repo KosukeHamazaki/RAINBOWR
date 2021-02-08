@@ -499,3 +499,21 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 # Jan 19, 2021, RAINBOWR version 0.1.26
 ## Major changes
 - We added a dependency on `Rfast` package to perform the faster computation of distance matrix. We also added an option of `pamonce = 5` in `cluster::pam` function to save the cost of performing k-medoids analysis.
+
+- We removed a dependency on `pblapply` package since the package is actually not needed in the RAINBOWR package. We also removed `parallel` package from Imports list in DESCRIPTION file because `parallel` package is initially installed in R. We also removed `plotly` package from Imports list, and moved it to Suggests list in the DESCRIPTION file.
+
+
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.0.2
+* win-builder release, R version 4.0.3
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 3.6.3
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.

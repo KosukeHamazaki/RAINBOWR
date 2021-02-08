@@ -772,6 +772,7 @@ manhattan3 <- function(input, map, cum.pos, plot.epi.3d = TRUE,
                              col = colPlotly)
     dataPlotly$minuslog10p <- round(dataPlotly$minuslog10p, 2)
     
+    if (requireNamespace("plotly", quietly = TRUE)) {
     plt <- plotly::plot_ly(data = dataPlotly,
                            color = ~ col, 
                            colors = col.id,
@@ -796,6 +797,9 @@ manhattan3 <- function(input, map, cum.pos, plot.epi.3d = TRUE,
              recursive = TRUE)
     } else {
       print(plt)
+    }
+    } else {
+      warning("R package `plotly` should be correctly installed when you use the option `plot.epi.3d = TRUE` !")
     }
   }
   

@@ -83,8 +83,6 @@ phylobase,
 haplotypes,
 rrBLUP,
 expm,
-parallel,
-pbapply,
 here,
 htmlwidgets,
 Rfast

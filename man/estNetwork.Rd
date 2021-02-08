@@ -33,7 +33,7 @@ estNetwork(
   probParsimony = 0.95,
   nMaxHaplo = 1000,
   kernelTypes = "addNOIA",
-  nCores = parallel::detectCores(),
+  nCores = parallel::detectCores() - 1,
   hOpt = "optimized",
   hOpt2 = "optimized",
   maxIter = 20,

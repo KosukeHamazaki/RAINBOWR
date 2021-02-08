@@ -365,7 +365,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
                      subpopInfo = NULL, groupingMethod = "kmedoids",
                      nGrp = 3, nIterClustering = 100, kernelTypes = "addNOIA",
-                     nCores = parallel::detectCores(), hOpt = "optimized",
+                     nCores = parallel::detectCores() - 1, hOpt = "optimized",
                      hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
                      saveName = NULL, saveStyle = "png",
                      pchBase = c(1, 16), colNodeBase = c(2, 4), colTipBase = c(3, 5, 6),
@@ -622,13 +622,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                                     return(soln)
                                                   }, mc.cores = nCores)
               } else {
-                solnList <- pbapply::pblapply(X = hStarts,
-                                              FUN = function(h) {
-                                                soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                               lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                
-                                                return(soln)
-                                              }, mc.cores = nCores)
+                solnList <- parallel::mclapply(X = hStarts,
+                                               FUN = function(h) {
+                                                 soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                                lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                 
+                                                 return(soln)
+                                               }, mc.cores = nCores)
               }
               solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
               soln <- solnList[[solnNo]]
@@ -727,13 +727,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                                      return(soln)
                                                    }, mc.cores = nCores)
               } else {
-                solnList2 <- pbapply::pblapply(X = hStarts,
-                                               FUN = function(h) {
-                                                 soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                                lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                 
-                                                 return(soln)
-                                               }, mc.cores = nCores)
+                solnList2 <- parallel::mclapply(X = hStarts,
+                                                FUN = function(h) {
+                                                  soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                 lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                  
+                                                  return(soln)
+                                                }, mc.cores = nCores)
               }
               solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
               soln2 <- solnList2[[solnNo2]]
@@ -1237,7 +1237,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                        subpopInfo = NULL, groupingMethod = "kmedoids", nGrp = 3, 
                        nIterClustering = 100, iterRmst = 100, networkMethod = "rmst",
                        autogamous = FALSE, probParsimony = 0.95, nMaxHaplo = 1000,
-                       kernelTypes = "addNOIA", nCores = parallel::detectCores(),
+                       kernelTypes = "addNOIA", nCores = parallel::detectCores() - 1,
                        hOpt = "optimized", hOpt2 = "optimized", maxIter = 20,
                        rangeHStart = 10 ^ c(-1:1), saveName = NULL, saveStyle = "png",
                        plotWhichMDS = 1:2, colConnection = c("grey40", "grey60"),
@@ -1721,13 +1721,13 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                                     return(soln)
                                                   }, mc.cores = nCores)
               } else {
-                solnList <- pbapply::pblapply(X = hStarts,
-                                              FUN = function(h) {
-                                                soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                               lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                
-                                                return(soln)
-                                              }, mc.cores = nCores)
+                solnList <- parallel::mclapply(X = hStarts,
+                                               FUN = function(h) {
+                                                 soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                                lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                 
+                                                 return(soln)
+                                               }, mc.cores = nCores)
               }
               solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
               soln <- solnList[[solnNo]]
@@ -1835,13 +1835,13 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                                        return(soln)
                                                      }, mc.cores = nCores)
                 } else {
-                  solnList2 <- pbapply::pblapply(X = hStarts,
-                                                 FUN = function(h) {
-                                                   soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
-                                                                  lower = 0, upper = 1e06, control = list(iter.max = maxIter))
-                                                   
-                                                   return(soln)
-                                                 }, mc.cores = nCores)
+                  solnList2 <- parallel::mclapply(X = hStarts,
+                                                  FUN = function(h) {
+                                                    soln <- nlminb(start = h, objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                                                   lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                                    
+                                                    return(soln)
+                                                  }, mc.cores = nCores)
                 }
                 solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
                 soln2 <- solnList2[[solnNo2]]

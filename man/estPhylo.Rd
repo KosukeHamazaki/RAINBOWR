@@ -27,7 +27,7 @@ estPhylo(
   nGrp = 3,
   nIterClustering = 100,
   kernelTypes = "addNOIA",
-  nCores = parallel::detectCores(),
+  nCores = parallel::detectCores() - 1,
   hOpt = "optimized",
   hOpt2 = "optimized",
   maxIter = 20,
