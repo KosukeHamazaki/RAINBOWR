@@ -36,6 +36,9 @@
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param covariate A \eqn{n \times 1} vector or a \eqn{n \times p _ 1} matrix. You can insert continuous values, such as other traits or genotype score for special markers.
 #' This argument is regarded as one of the fixed effects.
 #' @param covariate.factor A \eqn{n \times p _ 2} dataframe. You should assign a factor vector for each column.
@@ -50,7 +53,28 @@
 #' \item{"LR"}{Likelihood-ratio test, relatively slow, but accurate (default).}
 #' \item{"score"}{Score test, much faster than LR, but sometimes overestimate -log10(p).}
 #' }
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores (use only at UNIX command line).
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param kernel.method It determines how to calculate kernel. There are three methods.
 #' \describe{
 #' \item{"gaussian"}{It is the default method. Gaussian kernel is calculated by distance matrix.}
@@ -108,6 +132,9 @@
 #' @param return.EMM.res When return.EMM.res = TRUE, the results of equation of mixed models are included in the result of RGWAS.
 #' @param thres If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 #' When return.EMM.res or thres is TRUE, the results will be "list" class.
+#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
+#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+#' by setting `skip.check = TRUE`.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #' @param verbose2 If this argument is TRUE, welcome message will be shown.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
@@ -162,44 +189,52 @@
 #'
 #'
 #'
-RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.factor = NULL,
-                           structure.matrix = NULL, n.PC = 0, min.MAF = 0.02, test.method = "LR", n.core = 1,
-                           kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE, num.hap = NULL,
-                           test.effect = "additive", window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
+RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
+                           covariate = NULL, covariate.factor = NULL,
+                           structure.matrix = NULL, n.PC = 0, min.MAF = 0.02,
+                           test.method = "LR", n.core = 1, parallel.method = "mclapply",
+                           kernel.method = "linear", kernel.h = "tuned", 
+                           haplotype = TRUE, num.hap = NULL, test.effect = "additive", 
+                           window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
                            gene.set = NULL, weighting.center = TRUE, weighting.other = NULL,
-                           sig.level = 0.05, method.thres = "BH", plot.qq = TRUE, plot.Manhattan = TRUE, plot.method = 1,
+                           sig.level = 0.05, method.thres = "BH", plot.qq = TRUE, 
+                           plot.Manhattan = TRUE, plot.method = 1,
                            plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
-                           plot.type = "p", plot.pch = 16, saveName = NULL, main.qq = NULL,
-                           main.man = NULL, plot.add.last = FALSE, return.EMM.res = FALSE, optimizer = "nlminb",
-                           thres = TRUE, verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE){
-
+                           plot.type = "p", plot.pch = 16, saveName = NULL, 
+                           main.qq = NULL, main.man = NULL, plot.add.last = FALSE,
+                           return.EMM.res = FALSE, optimizer = "nlminb",
+                           thres = TRUE, skip.check = FALSE, verbose = TRUE, 
+                           verbose2 = FALSE, count = TRUE, time = TRUE) {
+  
   #### The start of the RGWAS function ####
   start <- Sys.time()
-
-
+  
+  
   #### Some settings to perform RGWAS ####
-  if(verbose2){
+  if (verbose2) {
     welcome_to_RGWAS()
   }
-
+  
   ### For phenotype ###
   n.sample.pheno <- nrow(pheno)
   n.pheno <- ncol(pheno) - 1
   pheno.ix <- 2:ncol(pheno)
   pheno.names <- colnames(pheno)[2:ncol(pheno)]
   lines.name.pheno <- as.character(pheno[, 1])
-
+  
   ### For covariate ###
   X0 <- matrix(1, n.sample.pheno, 1)
   colnames(X0) <- "Intercept"
   rownames(X0) <- lines.name.pheno
-
-  if(!is.null(covariate)){
+  
+  if (!is.null(covariate)) {
+    covariate <- as.matrix(covariate)
     p1 <- ncol(covariate)
     X0 <- cbind(X0, scale(covariate))
   }
-
-  if(!is.null(covariate.factor)){
+  
+  if (!is.null(covariate.factor)) {
+    covariate.factor <- data.frame(covariate.factor)
     p2 <- ncol(covariate.factor)
     for (i in 1:p2) {
       cov.fac.now <- covariate.factor[, i]
@@ -210,15 +245,16 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
       }
     }
   }
-
-  if(!is.null(structure.matrix)){
+  
+  if (!is.null(structure.matrix)) {
+    structure.matrix <- as.matrix(structure.matrix)
     colnames(structure.matrix) <- paste0("subpop", 1:ncol(structure.matrix))
     X0 <- cbind(X0, structure.matrix)
-
+    
     n.PC <- 0
   }
-
-
+  
+  
   ### For genotype ###
   geno <- geno[order(geno[, 2], geno[, 3]), ]
   lines.name.geno <- colnames(geno)[-c(1:3)]
@@ -234,108 +270,125 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
   chr.cum <- cumsum(chr.tab)
   pos <- as.double(map[, 3])
   cum.pos <- pos
-  if(length(chr.tab) != 1){
-    for(i in 1:(chr.max - 1)){
-      cum.pos[(chr.cum[i] + 1): (chr.cum[i + 1])] <- pos[(chr.cum[i] + 1):(chr.cum[i + 1])] + cum.pos[chr.cum[i]]
+  if (length(chr.tab) != 1) {
+    for (i in 1:(chr.max - 1)) {
+      cum.pos[(chr.cum[i] + 1):(chr.cum[i + 1])] <- pos[(chr.cum[i] + 1):(chr.cum[i + 1])] + cum.pos[chr.cum[i]]
     }
   }
   n.mark <- ncol(M0)
   rownames(M0) <- lines.name.geno
-
-
+  
+  
   ### Match phenotype and genotype ###
   pheno.mat <- as.matrix(pheno[, -1, drop = FALSE])
   rownames(pheno.mat) <- lines.name.pheno
-
-  modification.res <- modify.data(pheno.mat = pheno.mat, geno.mat = M0,
-                                  pheno.labels = NULL, geno.names = NULL,
-                                  map = NULL, return.ZETA = TRUE, return.GWAS.format = FALSE)
-
-  pheno.mat.modi <- modification.res$pheno.modi
-  match.modi <- match(rownames(pheno.mat.modi), pheno[, 1])
-  pheno.match <- pheno[match.modi, ]
-
-  M <- modification.res$geno.modi
-
+  
+  if (skip.check) {
+    pheno.mat.modi <- pheno.mat
+    match.modi <- 1:nrow(pheno.mat.modi)
+    pheno.match <- pheno[match.modi, ]
+    M <- M0
+  } else {
+    modification.res <- modify.data(pheno.mat = pheno.mat, geno.mat = M0,
+                                    pheno.labels = NULL, geno.names = NULL,
+                                    map = NULL, return.ZETA = is.null(ZETA),
+                                    return.GWAS.format = FALSE)
+    
+    pheno.mat.modi <- modification.res$pheno.modi
+    match.modi <- match(rownames(pheno.mat.modi), pheno[, 1])
+    pheno.match <- pheno[match.modi, ]
+    
+    M <- modification.res$geno.modi
+  }
+  
+  
   n.line <- nrow(M)
   X <- as.matrix(X0[match.modi, ])
-
-
-  if(is.null(ZETA)){
-    ZETA <- modification.res$ZETA
-  }else{
+  
+  
+  if (is.null(ZETA)) {
+    if (skip.check) {
+      K.A <- calcGRM(M)
+      Z.A <- design.Z(pheno.labels = pheno.match[, 1],
+                      geno.names = rownames(K.A))
+      ZETA <- list(A = list(Z = Z.A,
+                            K = K.A))
+    } else {
+      ZETA <- modification.res$ZETA
+    }
+  } else {
     ZETA.check <- any(unlist(lapply(ZETA, function(x) {
       (is.null(rownames(x$Z))) | (is.null(colnames(x$Z)))
     })))
-
-    if(ZETA.check){
+    
+    if (ZETA.check) {
       stop("No row names or column names for design matrix Z!!
            Please fill them with row : line (variety) names for phenotypes.
            and column : line (variety) names for genotypes.")
     }
-
-    ZETA <- lapply(ZETA, function(x){
+    
+    ZETA <- lapply(ZETA, function(x) {
       Z.match.pheno.no <- match(rownames(pheno.mat.modi), rownames(x$Z))
       Z.match.geno.no <- match(rownames(M), rownames(x$Z))
-
+      
       Z.modi <- x$Z[Z.match.pheno.no, Z.match.geno.no]
       K.modi <- x$K[Z.match.geno.no, Z.match.geno.no]
-
+      
       return(list(Z = Z.modi, K = K.modi))
     })
-    }
+  }
   K.A <- ZETA[[1]]$K
   Z.A <- ZETA[[1]]$Z
-
-
-
+  
+  
+  
   ### For covariates (again) ###
-  if(n.PC > 0){
+  if (n.PC > 0) {
     eigen.K.A <- eigen(K.A)
     eig.K.vec <- eigen.K.A$vectors
-
+    
     PC.part <- Z.A %*% eig.K.vec[, 1:n.PC]
     colnames(PC.part) <- paste0("n.PC_", 1:n.PC)
-
+    
     X <- cbind(X, PC.part)
   }
   X <- make.full(X)
-
-
+  
+  
   ### Some settings ###
   trait.names <- colnames(pheno)[pheno.ix]
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
     n.scores <- sum(n.scores.each)
-  }else{
+  } else {
     n.scores <- length(unique(gene.set[, 1]))
   }
-  if((kernel.method == "linear") & (length(test.effect) >= 2)){
+  if ((kernel.method == "linear") & (length(test.effect) >= 2)) {
     all.scores <- rep(list(matrix(0, nrow = n.scores, ncol = n.pheno)), length(test.effect))
     names(all.scores) <- test.effect
-
-    for(test.effect.no in 1:length(test.effect)){
+    
+    for (test.effect.no in 1:length(test.effect)) {
       colnames(all.scores[[test.effect.no]]) <- trait.names
     }
     thresholds <- matrix(NA, nrow = length(test.effect), ncol = n.pheno)
     rownames(thresholds) <- test.effect
     colnames(thresholds) <- trait.names
-  }else{
+  } else {
     all.scores <- matrix(0, nrow = n.scores, ncol = n.pheno)
     colnames(all.scores) <- trait.names
     thresholds <- matrix(NA, nrow = 1, ncol = n.pheno)
     rownames(thresholds) <- kernel.method
     colnames(thresholds) <- trait.names
   }
-
+  
   if (n.pheno == 0) {
     stop("No phenotypes.")
   }
-
-
-
+  
+  
+  
   ##### START RGWAS for each phenotype #####
-  for(pheno.no in 1:n.pheno){
+  for (pheno.no in 1:n.pheno) {
     trait.name <- trait.names[pheno.no]
     if (verbose) {
       print(paste("GWAS for trait:", trait.name))
@@ -343,105 +396,116 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
     y0 <- pheno.match[, pheno.ix[pheno.no]]
     not.NA <- which(!is.na(y0))
     y <- y0[not.NA]
-
+    
     n <- length(y)
-
+    
     X.now <- X[not.NA, , drop = FALSE]
     ZETA.now <- lapply(ZETA, function(x) list(Z = x$Z[not.NA, ], K = x$K))
-
-    if (sum(is.na(M)) == 0) {
-      M.now <- Z.A[not.NA, ] %*% M
+    
+    if (is.diag(x = Z.A)) {
+      M.now <- M[not.NA, , drop = FALSE]
     } else {
-      M.now <- M[apply(Z.A[not.NA, ], 1, function(x) which(x == 1)), ]
+      Z.A.nonNA.sp <- as(object = Z.A[not.NA, ], Class = "sparseMatrix")
+      which.one.Z.A <- apply(Z.A.nonNA.sp == 1, 1, which)
+      overlap.Z.A <- is.list(which.one.Z.A)
+      if (!overlap.Z.A) {
+        M.now <- M[which.one.Z.A, ]
+      } else {
+        M.now <- as.matrix(Z.A.nonNA.sp %*% M)
+      } 
     }
-
+    
     p <- ncol(X.now)
     m <- ncol(Z.A)
-
+    
     #### Calculate LL for the null hypothesis at first ####
     spI <- diag(n)
     S <- spI - tcrossprod(X.now %*% solve(crossprod(X.now)), X.now)
-
-    if(length(ZETA) > 1){
-      EMM.res0 <- EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now, n.core = n.core,
-                          n.thres = 450, REML = TRUE, pred = FALSE)
-
-      weights <- EMM.res0$weights
-    }else{
-      EMM.res0 <- EMM.cpp(y = y, X = X.now, ZETA = ZETA.now, n.core = n.core,
-                           n.thres = 450, REML = TRUE)
-      weights <- 1
-    }
-
+    
+    EMM.res0 <- EM3.general(y = y, X0 = X.now, ZETA = ZETA.now, 
+                            package = package.MM,
+                            n.core = n.core,
+                            REML = TRUE, pred = FALSE,
+                            return.u.always = FALSE, 
+                            return.u.each = FALSE,
+                            return.Hinv = FALSE)
+    weights <- EMM.res0$weights
+    
     ZKZt.list <- NULL
     ZKZt <- matrix(0, nrow = n, ncol = n)
-    for(ZKZt.no in 1:length(ZETA)){
+    for (ZKZt.no in 1:length(ZETA)) {
       Z.now <- ZETA.now[[ZKZt.no]]$Z
       K.now <- ZETA.now[[ZKZt.no]]$K
       ZKZt.now <- tcrossprod(Z.now %*% K.now, Z.now)
       ZKZt.weighted <- ZKZt.now * weights[ZKZt.no]
-
+      
       ZKZt.list <- c(ZKZt.list, list(ZKZt.weighted))
       ZKZt <- ZKZt + ZKZt.weighted
     }
-
-    if(test.method == "LR"){
+    
+    if (test.method == "LR") {
       LL0 <- EMM.res0$LL
-
+      
       spectral.res <- spectralG.cpp(ZETA = ZETA.now, X = X.now, weights = weights,
                                     return.G = TRUE, return.SGS = TRUE, spectral.method = "eigen")
       eigen.G <- spectral.res[[1]]
       eigen.SGS <- spectral.res[[2]]
-    }else{
-      if(test.method == "score"){
+    } else {
+      if (test.method == "score") {
         LL0 <- EMM.res0$LL
         Vu <- EMM.res0$Vu
         Ve <- EMM.res0$Ve
-
+        
         Gu <- tcrossprod(ZKZt)
         Ge <- diag(n)
         V0 <- Vu * Gu + Ve * Ge
-
-
+        
+        
         P0 <- MASS::ginv(S %*% V0 %*% S)
-      }else{
+      } else {
         stop("We only support 'LR' (likelihood-ratio test) and 'score' (score test)!")
       }
     }
-
-
-
-
-
+    
+    
+    
+    
+    
     #### Calculating the value of -log10(p) for each SNPs ####
     if ((n.core > 1) & requireNamespace("parallel", quietly = TRUE)) {
-        if(test.method == "LR"){
-          scores <- score.calc.LR.MC(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, LL0 = LL0,
-                                     eigen.SGS = eigen.SGS, eigen.G = eigen.G, n.core = n.core, map = map,
-                                     kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
-                                     num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
-                                     window.slide = window.slide, chi0.mixture = chi0.mixture, optimizer = optimizer,
-                                     weighting.center = weighting.center, weighting.other = weighting.other,
-                                     gene.set = gene.set, min.MAF = min.MAF, count = count)
-        }else{
-          scores <- score.calc.score.MC(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
-                                        LL0 = LL0, Gu = Gu, Ge = Ge, P0 = P0, n.core = n.core, map = map,
-                                        kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
-                                        num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
-                                        window.slide = window.slide, chi0.mixture = chi0.mixture,
-                                        weighting.center = weighting.center, weighting.other = weighting.other,
-                                        gene.set = gene.set, min.MAF = min.MAF, count = count)
-        }
-    }else {
-      if(test.method == "LR"){
-        scores <- score.calc.LR(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, LL0 = LL0,
-                                eigen.SGS = eigen.SGS, eigen.G = eigen.G, n.core = n.core, map = map, optimizer = optimizer,
+      if (test.method == "LR") {
+        scores <- score.calc.LR.MC(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
+                                   package.MM = package.MM, LL0 = LL0, eigen.SGS = eigen.SGS, 
+                                   eigen.G = eigen.G, n.core = n.core, 
+                                   parallel.method = parallel.method, map = map,
+                                   kernel.method = kernel.method, kernel.h = kernel.h, 
+                                   haplotype = haplotype, num.hap = num.hap, 
+                                   test.effect = test.effect, window.size.half = window.size.half,
+                                   window.slide = window.slide, chi0.mixture = chi0.mixture, 
+                                   optimizer = optimizer, weighting.center = weighting.center, 
+                                   weighting.other = weighting.other, gene.set = gene.set,
+                                   min.MAF = min.MAF, count = count)
+      } else {
+        scores <- score.calc.score.MC(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
+                                      LL0 = LL0, Gu = Gu, Ge = Ge, P0 = P0, n.core = n.core, 
+                                      parallel.method = parallel.method, map = map,
+                                      kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
+                                      num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
+                                      window.slide = window.slide, chi0.mixture = chi0.mixture,
+                                      weighting.center = weighting.center, weighting.other = weighting.other,
+                                      gene.set = gene.set, min.MAF = min.MAF, count = count)
+      }
+    } else {
+      if (test.method == "LR") {
+        scores <- score.calc.LR(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
+                                package.MM = package.MM, LL0 = LL0, eigen.SGS = eigen.SGS, 
+                                eigen.G = eigen.G, n.core = n.core, map = map, optimizer = optimizer,
                                 kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
                                 num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
                                 window.slide = window.slide, chi0.mixture = chi0.mixture,
                                 weighting.center = weighting.center, weighting.other = weighting.other,
                                 gene.set = gene.set, min.MAF = min.MAF, count = count)
-      }else{
+      } else {
         scores <- score.calc.score(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
                                    LL0 = LL0, Gu = Gu, Ge = Ge, P0 = P0, map = map,
                                    kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
@@ -451,11 +515,11 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
                                    gene.set = gene.set, min.MAF = min.MAF, count = count)
       }
     }
-
-    if(is.null(gene.set)){
+    
+    if (is.null(gene.set)) {
       window.centers <- as.numeric(rownames(scores))
       map2 <- map[window.centers, ]
-    }else{
+    } else {
       if (verbose) {
         print("Now generating map for gene set. Please wait.")
       }
@@ -463,46 +527,45 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
       map2 <- map20[, 1:3]
       cum.pos.set.mean <- c(map20[, 4])
     }
-
-    if((kernel.method == "linear") & (length(test.effect) >= 2)){
-      for(test.effect.no in 1:length(test.effect)){
+    
+    if ((kernel.method == "linear") & (length(test.effect) >= 2)) {
+      for (test.effect.no in 1:length(test.effect)) {
         if (plot.qq) {
           if (verbose) {
             print("Now Plotting (Q-Q plot). Please Wait.")
           }
-          if(is.null(saveName)){
+          if (is.null(saveName)) {
             if (length(grep("RStudio", names(dev.cur()))) == 0) {
               if (dev.cur() == dev.next()) {
                 dev.new()
-              }
-              else {
+              } else {
                 dev.set(dev.next())
               }
             }
             qq(scores[, test.effect.no])
-            if(is.null(main.qq)){
+            if (is.null(main.qq)) {
               title(main = paste(trait.name, test.effect[test.effect.no]))
-            }else{
+            } else {
               title(main = main.qq)
             }
-          }else{
+          } else {
             png(paste0(saveName, trait.name, "_qq_kernel_", test.effect[test.effect.no], ".png"))
             qq(scores[, test.effect.no])
-            if(is.null(main.qq)){
+            if (is.null(main.qq)) {
               title(main = paste(trait.name, test.effect[test.effect.no]))
-            }else{
+            } else {
               title(main = main.qq)
             }
             dev.off()
           }
         }
-
-
+        
+        
         if (plot.Manhattan) {
           if (verbose) {
             print("Now Plotting (Manhattan plot). Please Wait.")
           }
-          if(is.null(saveName)){
+          if (is.null(saveName)) {
             if (length(grep("RStudio", names(dev.cur()))) == 0) {
               if (dev.cur() == dev.next()) {
                 dev.new()
@@ -511,51 +574,51 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
                 dev.set(dev.next())
               }
             }
-            if(plot.method == 1){
+            if (plot.method == 1) {
               manhattan(input = cbind(map2, scores[, test.effect.no]), sig.level = sig.level, method.thres = method.thres, plot.col1 = plot.col1,
                         plot.type = plot.type, plot.pch = plot.pch)
-            }else{
+            } else {
               manhattan2(input = cbind(map2, scores[, test.effect.no]), sig.level = sig.level, method.thres = method.thres, plot.col2 = plot.col2,
                          plot.type = plot.type, plot.pch = plot.pch, cum.pos = cum.pos.set.mean)
             }
-            if(is.null(main.man)){
+            if (is.null(main.man)) {
               title(main = paste(trait.name, test.effect[test.effect.no]))
-            }else{
+            } else {
               title(main = main.man)
             }
-          }else{
+          } else {
             png(paste0(saveName, trait.name, "_manhattan_kernel", test.effect[test.effect.no], ".png"), width = 800)
-            if(plot.method == 1){
+            if (plot.method == 1) {
               manhattan(input = cbind(map2, scores[, test.effect.no]), sig.level = sig.level, method.thres = method.thres, plot.col1 = plot.col1,
                         plot.type = plot.type, plot.pch = plot.pch)
-            }else{
+            } else {
               manhattan2(input = cbind(map2, scores[, test.effect.no]), sig.level = sig.level, method.thres = method.thres, plot.col2 = plot.col2,
                          plot.type = plot.type, plot.pch = plot.pch, cum.pos = cum.pos.set.mean)
             }
-            if(is.null(main.man)){
+            if (is.null(main.man)) {
               title(main = paste(trait.name, test.effect[test.effect.no]))
-            }else{
+            } else {
               title(main = main.man)
             }
-            if(!(plot.add.last & (pheno.no == n.pheno))){
+            if (!(plot.add.last & (pheno.no == n.pheno))) {
               dev.off()
             }
           }
         }
         all.scores[[test.effect.no]][, pheno.no] <- scores[, test.effect.no]
         threshold <- try(CalcThreshold(cbind(map2, scores[, test.effect.no]), sig.level = sig.level, method = method.thres), silent = TRUE)
-        if("try-error" %in% class(threshold)){
+        if ("try-error" %in% class(threshold)) {
           threshold <- NA
         }
         thresholds[test.effect.no, pheno.no] <- threshold
-
+        
       }
-    }else{
+    } else {
       if (plot.qq) {
         if (verbose) {
           print("Now Plotting (Q-Q plot). Please Wait.")
         }
-        if(is.null(saveName)){
+        if (is.null(saveName)) {
           if (length(grep("RStudio", names(dev.cur()))) == 0) {
             if (dev.cur() == dev.next()) {
               dev.new()
@@ -565,29 +628,29 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
             }
           }
           qq(scores)
-          if(is.null(main.qq)){
+          if (is.null(main.qq)) {
             title(main = trait.name)
-          }else{
+          } else {
             title(main = main.qq)
           }
-        }else{
+        } else {
           png(paste0(saveName, trait.name, "_qq_kernel.png"))
           qq(scores)
-          if(is.null(main.qq)){
+          if (is.null(main.qq)) {
             title(main = trait.name)
-          }else{
+          } else {
             title(main = main.qq)
           }
           dev.off()
         }
       }
-
-
+      
+      
       if (plot.Manhattan) {
         if (verbose) {
           print("Now Plotting (Manhattan plot). Please Wait.")
         }
-        if(is.null(saveName)){
+        if (is.null(saveName)) {
           if (length(grep("RStudio", names(dev.cur()))) == 0) {
             if (dev.cur() == dev.next()) {
               dev.new()
@@ -596,80 +659,80 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate
               dev.set(dev.next())
             }
           }
-          if(plot.method == 1){
+          if (plot.method == 1) {
             manhattan(input = cbind(map2, scores), sig.level = sig.level, method.thres = method.thres, plot.col1 = plot.col1,
                       plot.type = plot.type, plot.pch = plot.pch)
-          }else{
+          } else {
             manhattan2(input = cbind(map2, scores), sig.level = sig.level, method.thres = method.thres, plot.col2 = plot.col2,
                        plot.type = plot.type, plot.pch = plot.pch, cum.pos = cum.pos.set.mean)
           }
-          if(is.null(main.man)){
+          if (is.null(main.man)) {
             title(main = trait.name)
-          }else{
+          } else {
             title(main = main.man)
           }
-        }else{
+        } else {
           png(paste0(saveName, trait.name, "_manhattan_kernel.png"), width = 800)
-          if(plot.method == 1){
+          if (plot.method == 1) {
             manhattan(input = cbind(map2, scores), sig.level = sig.level, method.thres = method.thres, plot.col1 = plot.col1,
                       plot.type = plot.type, plot.pch = plot.pch)
-          }else{
+          } else {
             manhattan2(input = cbind(map2, scores), sig.level = sig.level, method.thres = method.thres, plot.col2 = plot.col2,
                        plot.type = plot.type, plot.pch = plot.pch, cum.pos = cum.pos.set.mean)
           }
-          if(is.null(main.man)){
+          if (is.null(main.man)) {
             title(main = trait.name)
-          }else{
+          } else {
             title(main = main.man)
           }
-          if(!(plot.add.last & (pheno.no == n.pheno))){
+          if (!(plot.add.last & (pheno.no == n.pheno))) {
             dev.off()
           }
         }
       }
       all.scores[, pheno.no] <- scores
       threshold <- try(CalcThreshold(cbind(map2, scores), sig.level = sig.level, method = method.thres), silent = TRUE)
-      if("try-error" %in% class(threshold)){
+      if ("try-error" %in% class(threshold)) {
         threshold <- NA
       }
       thresholds[, pheno.no] <- threshold
     }
   }
-
-  if((kernel.method == "linear") & (length(test.effect) >= 2)){
-    res.Data <- lapply(all.scores, function(x){
+  
+  if ((kernel.method == "linear") & (length(test.effect) >= 2)) {
+    res.Data <- lapply(all.scores, function(x) {
       cbind(map2, x)
     })
-  }else{
+  } else {
     res.Data <- cbind(map2, all.scores)
   }
-
-
-
-
-  if(thres){
+  
+  
+  
+  
+  if (thres) {
     end <- Sys.time()
-
-    if(time){
+    
+    if (time) {
       print(end - start)
     }
-
-    if(return.EMM.res){
+    
+    if (return.EMM.res) {
       return(list(D = res.Data, thres = thresholds,
                   EMM.res = EMM.res0))
-    }else{
+    } else {
       return(list(D = res.Data, thres = thresholds))
     }
-  }else{
+  } else {
     end <- Sys.time()
-
-    if(time){
+    
+    if (time) {
       print(end - start)
     }
-
-    if(return.EMM.res){
+    
+    if (return.EMM.res) {
       return(list(D = res.Data, EMM.res = EMM.res0))
-    }else{
+    } else {
       return(res.Data)
     }
   }

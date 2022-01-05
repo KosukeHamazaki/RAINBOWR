@@ -30,7 +30,7 @@ score.calc.score(
 )
 }
 \arguments{
-\item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
+\item{M.now}{A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.}
 
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 

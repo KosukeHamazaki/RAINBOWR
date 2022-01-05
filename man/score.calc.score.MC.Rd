@@ -14,6 +14,7 @@ score.calc.score.MC(
   Ge,
   P0,
   n.core = 2,
+  parallel.method = "mclapply",
   map,
   kernel.method = "linear",
   kernel.h = "tuned",
@@ -31,7 +32,7 @@ score.calc.score.MC(
 )
 }
 \arguments{
-\item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
+\item{M.now}{A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.}
 
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
@@ -50,7 +51,29 @@ Please set names of list "Z" and "K"!}
 \item{P0}{A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
 \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.}
 
-\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+This argument is not valid when `parallel.method = "furrr"`.}
+
+\item{parallel.method}{Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+
+When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+
+When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+
+When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+\code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+
+We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+this parallelization method is not supported. So, if you are Windows user, 
+we recommend that you use the option `parallel.method = "foreach"`.}
 
 \item{map}{Data frame of map information where the first column is the marker names,
 the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.}

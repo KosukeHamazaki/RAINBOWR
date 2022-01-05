@@ -13,6 +13,9 @@
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param covariate A \eqn{n \times 1} vector or a \eqn{n \times p _ 1} matrix. You can insert continuous values, such as other traits or genotype score for special markers.
 #' This argument is regarded as one of the fixed effects.
 #' @param covariate.factor A \eqn{n \times p _ 2} dataframe. You should assign a factor vector for each column.
@@ -22,7 +25,28 @@
 #' @param n.PC Number of principal components to include as fixed effects. Default is 0 (equals K model).
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is assigned a zero score.
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores (use only at UNIX command line).
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param check.size This argument determines how many SNPs (around the SNP detected by normal GWAS) you will recalculate -log10(p).
 #' @param check.gene.size This argument determines how many genes (around the genes detected by normal GWAS) you will recalculate -log10(p).
 #' This argument is valid only when you assign "gene.set" argument.
@@ -107,6 +131,9 @@
 #' @param return.EMM.res When return.EMM.res = TRUE, the results of equation of mixed models are included in the result of RGWAS.
 #' @param thres If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 #' When return.EMM.res or thres is TRUE, the results will be "list" class.
+#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
+#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+#' by setting `skip.check = TRUE`.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #' @param verbose2 If this argument is TRUE, welcome message will be shown.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
@@ -153,8 +180,10 @@
 #'
 #'
 #'
-RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.factor = NULL,
-                          structure.matrix = NULL, n.PC = 0, min.MAF = 0.02, n.core = 1,
+RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston", 
+                          covariate = NULL, covariate.factor = NULL,
+                          structure.matrix = NULL, n.PC = 0, min.MAF = 0.02, 
+                          n.core = 1, parallel.method = "mclapply",
                           check.size = 40, check.gene.size = 4, kernel.percent = 0.1, GWAS.res.first = NULL,
                           P3D = TRUE, test.method.1 = "normal", test.method.2 = "LR",
                           kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE,
@@ -167,73 +196,88 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
                           plot.col3 = c("red3", "orange3"), plot.type = "p",
                           plot.pch = 16, saveName = NULL, main.qq.1 = NULL,
                           main.man.1 = NULL, main.qq.2 = NULL, main.man.2 = NULL,
-                          plot.add.last = FALSE, return.EMM.res = FALSE, thres = TRUE,
-                          verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE){
-
+                          plot.add.last = FALSE, return.EMM.res = FALSE, 
+                          thres = TRUE, skip.check = FALSE, verbose = TRUE, 
+                          verbose2 = FALSE, count = TRUE, time = TRUE) {
+  
   start <- Sys.time()
-  if(is.null(GWAS.res.first)){
+  if (is.null(GWAS.res.first)) {
     if (verbose) {
       print("The 1st step: Performing 1st GWAS (for screening)!")
     }
-    if(length(test.effect.1) >= 2){
+    if (length(test.effect.1) >= 2) {
       stop("Sorry, you can assign only one test effect for the 1st GWAS!!")
     }
-    if(test.method.1 == "normal"){
-      GWAS.res.first <- RGWAS.normal(pheno = pheno, geno = geno, ZETA = ZETA, covariate = covariate,
-                                     covariate.factor = covariate.factor, structure.matrix = structure.matrix,
-                                     n.PC = n.PC, min.MAF = min.MAF, P3D = P3D, n.core = n.core,
-                                     sig.level = sig.level, method.thres = method.thres, plot.qq = plot.qq.1, plot.Manhattan = plot.Manhattan.1,
-                                     plot.method = plot.method, plot.col1 = plot.col1, plot.col2 = plot.col2,
-                                     plot.type = plot.type, plot.pch = plot.pch, saveName = saveName, optimizer = optimizer,
-                                     main.qq = main.qq.1, main.man = main.man.1, plot.add.last = FALSE, return.EMM.res = FALSE,
-                                     thres = FALSE, verbose = verbose, verbose2 = verbose2, count = count, time = time)
-    }else{
-      GWAS.res.first <- RGWAS.multisnp(pheno = pheno, geno = geno, ZETA = ZETA, covariate = covariate,
-                                       covariate.factor = covariate.factor, structure.matrix = structure.matrix,
-                                       n.PC = n.PC, min.MAF = min.MAF, test.method = test.method.1, n.core = n.core,
-                                       kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
-                                       num.hap = num.hap, test.effect = test.effect.1, window.size.half = window.size.half,
-                                       window.slide = window.slide, chi0.mixture = chi0.mixture, gene.set = gene.set,
-                                       weighting.center = weighting.center, weighting.other = weighting.other,
-                                       sig.level = sig.level, method.thres = method.thres, plot.qq = FALSE, plot.Manhattan = FALSE,
-                                       plot.method = plot.method, plot.col1 = plot.col1, plot.col2 = plot.col2,
+    if (test.method.1 == "normal") {
+      GWAS.res.first <- RGWAS.normal(pheno = pheno, geno = geno, ZETA = ZETA, 
+                                     package.MM = package.MM, covariate = covariate,
+                                     covariate.factor = covariate.factor, 
+                                     structure.matrix = structure.matrix, n.PC = n.PC, 
+                                     min.MAF = min.MAF, P3D = P3D, n.core = n.core,
+                                     parallel.method = parallel.method, sig.level = sig.level,
+                                     method.thres = method.thres, plot.qq = plot.qq.1, 
+                                     plot.Manhattan = plot.Manhattan.1, plot.method = plot.method, 
+                                     plot.col1 = plot.col1, plot.col2 = plot.col2,
+                                     plot.type = plot.type, plot.pch = plot.pch, saveName = saveName, 
+                                     optimizer = optimizer, main.qq = main.qq.1, main.man = main.man.1, 
+                                     plot.add.last = FALSE, return.EMM.res = FALSE, thres = FALSE, 
+                                     skip.check = skip.check, verbose = verbose, 
+                                     verbose2 = verbose2, count = count, time = time)
+    } else {
+      GWAS.res.first <- RGWAS.multisnp(pheno = pheno, geno = geno, ZETA = ZETA, 
+                                       package.MM = package.MM, covariate = covariate,
+                                       covariate.factor = covariate.factor, 
+                                       structure.matrix = structure.matrix,
+                                       n.PC = n.PC, min.MAF = min.MAF, 
+                                       test.method = test.method.1, 
+                                       n.core = n.core, parallel.method = parallel.method, 
+                                       kernel.method = kernel.method, kernel.h = kernel.h, 
+                                       haplotype = haplotype, num.hap = num.hap, 
+                                       test.effect = test.effect.1, window.size.half = window.size.half,
+                                       window.slide = window.slide, chi0.mixture = chi0.mixture, 
+                                       gene.set = gene.set, weighting.center = weighting.center, 
+                                       weighting.other = weighting.other, sig.level = sig.level, 
+                                       method.thres = method.thres, plot.qq = FALSE, 
+                                       plot.Manhattan = FALSE, plot.method = plot.method, 
+                                       plot.col1 = plot.col1, plot.col2 = plot.col2, 
                                        plot.type = plot.type, plot.pch = plot.pch, saveName = saveName,
                                        main.qq = main.qq.2, main.man = main.man.2, plot.add.last = FALSE,
                                        return.EMM.res = FALSE, optimizer = optimizer,
-                                       thres = FALSE, verbose = verbose, verbose2 = verbose2, count = count, time = time)
+                                       thres = FALSE, skip.check = skip.check, verbose = verbose,
+                                       verbose2 = verbose2, count = count, time = time)
     }
-  }else{
+  } else {
     if (verbose) {
       print("The 1st step has already finished because you input 'GWAS.res.first'.")
     }
   }
-
+  
   n.pheno <- ncol(GWAS.res.first) - 3
   trait.names <- colnames(GWAS.res.first)[4:(4 + n.pheno - 1)]
   map <- geno[, 1:3]
-
-  if((kernel.method == "linear") & (length(test.effect.2) >= 2)){
+  
+  if ((kernel.method == "linear") & (length(test.effect.2) >= 2)) {
     thresholds <- matrix(NA, nrow = length(test.effect.2), ncol = n.pheno)
     thresholds.correction <- matrix(NA, nrow = length(test.effect.2), ncol = n.pheno)
     rownames(thresholds) <- rep("normal", length(test.effect.2))
     rownames(thresholds.correction) <- test.effect.2
     colnames(thresholds) <- colnames(thresholds.correction) <- trait.names
-  }else{
+  } else {
     thresholds <- thresholds.correction <- matrix(NA, nrow = 1, ncol = n.pheno)
     rownames(thresholds) <- "normal"
     rownames(thresholds.correction) <- kernel.method
     colnames(thresholds) <- colnames(thresholds.correction) <- trait.names
   }
-
-  if((kernel.method == "linear") & (length(test.effect.2) >= 2)){
+  
+  if ((kernel.method == "linear") & (length(test.effect.2) >= 2)) {
     res.all <- rep(list(GWAS.res.first), length(test.effect.2))
-  }else{
+  } else {
     res.all <- GWAS.res.first
   }
-
-
-
-  for(pheno.no in 1:n.pheno){
+  
+  
+  
+  for (pheno.no in 1:n.pheno) {
     trait.name <- trait.names[pheno.no]
     pheno.now <- pheno[, c(1, pheno.no + 1)]
     GWAS.res.first.now <- GWAS.res.first[, c(1:3, pheno.no + 3)]
@@ -241,12 +285,12 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
     ord.pval.first <- order(pval.first, decreasing = TRUE)
     ord.pval.ker.percent.0 <- ord.pval.first[1:round(length(pval.first) * (kernel.percent / 100), 0)]
     ord.pval.ker.percent <- as.numeric(rownames(GWAS.res.first)[ord.pval.ker.percent.0])
-
-    if(is.null(gene.set)){
+    
+    if (is.null(gene.set)) {
       check.obj <- "SNPs"
       check.size.half <- check.size / 2
       checks.mat <- matrix(NA, nrow = length(ord.pval.ker.percent) * (check.size + 1), ncol = length(ord.pval.ker.percent))
-      for(check.no in 1:length(ord.pval.ker.percent)){
+      for (check.no in 1:length(ord.pval.ker.percent)) {
         check <- sort(ord.pval.ker.percent)[check.no]
         checks.now <- (check - check.size.half):(check + check.size.half)
         checks.mat[, check.no] <- checks.now
@@ -256,13 +300,13 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
       n.checks <- length(checks)
       pseudo.chr <- rep(NA, n.checks)
       pseudo.chr[1] <- 1
-      for(k in 2:n.checks){
+      for (k in 2:n.checks) {
         pseudo.chr.now <- pseudo.chr[k - 1]
-
+        
         check.diff <- checks[k] - checks[k - 1]
-        if(check.diff == 1){
+        if (check.diff == 1) {
           pseudo.chr[k] <- pseudo.chr.now
-        }else{
+        } else {
           pseudo.chr[k] <- pseudo.chr.now + 1
         }
       }
@@ -273,70 +317,77 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
       rownames(pseudo.map) <- checks
       M.check <- geno[checks, -c(1:3)]
       geno.check <- cbind(pseudo.map, M.check)
-
+      
       gene.set.now <- NULL
-    }else{
+    } else {
       check.obj <- "genes"
-      if(test.method.1 != "normal"){
+      if (test.method.1 != "normal") {
         check.size.half <- check.gene.size / 2
         checks.mat <- matrix(NA, nrow = length(ord.pval.ker.percent) * (check.gene.size + 1), ncol = length(ord.pval.ker.percent))
-        for(check.no in 1:length(ord.pval.ker.percent)){
+        for (check.no in 1:length(ord.pval.ker.percent)) {
           check <- sort(ord.pval.ker.percent)[check.no]
           checks.now <- (check - check.size.half):(check + check.size.half)
           checks.mat[, check.no] <- checks.now
         }
-
+        
         checks <- unique(c(checks.mat))
         checks <- checks[(checks >= 1) & (checks <= max(as.numeric(rownames(GWAS.res.first))))]
         n.checks <- length(checks)
-
+        
         gene.names <- as.character(unique(gene.set[, 1]))
         gene.names.now <- gene.names[checks]
-      }else{
+      } else {
         check.size.half <- check.size / 2
         checks.mat <- matrix(NA, nrow = length(ord.pval.ker.percent) * (check.size + 1), ncol = length(ord.pval.ker.percent))
-        for(check.no in 1:length(ord.pval.ker.percent)){
+        for (check.no in 1:length(ord.pval.ker.percent)) {
           check <- sort(ord.pval.ker.percent)[check.no]
           checks.now <- (check - check.size.half):(check + check.size.half)
           checks.mat[, check.no] <- checks.now
         }
         checks <- unique(c(checks.mat))
         checks <- checks[(checks >= 1) & (checks <= max(as.numeric(rownames(GWAS.res.first))))]
-
+        
         match.gene.list <- match(as.character(gene.set[, 2]), as.character(map[checks, 1]))
         gene.names.now <- unique(as.character(gene.set[!is.na(match.gene.list), 1]))
         n.checks <- length(gene.names.now)
       }
       gene.set.now <- gene.set[as.character(gene.set[, 1]) %in% gene.names.now, ]
-
+      
       geno.check <- geno
     }
-
-
+    
+    
     if (verbose) {
       print(paste("The 2nd step: Recalculating -log10(p) of", trait.name, "for", n.checks, check.obj, "by kernel-based (mutisnp) GWAS."))
     }
-    RGWAS.multisnp.res.0 <- RGWAS.multisnp(pheno = pheno.now, geno = geno.check, ZETA = ZETA, covariate = covariate,
-                                         covariate.factor = covariate.factor, structure.matrix = structure.matrix,
-                                         n.PC = n.PC, min.MAF = min.MAF, test.method = test.method.2, n.core = n.core,
-                                         kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
-                                         num.hap = num.hap, test.effect = test.effect.2, window.size.half = window.size.half,
-                                         window.slide = window.slide, chi0.mixture = chi0.mixture, gene.set = gene.set.now,
-                                         weighting.center = weighting.center, weighting.other = weighting.other,
-                                         sig.level = sig.level, method.thres = method.thres, plot.qq = FALSE, plot.Manhattan = FALSE,
-                                         plot.method = plot.method, plot.col1 = plot.col1, plot.col2 = plot.col2,
-                                         plot.type = plot.type, plot.pch = plot.pch, saveName = saveName,
-                                         main.qq = main.qq.2, main.man = main.man.2, plot.add.last = FALSE,
-                                         return.EMM.res = TRUE, optimizer = optimizer,
-                                         thres = FALSE, verbose = verbose, count = count, time = time)
-
+    RGWAS.multisnp.res.0 <- RGWAS.multisnp(pheno = pheno.now, geno = geno.check, 
+                                           ZETA = ZETA, package.MM = package.MM, 
+                                           covariate = covariate, covariate.factor = covariate.factor,
+                                           structure.matrix = structure.matrix, n.PC = n.PC,
+                                           min.MAF = min.MAF, test.method = test.method.2, 
+                                           n.core = n.core, parallel.method = parallel.method, 
+                                           kernel.method = kernel.method, kernel.h = kernel.h, 
+                                           haplotype = haplotype, num.hap = num.hap, 
+                                           test.effect = test.effect.2, window.size.half = window.size.half,
+                                           window.slide = window.slide, chi0.mixture = chi0.mixture, 
+                                           gene.set = gene.set.now, weighting.center = weighting.center, 
+                                           weighting.other = weighting.other, sig.level = sig.level, 
+                                           method.thres = method.thres, plot.qq = FALSE, plot.Manhattan = FALSE,
+                                           plot.method = plot.method, plot.col1 = plot.col1, 
+                                           plot.col2 = plot.col2, plot.type = plot.type, 
+                                           plot.pch = plot.pch, saveName = saveName,
+                                           main.qq = main.qq.2, main.man = main.man.2, 
+                                           plot.add.last = FALSE, return.EMM.res = TRUE, 
+                                           optimizer = optimizer, thres = FALSE, skip.check = TRUE,
+                                           verbose = verbose, count = count, time = time)
+    
     RGWAS.multisnp.res <- RGWAS.multisnp.res.0$D
     EMM.res0 <- RGWAS.multisnp.res.0$EMM.res
-
-    if((kernel.method == "linear") & (length(test.effect.2) >= 2)){
-      GWAS.res.merge.list <- lapply(RGWAS.multisnp.res, function(x){
+    
+    if ((kernel.method == "linear") & (length(test.effect.2) >= 2)) {
+      GWAS.res.merge.list <- lapply(RGWAS.multisnp.res, function(x) {
         colnames(x) <- colnames(GWAS.res.first.now)
-        if(is.null(gene.set)){
+        if (is.null(gene.set)) {
           x[, 1:3] <- map[match(rownames(x), rownames(map)), ]
         }
         GWAS.res.merge.0 <- rbind(x, GWAS.res.first.now)
@@ -346,20 +397,20 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
         check.here <- match(1:nrow(x), ord.GWAS.res.merge)
         return(list(res = res.correction, check = check.here))
       })
-
-
+      
+      
       res.corrections <- rep(list(NA), length(test.effect.2))
-      for(test.effect.no in 1:length(test.effect.2)){
+      for (test.effect.no in 1:length(test.effect.2)) {
         res.correction <- (GWAS.res.merge.list[[test.effect.no]])[[1]]
         res.corrections[[test.effect.no]] <- res.correction
         check.here <- (GWAS.res.merge.list[[test.effect.no]])[[2]]
         pval.correction <- res.correction[, 4]
-
+        
         if (plot.qq.2) {
           if (verbose) {
             print("Now Plotting (Q-Q plot). Please Wait.")
           }
-          if(is.null(saveName)){
+          if (is.null(saveName)) {
             if (length(grep("RStudio", names(dev.cur()))) == 0) {
               if (dev.cur() == dev.next()) {
                 dev.new()
@@ -369,29 +420,29 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
               }
             }
             qq(pval.correction)
-            if(is.null(main.qq.2)){
+            if (is.null(main.qq.2)) {
               title(main = trait.name)
-            }else{
+            } else {
               title(main = main.qq.2)
             }
-          }else{
+          } else {
             png(paste0(saveName, trait.name, "_qq_kernel.png"))
             qq(pval.correction)
-            if(is.null(main.qq.2)){
+            if (is.null(main.qq.2)) {
               title(main = trait.name)
-            }else{
+            } else {
               title(main = main.qq.2)
             }
             dev.off()
           }
         }
-
-
+        
+        
         if (plot.Manhattan.2) {
           if (verbose) {
             print("Now Plotting (Manhattan plot). Please Wait.")
           }
-          if(is.null(saveName)){
+          if (is.null(saveName)) {
             if (length(grep("RStudio", names(dev.cur()))) == 0) {
               if (dev.cur() == dev.next()) {
                 dev.new()
@@ -400,61 +451,61 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
                 dev.set(dev.next())
               }
             }
-            if(plot.method == 1){
+            if (plot.method == 1) {
               manhattan(input = res.correction, sig.level = sig.level, method.thres = method.thres, plot.col1 = plot.col1,
                         plot.type = plot.type, plot.pch = plot.pch)
-              if(!is.null(plot.col3)){
+              if (!is.null(plot.col3)) {
                 manhattan.plus(input = res.correction, checks = check.here,
                                plot.col1 = plot.col1, plot.col3 = plot.col3,
                                plot.type = plot.type, plot.pch = plot.pch)
               }
-            }else{
+            } else {
               manhattan2(input = res.correction, sig.level = sig.level, method.thres = method.thres, plot.col2 = plot.col2,
                          plot.type = plot.type, plot.pch = plot.pch)
             }
-            if(is.null(main.man.2)){
+            if (is.null(main.man.2)) {
               title(main = trait.name)
-            }else{
+            } else {
               title(main = main.man.2)
             }
-          }else{
+          } else {
             png(paste0(saveName, trait.name, "_manhattan_kernel.png"), width = 800)
-            if(plot.method == 1){
+            if (plot.method == 1) {
               manhattan(input = res.correction, sig.level = sig.level, method.thres = method.thres, plot.col1 = plot.col1,
                         plot.type = plot.type, plot.pch = plot.pch)
-              if(!is.null(plot.col3)){
+              if (!is.null(plot.col3)) {
                 manhattan.plus(input = res.correction, checks = check.here,
                                plot.col1 = plot.col1, plot.col3 = plot.col3,
                                plot.type = plot.type, plot.pch = plot.pch)
               }
-            }else{
+            } else {
               manhattan2(input = res.correction, sig.level = sig.level, method.thres = method.thres, plot.col2 = plot.col2,
                          plot.type = plot.type, plot.pch = plot.pch)
             }
-            if(is.null(main.man.2)){
+            if (is.null(main.man.2)) {
               title(main = trait.name)
-            }else{
+            } else {
               title(main = main.man.2)
             }
-            if(!(plot.add.last & (pheno.no == n.pheno))){
+            if (!(plot.add.last & (pheno.no == n.pheno))) {
               dev.off()
             }
           }
         }
-
+        
         threshold <- try(CalcThreshold(GWAS.res.first.now, sig.level = sig.level, method = method.thres), silent = TRUE)
         threshold.correction <- try(CalcThreshold(res.correction, sig.level = sig.level, method = method.thres), silent = TRUE)
-        if("try-error" %in% class(threshold)){
+        if ("try-error" %in% class(threshold)) {
           threshold <- NA
         }
-        if("try-error" %in% class(threshold.correction)){
+        if ("try-error" %in% class(threshold.correction)) {
           threshold.correction <- NA
         }
         thresholds[test.effect.no, pheno.no] <- threshold
         thresholds.correction[test.effect.no, pheno.no] <- threshold.correction
       }
-
-      for(test.effect.no in 1:length(test.effect.2)){
+      
+      for (test.effect.no in 1:length(test.effect.2)) {
         colnames(res.corrections[[test.effect.no]])[1:3] <-
           colnames(res.all[[test.effect.no]])[1:3] <- c("marker", "chrom", "pos")
         res.all[[test.effect.no]] <- merge(res.all[[test.effect.no]],
@@ -464,13 +515,13 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
                                            all.x = T, all.y = T)
         colnames(res.all[[test.effect.no]])[ncol(res.all[[test.effect.no]])] <-
           paste0(trait.name, "_correction")
-
+        
         res.all[[test.effect.no]] <- (res.all[[test.effect.no]])[order(res.all[[test.effect.no]][, 2],
                                                                        res.all[[test.effect.no]][, 3]), ]
       }
-    }else{
+    } else {
       colnames(RGWAS.multisnp.res) <- colnames(GWAS.res.first.now)
-      if(is.null(gene.set)){
+      if (is.null(gene.set)) {
         RGWAS.multisnp.res[, 1:3] <- map[match(rownames(RGWAS.multisnp.res), rownames(map)), ]
       }
       GWAS.res.merge.0 <- rbind(RGWAS.multisnp.res, GWAS.res.first.now)
@@ -479,14 +530,14 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
       res.correction <- GWAS.res.merge[ord.GWAS.res.merge, ]
       check.here <- match(1:nrow(RGWAS.multisnp.res), ord.GWAS.res.merge)
       pval.correction <- res.correction[, 4]
-
-
-
+      
+      
+      
       if (plot.qq.2) {
         if (verbose) {
           print("Now Plotting (Q-Q plot). Please Wait.")
         }
-        if(is.null(saveName)){
+        if (is.null(saveName)) {
           if (length(grep("RStudio", names(dev.cur()))) == 0) {
             if (dev.cur() == dev.next()) {
               dev.new()
@@ -495,29 +546,29 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
             }
           }
           qq(pval.correction)
-          if(is.null(main.qq.2)){
+          if (is.null(main.qq.2)) {
             title(main = trait.name)
-          }else{
+          } else {
             title(main = main.qq.2)
           }
-        }else{
+        } else {
           png(paste0(saveName, trait.name, "_qq_kernel.png"))
           qq(pval.correction)
-          if(is.null(main.qq.2)){
+          if (is.null(main.qq.2)) {
             title(main = trait.name)
-          }else{
+          } else {
             title(main = main.qq.2)
           }
           dev.off()
         }
       }
-
-
+      
+      
       if (plot.Manhattan.2) {
         if (verbose) {
           print("Now Plotting (Manhattan plot). Please Wait.")
         }
-        if(is.null(saveName)){
+        if (is.null(saveName)) {
           if (length(grep("RStudio", names(dev.cur()))) == 0) {
             if (dev.cur() == dev.next()) {
               dev.new()
@@ -525,54 +576,54 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
               dev.set(dev.next())
             }
           }
-          if(plot.method == 1){
+          if (plot.method == 1) {
             manhattan(input = res.correction, sig.level = sig.level, method.thres = method.thres, plot.col1 = plot.col1,
                       plot.type = plot.type, plot.pch = plot.pch)
-            if(!is.null(plot.col3)){
+            if (!is.null(plot.col3)) {
               manhattan.plus(input = res.correction, checks = check.here,
                              plot.col1 = plot.col1, plot.col3 = plot.col3,
                              plot.type = plot.type, plot.pch = plot.pch)
             }
-          }else{
+          } else {
             manhattan2(input = res.correction, sig.level = sig.level, method.thres = method.thres, plot.col2 = plot.col2,
                        plot.type = plot.type, plot.pch = plot.pch)
           }
-          if(is.null(main.man.2)){
+          if (is.null(main.man.2)) {
             title(main = trait.name)
-          }else{
+          } else {
             title(main = main.man.2)
           }
-        }else{
+        } else {
           png(paste0(saveName, trait.name, "_manhattan_kernel.png"), width = 800)
-          if(plot.method == 1){
+          if (plot.method == 1) {
             manhattan(input = res.correction, sig.level = sig.level, method.thres = method.thres, plot.col1 = plot.col1,
                       plot.type = plot.type, plot.pch = plot.pch)
-            if(!is.null(plot.col3)){
+            if (!is.null(plot.col3)) {
               manhattan.plus(input = res.correction, checks = check.here,
                              plot.col1 = plot.col1, plot.col3 = plot.col3,
                              plot.type = plot.type, plot.pch = plot.pch)
             }
-          }else{
+          } else {
             manhattan2(input = res.correction, sig.level = sig.level, method.thres = method.thres, plot.col2 = plot.col2,
                        plot.type = plot.type, plot.pch = plot.pch)
           }
-          if(is.null(main.man.2)){
+          if (is.null(main.man.2)) {
             title(main = trait.name)
-          }else{
+          } else {
             title(main = main.man.2)
           }
-          if(!(plot.add.last & (pheno.no == n.pheno))){
+          if (!(plot.add.last & (pheno.no == n.pheno))) {
             dev.off()
           }
         }
       }
-
+      
       threshold <- try(CalcThreshold(GWAS.res.first[, c(1:3, pheno.no + 3)], sig.level = sig.level, method = method.thres), silent = TRUE)
       threshold.correction <- try(CalcThreshold(res.correction, sig.level = sig.level, method= method.thres), silent = TRUE)
-      if("try-error" %in% class(threshold)){
+      if ("try-error" %in% class(threshold)) {
         threshold <- NA
       }
-      if("try-error" %in% class(threshold.correction)){
+      if ("try-error" %in% class(threshold.correction)) {
         threshold.correction <- NA
       }
       thresholds[, pheno.no] <- threshold
@@ -584,33 +635,33 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.
       res.all <- res.all[order(res.all[, 2], res.all[, 3]), ]
     }
   }
-
-
+  
+  
   thresholds.list <- list(first = thresholds, second = thresholds.correction)
-
-  if(thres){
+  
+  if (thres) {
     end <- Sys.time()
-
-    if(time){
+    
+    if (time) {
       print(end - start)
     }
-
-    if(return.EMM.res){
+    
+    if (return.EMM.res) {
       return(list(D = res.all, thres = thresholds.list,
                   EMM.res = EMM.res0))
-    }else{
+    } else {
       return(list(D = res.all, thres = thresholds.list))
     }
-  }else{
+  } else {
     end <- Sys.time()
-
-    if(time){
+    
+    if (time) {
       print(end - start)
     }
-
-    if(return.EMM.res){
+    
+    if (return.EMM.res) {
       return(list(D = res.all, EMM.res = EMM.res0))
-    }else{
+    } else {
       return(res.all)
     }
   }

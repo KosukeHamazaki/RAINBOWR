@@ -9,9 +9,10 @@ score.calc.epistasis.LR(
   y,
   X.now,
   ZETA.now,
+  package.MM = "gaston",
   eigen.SGS = NULL,
   eigen.G = NULL,
-  n.core = NA,
+  n.core = 1,
   optimizer = "nlminb",
   map,
   haplotype = TRUE,
@@ -21,12 +22,13 @@ score.calc.epistasis.LR(
   chi0.mixture = 0.5,
   gene.set = NULL,
   dominance.eff = TRUE,
+  skip.self.int = FALSE,
   min.MAF = 0.02,
   count = TRUE
 )
 }
 \arguments{
-\item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
+\item{M.now}{A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.}
 
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
@@ -35,6 +37,10 @@ score.calc.epistasis.LR(
 \item{ZETA.now}{A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 For example, ZETA = list(A = list(Z = Z, K = K))
 Please set names of list "Z" and "K"!}
+
+\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+"RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+See more details at \code{\link{EM3.general}}.}
 
 \item{eigen.SGS}{A list with
 \describe{
@@ -89,6 +95,9 @@ which correspond to the marker names of "geno" argument.}
 \item{dominance.eff}{If this argument is TRUE, dominance effect is included in the model,
 and additive x dominance and dominance x dominance are also tested as epistatic effects.
 When you use inbred lines, please set this argument FALSE.}
+
+\item{skip.self.int}{As default, the function also tests the self-interactions among the same SNP-sets.
+If you want to avoid this, please set `skip.self.int = TRUE`.}
 
 \item{min.MAF}{Specifies the minimum minor allele frequency (MAF).
 If a marker has a MAF less than min.MAF, it is assigned a zero score.}

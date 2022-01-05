@@ -11,14 +11,14 @@
 ##### * checking data for ASCII and uncompressed saves ... WARNING
 
 Note: 
- significantly better compression could be obtained
+significantly better compression could be obtained
 
-       by using R CMD build --resave-data
-                     old_size new_size compress
- Rice_Zhao_etal.RData    207Kb    105Kb  xz
- 
- 
- 
+by using R CMD build --resave-data
+old_size new_size compress
+Rice_Zhao_etal.RData    207Kb    105Kb  xz
+
+
+
 #### There were 4 NOTEs:
 ##### * checking CRAN incoming feasibility ... NOTE
 
@@ -47,8 +47,8 @@ Examples with CPU or elapsed time > 10s
 
 #### There were no WARNINGs:
 - We resolved the [WARNING above](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/cran-comments.md#there-was-1-warning) by compressing the dataset using the `usethis::use_data` function and selecting `xz` compression.
- 
- 
+
+
 #### There were 1 NOTE:
 ##### * checking CRAN incoming feasibility ... NOTE
 - Still we have this NOTE message, but we think it is not a big problem. This is because this message is a remainder to check that the submission comes actually from his maintainer and not anybody else as the CRAN maintainer Dr. Uwe Ligges mentioned in https://mailman.stat.ethz.ch/pipermail/r-devel/2014-March/068497.html.
@@ -86,9 +86,9 @@ We will describe the comments and their solution as follows.
 > (except for print() and summary() functions)
 
 - We modified some print()/cat() functions as follows.
-  - print("ERROR: error messages.") --> stop("Error messages").
-  - cat("Warning!!: warning messages.") --> warning("Warning messages.")
-  - print("Print messages.") --> if (verbose) print("Print messages.")
+- print("ERROR: error messages.") --> stop("Error messages").
+- cat("Warning!!: warning messages.") --> warning("Warning messages.")
+- print("Print messages.") --> if (verbose) print("Print messages.")
 - Now, the messages to the console can be easily suppressed. 
 
 
@@ -144,10 +144,10 @@ We will describe the comments and their solution as follows.
 > (except for print() and summary() functions)
 
 - We modified some print()/cat() functions as follows.
-  - cat("\n") --> if (count) { cat("\n") }  ### in the functions related to `RGWAS`
-  - print()  --> if (verbose) { print() }  ### in the `See` function, we added `verbose` argument
+- cat("\n") --> if (count) { cat("\n") }  ### in the functions related to `RGWAS`
+- print()  --> if (verbose) { print() }  ### in the `See` function, we added `verbose` argument
 - Now, the messages to the console can be easily suppressed.
-  You can check this from the examples in \dontshow{}.
+You can check this from the examples in \dontshow{}.
 
 
 > However, there is still a dontrun in EMM.cpp.Rd
@@ -224,11 +224,11 @@ We will describe the comments and their solution as follows.
 - We have to change the user's options `par`, so we modified the `manhattan3` function (in the `functions_for_RGWAS.R` file) as follows to reset the graphical settings. (We put the `on.exit(par(oldpar))` before the plotting section.)
 
 ```
-      oldpar <- par(no.readonly = TRUE)
-      on.exit(par(oldpar))
-      par(mar = c(3, 3, 3, 6), xpd = T)
-      plot(x, y, cex = pl.size, xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)),
-      col = col.id[col.num], pch = 1)
+oldpar <- par(no.readonly = TRUE)
+on.exit(par(oldpar))
+par(mar = c(3, 3, 3, 6), xpd = T)
+plot(x, y, cex = pl.size, xlim = c(0, max(cum.pos)), ylim = c(0, max(cum.pos)),
+col = col.id[col.num], pch = 1)
 ```
 
 
@@ -270,24 +270,24 @@ We will describe the comments and their solution as follows.
 
 > EMM_functions.cpp: In function ‘Rcpp::List spectralG_eigen(Rcpp::NumericMatrix, Rcpp::NumericMatrix, bool, bool)’: 
 EMM_functions.cpp:1216:25: error: call of overloaded ‘sqrt(const int&)’ is ambiguous
-   double offset = sqrt(n);
+double offset = sqrt(n);
 
 - Then, we changed the C++ code in the `spectralG_eigen` function in the `EMM_functions.cpp` file as follows.
 
-  - Before
-  ```
-    const int n(X.rows()), p(X.cols());   # L1207
-  
-    double offset = sqrt(n);            # L1215
-  ```
+- Before
+```
+const int n(X.rows()), p(X.cols());   # L1207
 
-  - After
-  ```
-    const double n(X.rows()), p(X.cols());   # L1207
-  
-    double offset = std::sqrt(n);            # L1215
-  ```
-  
+double offset = sqrt(n);            # L1215
+```
+
+- After
+```
+const double n(X.rows()), p(X.cols());   # L1207
+
+double offset = std::sqrt(n);            # L1215
+```
+
 - We also modified other parts related to the calling math functions (such as log pow sqrt) with integer arguments in the `EMM_functions.cpp` file.
 
 - Actually, we are not sure that this change is correct because we cannot check the error disappears for the `Solaris` OS. So, if we have additional parts to be corrected, please tell us details with examples of correct codes.
@@ -324,19 +324,19 @@ We fixed some parts related to the treatment of the missing in marker genotypes.
 
 - Then, we changed the R code in the `RGWAS.normal`, `RGWAS.multisnp`, and `RGWAS.epistasis` functions as follows.
 
-  - Before
-  ```
-      M.now <- Z.A[not.NA, ] %*% M
-  ```
+- Before
+```
+M.now <- Z.A[not.NA, ] %*% M
+```
 
-  - After
-  ```
-    if (sum(is.na(M)) == 0) {
-      M.now <- Z.A[not.NA, ] %*% M
-    } else {
-      M.now <- M[apply(Z.A[not.NA, ], 1, function(x) which(x == 1)), ]
-    }
-  ```
+- After
+```
+if (sum(is.na(M)) == 0) {
+M.now <- Z.A[not.NA, ] %*% M
+} else {
+M.now <- M[apply(Z.A[not.NA, ], 1, function(x) which(x == 1)), ]
+}
+```
 
 
 
@@ -376,21 +376,21 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 ## Major changes
 - In version 0.1.16, the following NOTE was shown:
 
- ```
- Found the following (possibly) invalid URLs:
-     URL: https://cran.r-project.org/web/packages/RAINBOWR/index.html
-       From: inst/doc/RAINBOWR.html
-            README.md
-       Status: 200
-       Message: OK
-       CRAN URL not in canonical form
-    The canonical URL of the CRAN page for a package is
-      https://CRAN.R-project.org/package=pkgname
- ```
- 
- Then, we fixed this by using the canonical URL of the CRAN package "https://cran.r-project.org/package=RAINBOWR" in `inst/doc/RAINBOWR.html` and `README.md` files.
- 
- 
+```
+Found the following (possibly) invalid URLs:
+URL: https://cran.r-project.org/web/packages/RAINBOWR/index.html
+From: inst/doc/RAINBOWR.html
+README.md
+Status: 200
+Message: OK
+CRAN URL not in canonical form
+The canonical URL of the CRAN page for a package is
+https://CRAN.R-project.org/package=pkgname
+```
+
+Then, we fixed this by using the canonical URL of the CRAN package "https://cran.r-project.org/package=RAINBOWR" in `inst/doc/RAINBOWR.html` and `README.md` files.
+
+
 ## Test environments 
 * platform x86_64-apple-darwin17.0, R version 4.0.0
 * win-builder release, R version 4.0.0
@@ -508,6 +508,69 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 * win-builder release, R version 4.0.3
 * win-builder devel, R Under development (unstable)
 * win-builder oldrelease, R version 3.6.3
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.
+
+
+
+
+
+# Apr 06, 2021, RAINBOWR version 0.1.27
+## Major changes
+- We removed `haplotypes` package from Imports list, and moved it to Suggests list in the DESCRIPTION file. This is because the package `phangorn`, which is used in the `haplotypes` package, is now scheduled for archival on 2021-04-19.
+
+
+
+# Jan 05, 2022, RAINBOWR version 0.1.28
+## Major changes
+- We implemented new functions for testing the interaction between each SNP and the genetic background. The functions to compute p-values for those effects are `score.calc.int` and `score.calc.int.MC`, and the function to perform SNP-based GWAS including such interaction effects is `RGWAS.normal.interaction`. We also added the to `NAMESPACE` file.
+
+- We implemented a new function `is.diag`, which judges a matrix is diagonal or not.
+
+- We implemented a new function `parallel.compute`, which enables us to perform parallel computation easily with the three different methods: `mclapply`, `furrr`, and `foreach`. This function is utilized in `score.calc.MC`, `score.calc.LR.MC`, `score.calc.score.MC`, `score.calc.epistasis.LR.MC`, `score.calc.epistasis.score.MC`, and `score.calc.int.MC` functions.
+
+- We implemented a new function `EM3.general`, which enables us to solve mixed-effects model with the three different packages: `RAINBOWR`, `gaston`, and `MM4LMM`.
+
+- We also added the four functions above to the NAMESPACE file to be exported correctly.
+
+- We fixed some mistakes in `EM3.cpp` and `EM3.linker.cpp` functions when computing `Vinv`. We also added new arguments of `return.u.always`, `return.u.each`, and `return.Hinv`, and a new return of `u.each` as a `u` in the older version. We also modified a return of `u` to the summation of genotypic values.
+
+- We rewrote the codes in `score.calc`, `score.calc.MC`, and `GWAS_F_test` (C++) functions so that it can test multiple fixed effects simultaneously.
+
+- We fixed some parts in `RGWAS.normal`, `RGWAS.multisnp`, and `RGWAS.epstasis` functions when using `covariate`, `covariate.factor`, and `structure.matrix` arguments.
+
+- We added a new argument `skip.check` in `RGWAS.normal`, `RGWAS.multisnp`, `RGWAS.epstasis`, `RGWAS.twostep`, and `RGWAS.twostep.epi` functions. As default, RAINBOWR checks the type of input data and modifies it into the correct format. However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure by setting `skip.check = TRUE`.
+
+- We introduced a new argument `package.MM` in `RGWAS.normal`, `RGWAS.multisnp`, `RGWAS.epstasis`, `RGWAS.twostep`, `RGWAS.twostep.epi`, `score.calc`, `score.calc.MC`, `score.calc.LR`, `score.calc.LR.MC`, `score.calc.epistasis.LR`, `score.calc.epistasis.LR.MC`, `score.calc.int`, and `score.calc.int.MC` functions. By changing this argument, you can choose which package is used to solve the mixed-effects model in GWAS from the following three packages: `RAINBOWR`, `gaston`, and `MM4LMM`.
+
+
+- We introduced a new argument `parallel.method` in `RGWAS.normal`, `RGWAS.multisnp`, `RGWAS.epstasis`, `RGWAS.twostep`, `RGWAS.twostep.epi`, `score.calc.MC`, `score.calc.LR.MC`, `score.calc.score.MC`, `score.calc.epistasis.LR.MC`, `score.calc.epistasis.score.MC`, and `score.calc.int.MC` functions. In the older version, you can just use the `pbmcapply::pbmclapply` function for parallel computation, but now you can choose the parallel computation method from the following three methods: `mclapply`, `furrr`, and `foreach`.
+
+
+- We largely corrected the functions related to epstatic tests; `RGWAS.epistasis`, `RGWAS.twostep.epi`, `score.calc.epistasis.LR`, `score.calc.epistasis.score`, `score.calc.epistasis.LR.MC`, and `score.calc.epistasis.score.MC` functions. This is because how to compute the interaction term between two haplotype blocks was wrong in the older version. We also added a new argument `skip.self.int` to choose whether skipping the computation for the epistatsis of self-interaction.
+
+
+- We added `gaston` and `MM4LMM` packages to Imports list in the DESCRIPTION file because these packages are required when you use these packages with `package.MM` argument. We also added `lmm.aireml`, `lmm.diago`, and `MMEst` functions to be imported in the NAMESPACE file.
+
+
+- We added `adegenet`, `furrr`, `future`, `progressr`, `foreach`, and `doParallel` packages to Suggests list in the DESCRIPTION file according to the implementation of new functions and arguments.We also removed `ggplot2`, `ggtree`, `scatterpie`, and `phylobase` packages from Imports list, and moved it to Suggests list in the DESCRIPTION file.
+
+
+
+
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.1.2
+* win-builder release, R version 4.1.2
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 4.0.5
+
 
 ## R CMD check results
 #### Status: OK

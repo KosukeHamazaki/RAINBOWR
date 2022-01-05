@@ -9,10 +9,11 @@ score.calc.LR(
   y,
   X.now,
   ZETA.now,
+  package.MM = "gaston",
   LL0,
   eigen.SGS = NULL,
   eigen.G = NULL,
-  n.core = NA,
+  n.core = 1,
   optimizer = "nlminb",
   map,
   kernel.method = "linear",
@@ -31,7 +32,7 @@ score.calc.LR(
 )
 }
 \arguments{
-\item{M.now}{A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.}
+\item{M.now}{A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.}
 
 \item{y}{A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.}
 
@@ -40,6 +41,10 @@ score.calc.LR(
 \item{ZETA.now}{A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 For example, ZETA = list(A = list(Z = Z, K = K))
 Please set names of list "Z" and "K"!}
+
+\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+"RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+See more details at \code{\link{EM3.general}}.}
 
 \item{LL0}{The log-likelihood for the null model.}
 

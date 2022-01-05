@@ -15,7 +15,7 @@ EM3.linker.cpp(
   X.fix = TRUE,
   eigen.SGS = NULL,
   eigen.G = NULL,
-  n.core = NA,
+  n.core = 1,
   tol = NULL,
   bounds = c(1e-06, 1e+06),
   optimizer = "nlminb",
@@ -23,7 +23,10 @@ EM3.linker.cpp(
   n.thres = 450,
   spectral.method = NULL,
   REML = TRUE,
-  pred = TRUE
+  pred = TRUE,
+  return.u.always = TRUE,
+  return.u.each = TRUE,
+  return.Hinv = TRUE
 )
 }
 \arguments{
@@ -89,6 +92,15 @@ If this argument is NULL, either method will be chosen accorsing to the dimensio
 If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".}
 
 \item{pred}{If TRUE, the fitting values of y is returned.}
+
+\item{return.u.always}{If TRUE, BLUP (`u`; \eqn{u}) will be returned.}
+
+\item{return.u.each}{If TRUE, the function also computes each BLUP corresponding 
+to different kernels (when solving multi-kernel mixed-effects model). It takes 
+additional time compared to the one with `return.u.each = FALSE`.}
+
+\item{return.Hinv}{If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}} 
+will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.}
 }
 \value{
 \describe{
@@ -96,7 +108,8 @@ If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "
 \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
 \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 \item{$beta}{BLUE(\eqn{\beta})}
-\item{$u}{BLUP(\eqn{u})}
+\item{$u}{BLUP(Sum of \eqn{Zu})}
+\item{$u.each}{BLUP(Each \eqn{u})}
 \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
 \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
 \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
@@ -159,7 +172,7 @@ This function can be used only when the kernels other than genomic relationship 
   herit <- Vu * weights / (Vu + Ve)   ### genomic heritability (all chromosomes, chromosome 12)
   
   beta <- EM3.linker.res$beta   ### Here, this is an intercept.
-  u <- EM3.linker.res$u   ### estimated genotypic values (all chromosomes, chromosome 12)
+  u.each <- EM3.linker.res$u.each   ### estimated genotypic values (all chromosomes, chromosome 12)
 }
 
 
@@ -218,8 +231,8 @@ This function can be used only when the kernels other than genomic relationship 
   (herit <- Vu * weights / (Vu + Ve))   ### genomic heritability (all chromosomes, chromosome 12)
   
   (beta <- EM3.linker.res$beta)   ### Here, this is an intercept.
-  u <- EM3.linker.res$u   ### estimated genotypic values (all chromosomes, chromosome 12)
-  See(u)
+  u.each <- EM3.linker.res$u.each   ### estimated genotypic values (all chromosomes, chromosome 12)
+  See(u.each)
 }
 }
 \references{

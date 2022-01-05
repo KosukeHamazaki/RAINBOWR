@@ -49,7 +49,7 @@
   herit <- Vu * weights / (Vu + Ve)   ### genomic heritability (all chromosomes, chromosome 12)
   
   beta <- EM3.linker.res$beta   ### Here, this is an intercept.
-  u <- EM3.linker.res$u   ### estimated genotypic values (all chromosomes, chromosome 12)
+  u.each <- EM3.linker.res$u.each   ### estimated genotypic values (all chromosomes, chromosome 12)
 }
 
 
@@ -108,6 +108,6 @@
   (herit <- Vu * weights / (Vu + Ve))   ### genomic heritability (all chromosomes, chromosome 12)
   
   (beta <- EM3.linker.res$beta)   ### Here, this is an intercept.
-  u <- EM3.linker.res$u   ### estimated genotypic values (all chromosomes, chromosome 12)
-  See(u)
+  u.each <- EM3.linker.res$u.each   ### estimated genotypic values (all chromosomes, chromosome 12)
+  See(u.each)
 }

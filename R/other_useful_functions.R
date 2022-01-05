@@ -21,7 +21,7 @@
 #'
 See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
                 rowst = 1, colst = 1, narray = 2, drop = FALSE,
-                save.variable = FALSE, verbose = TRUE){
+                save.variable = FALSE, verbose = TRUE) {
   islist <- is.list(data)
   isvec <- is.vector(data)
   isfac <- is.factor(data)
@@ -126,10 +126,10 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
                               start.other:end.other, start.other:end.other, drop = drop]
           }
           dim.show <- dim(data)
-        }else{
+        } else {
           stop("You can only see data whose # of the dimensions <= 4!!")
         }
-      }else{
+      } else {
         warning("We cannot offer the simple view of your data. Instead we will offer the structure of your data.")
         data.show <- str(data)
         dim.show <-  NULL
@@ -179,11 +179,11 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
   if (len.x.unique == 2) {
     is.scoring1 <- all(x.unique == c(-1, 1))
     is.scoring2 <- all(x.unique == c(0, 2))
-  } else{
+  } else {
     if (len.x.unique == 3) {
       is.scoring1 <- all(x.unique == c(-1, 0, 1))
       is.scoring2 <- all(x.unique == c(0, 1, 2))
-    } else{
+    } else {
       stop("Something wrong with your genotype data!!")
     }
   }
@@ -192,12 +192,12 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
     freq <- apply(x.0, 2, function(x) {
       return(mean(x + 1, na.rm = TRUE) / 2)
     })
-  } else{
+  } else {
     if (is.scoring2) {
       freq <- apply(x.0, 2, function(x) {
         return(mean(x, na.rm = TRUE) / 2)
       })
-    } else{
+    } else {
       stop("Genotype data should be scored with (-1, 0, 1) or (0, 1, 2)!!")
     }
   }
@@ -216,7 +216,7 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
   
   if (!is.null(map.0)) {
     map <- map.0[mark.remain,]
-  } else{
+  } else {
     map <- NULL
   }
   MAF.after <- MAF.before[mark.remain]
@@ -226,7 +226,7 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
       data = list(x = x, map = map),
       MAF = list(before = MAF.before, after = MAF.after)
     ))
-  } else{
+  } else {
     return(list(x = x, map = map))
   }
 }
@@ -372,6 +372,15 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      cexMax = 2, cexMin = 0.7, edgeColoring = TRUE, tipLabel = TRUE,
                      ggPlotTree = FALSE, cexMaxForGG = 0.12, cexMinForGG = 0.06,
                      alphaBase = c(0.9, 0.3), verbose = TRUE) {
+  if (requireNamespace("ggtree", quietly = TRUE) & 
+      requireNamespace("phylobase", quietly = TRUE)) {
+    ggPlotTree <- ggPlotTree
+  } else {
+    warning(paste0("If you want to plot phylogenetic trees, please install `ggtree` and `phylobase` packages from Bioconductor! \n",
+                   "We switched `ggPlotTree = FALSE`."))
+    ggPlotTree <- FALSE
+  }
+  
   if (!is.null(geno)) {
     M <- t(geno[, -c(1:3)])
     map <- geno[, 1:3]
@@ -561,7 +570,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     hOptBase2 <- hOpt2
     
     
-    for (kernelType in kernelTypes){
+    for (kernelType in kernelTypes) {
       if (verbose) {
         print(paste0("Now optimizing for kernelType: ", kernelType))
       }
@@ -584,7 +593,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         hStarts <- h * rangeHStart
         hStarts <- split(hStarts, factor(1:length(rangeHStart)))
         
-        if (kernelType %in% c("phylo", "gaussian", "exponential")){
+        if (kernelType %in% c("phylo", "gaussian", "exponential")) {
           if (hOptBase == "optimized") {
             if (verbose) {
               print("Now optimizing hyperparameter for estimating haplotype effects...")
@@ -669,7 +678,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
         EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
         LL <- EM3Res$LL
-        gvEst <- EM3Res$u[(nLine + 1):(nLine + nHaplo), ]
+        gvEst <- EM3Res$u.each[(nLine + 1):(nLine + nHaplo), ]
         EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
         LL0 <- EMMRes0$LL
         
@@ -950,7 +959,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         
         
         plt <- ggtree::ggtree(tr = trPhylo42,
-                              ggtree::aes(col = I(.data$color)),
+                              ggtree::aes(col = I(ggplot2::.data$color)),
                               layout = "equal_angle")
         
         
@@ -1246,6 +1255,14 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                        colHaploBase = c(3, 5, 6), cexMax = 2, cexMin = 0.7,
                        ggPlotNetwork = FALSE, cexMaxForGG = 0.025, cexMinForGG = 0.008,
                        alphaBase = c(0.9, 0.3), verbose = TRUE) {
+  if (requireNamespace("ggplot2", quietly = TRUE) &
+      requireNamespace("scatterpie", quietly = TRUE)) {
+    ggPlotNetwork <- ggPlotNetwork
+  } else {
+    warning(paste0("If you want to plot haplotype network, please install `ggplot2` and `scatterpie` packages! \n",
+                   "We switched `ggPlotNetwork = FALSE`."))
+    ggPlotNetwork <- FALSE
+  }
   
   if (!is.null(geno)) {
     M <- t(geno[, -c(1:3)])
@@ -1493,7 +1510,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       
       namesBlockInterestComp <- rownames(blockInterestUniqueSorted)[matchString]
       nComp <- sum(is.na(namesBlockInterestComp))
-      if (nComp >= 1){
+      if (nComp >= 1) {
         existComp <- TRUE
         compNames <- paste0("c", 1:nComp)
       } else {
@@ -1527,7 +1544,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       nHaploComp <- nrow(distMatComp)
       nComp <- nHaploComp - nHaplo
       
-      if (nComp >= 1){
+      if (nComp >= 1) {
         existComp <- TRUE
         compNames <- paste0("c", 1:nComp)
       } else {
@@ -1580,21 +1597,26 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       
       haplotypeInfo$haploBlockCompSorted <- NULL
       
-      if (autogamous) {
-        parsimnetRes <- haplotypes::parsimnet(x = distMat / 2,
-                                              seqlength = nMrkInBlock,
-                                              prob = probParsimony)
-        parsimnetResAll <- haplotypes::parsimnet(x = distMat / 2,
-                                                 seqlength = nMrkInBlock,
-                                                 prob = NULL)
+      if (requireNamespace("haplotypes", quietly = TRUE)) {
+        if (autogamous) {
+          parsimnetRes <- haplotypes::parsimnet(x = distMat / 2,
+                                                seqlength = nMrkInBlock,
+                                                prob = probParsimony)
+          parsimnetResAll <- haplotypes::parsimnet(x = distMat / 2,
+                                                   seqlength = nMrkInBlock,
+                                                   prob = NULL)
+        } else {
+          parsimnetRes <- haplotypes::parsimnet(x = distMat,
+                                                seqlength = nMrkInBlock)
+          parsimnetResAll <- haplotypes::parsimnet(x = distMat,
+                                                   seqlength = nMrkInBlock,
+                                                   prob = NULL)
+          
+        }
       } else {
-        parsimnetRes <- haplotypes::parsimnet(x = distMat,
-                                              seqlength = nMrkInBlock)
-        parsimnetResAll <- haplotypes::parsimnet(x = distMat,
-                                                 seqlength = nMrkInBlock,
-                                                 prob = NULL)
-        
+        stop("R package `haplotypes` should be correctly installed when you use the option `complementHaplo = 'TCS'` !")
       }
+      
       parsimnetResults <- list(parsimnetRes = parsimnetRes,
                                parsimnetResForOneNet = parsimnetResAll)
       haplotypeInfo$parsimnetResults <- parsimnetResults
@@ -1613,7 +1635,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       nHaploComp <- nHaplo + nComp
       
       
-      if (nComp >= 1){
+      if (nComp >= 1) {
         existComp <- TRUE
         compNames <- paste0("c", 1:nComp)
       } else {
@@ -1665,7 +1687,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     hOptBase <- hOpt
     hOptBase2 <- hOpt2
     
-    for (kernelType in kernelTypes){
+    for (kernelType in kernelTypes) {
       if (verbose) {
         print(paste0("Now optimizing for kernelType: ", kernelType))
       }
@@ -1765,7 +1787,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         
         ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
         EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
-        gvEst <- EM3Res$u[(nLine + 1):(nLine + nHaplo), ]
+        gvEst <- EM3Res$u.each[(nLine + 1):(nLine + nHaplo), ]
         LL <- EM3Res$LL
         EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
         LL0 <- EMMRes0$LL
@@ -1797,7 +1819,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
             cexAll[compNames] <- cexCompForGG
           }
         } else {
-          if (existComp){
+          if (existComp) {
             ZgKernel <- diag(nTotal)
             rownames(ZgKernel) <- colnames(ZgKernel) <- namesBlockInterestComp
             
@@ -2193,20 +2215,20 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         
         
         plt <- ggplot2::ggplot(data = mdsPointsForPlotDF,
-                               ggplot2::aes(x = .data$MDS1,
-                                            y = .data$MDS2)) 
+                               ggplot2::aes(x = ggplot2::.data$MDS1,
+                                            y = ggplot2::.data$MDS2)) 
         if (any(alphaAll == alpha2)) {
           plt <- plt +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                        ggplot2::aes(x = .data$MDS1,
-                                                     y = .data$MDS2,
-                                                     r = .data$cex),
+                                        ggplot2::aes(x = ggplot2::.data$MDS1,
+                                                     y = ggplot2::.data$MDS2,
+                                                     r = ggplot2::.data$cex),
                                         cols = colnames(colorForAllCompDF),
                                         col = NA, alpha = alpha1) +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha2, ],
-                                        ggplot2::aes(x = .data$MDS1,
-                                                     y = .data$MDS2,
-                                                     r = .data$cex),
+                                        ggplot2::aes(x = ggplot2::.data$MDS1,
+                                                     y = ggplot2::.data$MDS2,
+                                                     r = ggplot2::.data$cex),
                                         cols = colnames(colorForAllCompDF),
                                         col = NA, alpha = alpha2) +
             ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
@@ -2217,9 +2239,9 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         } else {
           plt <- plt +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                        ggplot2::aes(x = .data$MDS1,
-                                                     y = .data$MDS2,
-                                                     r = .data$cex),
+                                        ggplot2::aes(x = ggplot2::.data$MDS1,
+                                                     y = ggplot2::.data$MDS2,
+                                                     r = ggplot2::.data$cex),
                                         cols = colnames(colorForAllCompDF),
                                         col = NA, alpha = alpha1) +
             ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
@@ -2236,10 +2258,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                     x2 = mdsPoints[mstResComp[, 2], 1],
                                     y2 = mdsPoints[mstResComp[, 2], 2])
         
-        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = .data$x1,
-                                                        y = .data$y1,
-                                                        xend = .data$x2,
-                                                        yend = .data$y2),
+        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = ggplot2::.data$x1,
+                                                        y = ggplot2::.data$y1,
+                                                        xend = ggplot2::.data$x2,
+                                                        yend = ggplot2::.data$y2),
                                            data = mdsSegmentsDF,
                                            col = colConnection[1],
                                            lty = ltyConnection[1],
@@ -2250,10 +2272,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                           x2 = mdsPoints[mstResCompPlus[, 2], 1],
                                           y2 = mdsPoints[mstResCompPlus[, 2], 2])
           
-          plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = .data$x1,
-                                                          y = .data$y1,
-                                                          xend = .data$x2,
-                                                          yend = .data$y2),
+          plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = ggplot2::.data$x1,
+                                                          y = ggplot2::.data$y1,
+                                                          xend = ggplot2::.data$x2,
+                                                          yend = ggplot2::.data$y2),
                                              data = mdsSegmentsPlusDF,
                                              col = colConnection[2],
                                              lty = ltyConnection[2],
@@ -2382,6 +2404,14 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
                           pchBase = c(1, 16), colNodeBase = c(2, 4), colTipBase = c(3, 5, 6),
                           cexMax = 2, cexMin = 0.7, edgeColoring = TRUE, tipLabel = TRUE,
                           ggPlotTree = FALSE, cexMaxForGG = 0.12, cexMinForGG = 0.06, alphaBase = c(0.9, 0.3)) {
+  if (requireNamespace("ggtree", quietly = TRUE) & 
+      requireNamespace("phylobase", quietly = TRUE)) {
+    ggPlotTree <- ggPlotTree
+  } else {
+    warning(paste0("If you want to plot phylogenetic trees, please install `ggtree` and `phylobase` packages from Bioconductor! \n",
+                   "We switched `ggPlotTree = FALSE`."))
+    ggPlotTree <- FALSE
+  }
   
   haplotypeInfo <- estPhyloRes$haplotypeInfo
   haploCluster <- haplotypeInfo$haploCluster
@@ -2403,7 +2433,7 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
   
   kernelTypes <- names(estPhyloRes$gvTotal)
   
-  for (kernelType in kernelTypes){
+  for (kernelType in kernelTypes) {
     EMMResults <- estPhyloRes$EMMResults[[kernelType]]
     EM3Res <- EMMResults$EM3Res
     EMMRes <- EMMResults$EMMRes
@@ -2593,7 +2623,7 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
       
       
       plt <- ggtree::ggtree(tr = trPhylo42,
-                            ggtree::aes(col = I(.data$color)),
+                            ggtree::aes(col = I(ggplot2::.data$color)),
                             layout = "equal_angle")
       
       
@@ -2727,6 +2757,14 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                              colHaploBase = c(3, 5, 6), cexMax = 2, cexMin = 0.7,
                              ggPlotNetwork = FALSE, cexMaxForGG = 0.025, 
                              cexMinForGG = 0.008, alphaBase = c(0.9, 0.3)) {
+  if (requireNamespace("ggplot2", quietly = TRUE) &
+      requireNamespace("scatterpie", quietly = TRUE)) {
+    ggPlotNetwork <- ggPlotNetwork
+  } else {
+    warning(paste0("If you want to plot haplotype network, please install `ggplot2` and `scatterpie` packages! \n",
+                   "We switched `ggPlotNetwork = FALSE`."))
+    ggPlotNetwork <- FALSE
+  }
   
   haplotypeInfo <- estNetworkRes$haplotypeInfo
   haploCluster <- haplotypeInfo$haploCluster
@@ -2753,7 +2791,7 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
   kernelTypes <- names(estNetworkRes$gvTotal)
   namesBlockInterestComp <- rownames(distMatComp)
   
-  if (nComp >= 1){
+  if (nComp >= 1) {
     existComp <- TRUE
     compNames <- paste0("c", 1:nComp)
   } else {
@@ -2770,7 +2808,7 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
   
   
   
-  for (kernelType in kernelTypes){
+  for (kernelType in kernelTypes) {
     EMMResults <- estNetworkRes$EMMResults[[kernelType]]
     EM3Res <- EMMResults$EM3Res
     EMMRes <- EMMResults$EMMRes
@@ -2794,7 +2832,7 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
           cexAll[compNames] <- cexCompForGG
         }
       } else {
-        if (existComp){
+        if (existComp) {
           gvCentered <- gvEstTotal - mean(gvEstTotal)
           gvScaled <- gvCentered / sd(gvCentered)
           gvScaled4Cex <- gvScaled * (cexMax - cexMin) / max(abs(gvScaled)) 
@@ -3092,20 +3130,20 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
       
       
       plt <- ggplot2::ggplot(data = mdsPointsForPlotDF,
-                             ggplot2::aes(x = .data$MDS1,
-                                          y = .data$MDS2)) 
+                             ggplot2::aes(x = ggplot2::.data$MDS1,
+                                          y = ggplot2::.data$MDS2)) 
       if (any(alphaAll == alpha2)) {
         plt <- plt +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                      ggplot2::aes(x = .data$MDS1,
-                                                   y = .data$MDS2,
-                                                   r = .data$cex),
+                                      ggplot2::aes(x = ggplot2::.data$MDS1,
+                                                   y = ggplot2::.data$MDS2,
+                                                   r = ggplot2::.data$cex),
                                       cols = colnames(colorForAllCompDF),
                                       col = NA, alpha = alpha1) +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha2, ],
-                                      ggplot2::aes(x = .data$MDS1,
-                                                   y = .data$MDS2,
-                                                   r = .data$cex),
+                                      ggplot2::aes(x = ggplot2::.data$MDS1,
+                                                   y = ggplot2::.data$MDS2,
+                                                   r = ggplot2::.data$cex),
                                       cols = colnames(colorForAllCompDF),
                                       col = NA, alpha = alpha2) +
           ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
@@ -3116,9 +3154,9 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
       } else {
         plt <- plt +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                      ggplot2::aes(x = .data$MDS1,
-                                                   y = .data$MDS2,
-                                                   r = .data$cex),
+                                      ggplot2::aes(x = ggplot2::.data$MDS1,
+                                                   y = ggplot2::.data$MDS2,
+                                                   r = ggplot2::.data$cex),
                                       cols = colnames(colorForAllCompDF),
                                       col = NA, alpha = alpha1) +
           ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
@@ -3135,10 +3173,10 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                                   x2 = mdsPoints[mstResComp[, 2], 1],
                                   y2 = mdsPoints[mstResComp[, 2], 2])
       
-      plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = .data$x1,
-                                                      y = .data$y1,
-                                                      xend = .data$x2,
-                                                      yend = .data$y2),
+      plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = ggplot2::.data$x1,
+                                                      y = ggplot2::.data$y1,
+                                                      xend = ggplot2::.data$x2,
+                                                      yend = ggplot2::.data$y2),
                                          data = mdsSegmentsDF,
                                          col = colConnection[1],
                                          lty = ltyConnection[1],
@@ -3149,10 +3187,10 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                                         x2 = mdsPoints[mstResCompPlus[, 2], 1],
                                         y2 = mdsPoints[mstResCompPlus[, 2], 2])
         
-        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = .data$x1,
-                                                        y = .data$y1,
-                                                        xend = .data$x2,
-                                                        yend = .data$y2),
+        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = ggplot2::.data$x1,
+                                                        y = ggplot2::.data$y1,
+                                                        xend = ggplot2::.data$x2,
+                                                        yend = ggplot2::.data$y2),
                                            data = mdsSegmentsPlusDF,
                                            col = colConnection[2],
                                            lty = ltyConnection[2],

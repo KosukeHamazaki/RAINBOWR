@@ -35,8 +35,8 @@
 #'
 spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TRUE,
                           return.SGS = FALSE, spectral.method = NULL,
-                          tol = NULL, df.H = NULL){
-  if((!is.null(tol)) & (length(tol) == 1)){
+                          tol = NULL, df.H = NULL) {
+  if ((!is.null(tol)) & (length(tol) == 1)) {
     tol <- rep(tol, 2)
   }
   
@@ -45,11 +45,11 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
   ms.ZETA <- unlist(lapply(ZETA, function(x) ncol(x$Z)))
   m.ZETA <- sum(ms.ZETA)
   lz <- length(ZETA)
-  if(!is.null(ZWs)){
+  if (!is.null(ZWs)) {
     lw <- length(ZWs)
     ms.ZWs <- unlist(lapply(ZWs, function(x) ncol(x$Z)))
     m.ZWs <- sum(ms.ZWs)
-  }else{
+  } else {
     lw <- 0
     ms.ZWs <- NULL
     m.ZWs <- 0
@@ -57,33 +57,33 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
   
   m <- m.ZETA + m.ZWs
   
-  if((lz + lw) != length(weights)){
+  if ((lz + lw) != length(weights)) {
     stop("Weights should have the same length as ZETA!")
   }
   stopifnot(all(weights >= 0))
   
-  if(is.null(X)){
+  if (is.null(X)) {
     X <- as.matrix(rep(1, n))
     rownames(X) <- lines.name.pheno
     colnames(X) <- "Intercept"
   }
   p <- ncol(X)
   
-  if(is.null(spectral.method)){
-    if(n <= m + p){
+  if (is.null(spectral.method)) {
+    if (n <= m + p) {
       spectral.method <- "eigen"
-    }else{
+    } else {
       spectral.method <- "cholesky"
     }
   }
   
-  if(is.null(df.H)){
+  if (is.null(df.H)) {
     df.H <- n
   }
   
-  if(spectral.method == "cholesky"){
+  if (spectral.method == "cholesky") {
     ZBt <- NULL
-    for(i in 1:lz){
+    for (i in 1:lz) {
       Z.now <- ZETA[[i]]$Z
       K.now <- ZETA[[i]]$K
       
@@ -97,8 +97,8 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
       ZBt <- cbind(ZBt, sqrt(weights[i]) * ZBt.now)
     }
     
-    if(!is.null(ZWs)){
-      for(j in 1:lw){
+    if (!is.null(ZWs)) {
+      for (j in 1:lw) {
         Z.now <- ZWs[[j]]$Z
         Bt.now <- ZWs[[j]]$W %*% ZWs[[j]]$Gamma
         
@@ -110,42 +110,42 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
                                              return_SGS = return.SGS),
                           silent = TRUE)
     
-    if(!("try-error" %in% class(spectral_G.res))){
+    if (!("try-error" %in% class(spectral_G.res))) {
       
-      if(return.G){
+      if (return.G) {
         U0 <- spectral_G.res$U
         delta0 <- c(spectral_G.res$D)
         
-        if(!is.null(tol)){
+        if (!is.null(tol)) {
           G.tol.over <- which(delta0 > tol[2])
-        }else{
+        } else {
           G.tol.over <- 1:df.H
         }
         delta <- delta0[G.tol.over]
         U <- U0[, G.tol.over]
       }
       
-      if(return.SGS){
+      if (return.SGS) {
         Q0 <- spectral_G.res$Q
         theta0 <- c(spectral_G.res$theta)
         
-        if(!is.null(tol)){
+        if (!is.null(tol)) {
           SGS.tol.over <- which(theta0 > tol[2])
-        }else{
+        } else {
           SGS.tol.over <- 1:(df.H - p)
         }
         theta <- theta0[SGS.tol.over]
         Q <- Q0[, SGS.tol.over]
       }
-    }else{
+    } else {
       spectral.method <- "eigen"
     }
   }
   
   
-  if(spectral.method == "eigen"){
+  if (spectral.method == "eigen") {
     ZKZt <- matrix(0, nrow = n, ncol = n)
-    for(i in 1:lz){
+    for (i in 1:lz) {
       Z.now <- ZETA[[i]]$Z
       K.now <- ZETA[[i]]$K
       
@@ -153,8 +153,8 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
       ZKZt <- ZKZt + weights[i] * ZKZt.now
     }
     
-    if(!is.null(ZWs)){
-      for(j in 1:lw){
+    if (!is.null(ZWs)) {
+      for (j in 1:lw) {
         Z.now <- ZWs[[j]]$Z
         K.now <- tcrossprod(ZWs[[j]]$W %*% ZWs[[j]]$Gamma, ZWs[[j]]$W)
         
@@ -165,26 +165,26 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
     spectral_G.res <- spectralG_eigen(zkzt = ZKZt, x = X, return_G = return.G,
                                       return_SGS = return.SGS)
     
-    if(return.G){
+    if (return.G) {
       U0 <- spectral_G.res$U
       delta0 <- c(spectral_G.res$D)
       
-      if(!is.null(tol)){
+      if (!is.null(tol)) {
         G.tol.over <- which(delta0 > tol[2])
-      }else{
+      } else {
         G.tol.over <- 1:df.H
       }
       delta <- delta0[G.tol.over]
       U <- U0[, G.tol.over]
     }
     
-    if(return.SGS){
+    if (return.SGS) {
       Q0 <- spectral_G.res$Q
       theta0 <- c(spectral_G.res$theta)
       
-      if(!is.null(tol)){
+      if (!is.null(tol)) {
         SGS.tol.over <- which(theta0 > tol[2])
-      }else{
+      } else {
         SGS.tol.over <- 1:(df.H - p)
       }
       theta <- theta0[SGS.tol.over]
@@ -193,15 +193,15 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
   }
   
   
-  if(return.G){
+  if (return.G) {
     spectral.G <- list(U = U, delta = delta)
-  }else{
+  } else {
     spectral.G <- NULL
   }
   
-  if(return.SGS){
+  if (return.SGS) {
     spectral.SGS <- list(Q = Q, theta = theta)
-  }else{
+  } else {
     spectral.SGS <- NULL
   }
   
@@ -291,10 +291,10 @@ spectralG.cpp <- function(ZETA, ZWs = NULL, X = NULL, weights = 1, return.G = TR
 EMM1.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, n.core = NA, lam.len = 4, 
                      init.range = c(1e-04, 1e02), init.one = 0.5, conv.param = 1e-06,
                      count.max = 15, bounds = c(1e-06, 1e06), tol = NULL, REML = TRUE,
-                     silent = TRUE, plot.l = FALSE, SE = FALSE, return.Hinv = TRUE){
+                     silent = TRUE, plot.l = FALSE, SE = FALSE, return.Hinv = TRUE) {
   
   #### The start of EMM1 (GEMMA-based) ####
-  if(length(ZETA) != 1){
+  if (length(ZETA) != 1) {
     stop("If you want to solve multikernel mixed-model equation, you should use EM3.cpp function.")
   }
   
@@ -348,7 +348,7 @@ EMM1.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, n.core = NA, lam.len = 4
   
   
   ### Eigen decomposition of ZKZt ###
-  if(is.null(eigen.G)){
+  if (is.null(eigen.G)) {
     eigen.G <- spectralG.cpp(ZETA = lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K)),
                              X = X, return.G = TRUE, return.SGS = FALSE, tol = tol, df.H = NULL)[[1]]
   }
@@ -356,7 +356,7 @@ EMM1.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, n.core = NA, lam.len = 4
   delta <- eigen.G$delta
   
   
-  if(lam.len >= 2){
+  if (lam.len >= 2) {
     it <- split(lambda.0, factor(1:lam.len))
     
     if (is.na(n.core)) {
@@ -376,7 +376,7 @@ EMM1.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, n.core = NA, lam.len = 4
     lambda.opts <- mclap.res[seq(1, 3 * lam.len - 2, by = 3)]
     lambda.opt <- lambda.opts[which.max(l.maxs)]
     names(lambda.opt) <- "lambda.opt"
-  }else{
+  } else {
     ml.res <- ml_est_out(lambda.0[1], y = as.matrix(y), x = as.matrix(X),
                          u = U, delta = as.matrix(delta), z = Z, k = K,
                          logXtX = logXtX, conv_param = conv.param, count_max = count.max,
@@ -470,10 +470,10 @@ EMM1.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, n.core = NA, lam.len = 4
 #'
 #'
 EMM2.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = NULL, optimizer = "nlminb",
-                     traceInside = 0, REML = TRUE, bounds = c(1e-09, 1e+09), SE = FALSE, return.Hinv = FALSE){
+                     traceInside = 0, REML = TRUE, bounds = c(1e-09, 1e+09), SE = FALSE, return.Hinv = FALSE) {
   
   #### The start of EMM2 (EMMA-based) ####
-  if(length(ZETA) != 1){
+  if (length(ZETA) != 1) {
     stop("If you want to solve multikernel mixed-model equation, you should use EM3.cpp function.")
   }
   
@@ -515,14 +515,14 @@ EMM2.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
   spI <- diag(n)
   
   ### Eigen decomposition of ZKZt ###
-  if(is.null(eigen.G)){
+  if (is.null(eigen.G)) {
     eigen.G <- spectralG.cpp(ZETA = lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K)),
                              X = X, return.G = TRUE, return.SGS = FALSE, tol = tol, df.H = NULL)[[1]]
   }
   U <- eigen.G$U
   delta <- eigen.G$delta
   
-  if(is.null(eigen.SGS)){
+  if (is.null(eigen.SGS)) {
     eigen.SGS <- spectralG.cpp(ZETA = lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K)),
                                X = X, return.G = FALSE, return.SGS = TRUE, tol = tol, df.H = NULL)[[2]]
   }
@@ -722,21 +722,21 @@ EMM.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, n.thres
                     reestimation = FALSE, n.core = NA, lam.len = 4, init.range = c(1e-06, 1e02),
                     init.one = 0.5, conv.param = 1e-06, count.max = 20, bounds = c(1e-06, 1e06),
                     tol = NULL, optimizer = "nlminb", traceInside = 0, REML = TRUE,
-                    silent = TRUE, plot.l = FALSE, SE = FALSE, return.Hinv = TRUE){
+                    silent = TRUE, plot.l = FALSE, SE = FALSE, return.Hinv = TRUE) {
   n <- length(y)
   
-  if(n >= n.thres){
+  if (n >= n.thres) {
     res <- EMM1.cpp(y = y, X = X, ZETA = ZETA, eigen.G = eigen.G, n.core = n.core, lam.len = lam.len,
                     init.range = init.range, init.one = init.one, conv.param = conv.param,
                     count.max = count.max, bounds = bounds, tol = tol, REML = REML,
                     silent = silent, plot.l = plot.l, SE = SE, return.Hinv = return.Hinv)
     
-    if((res$reest == 1) & reestimation){
+    if ((res$reest == 1) & reestimation) {
       res <- EMM2.cpp(y = y, X = X, ZETA = ZETA, eigen.G = eigen.G, eigen.SGS = eigen.SGS, REML = REML,
                       optimizer = optimizer, traceInside = traceInside, tol = tol, bounds = bounds, SE = SE, return.Hinv = return.Hinv)
     }
     
-  }else{
+  } else {
     res <- EMM2.cpp(y = y, X = X, ZETA = ZETA, eigen.G = eigen.G, eigen.SGS = eigen.SGS, REML = REML,
                     optimizer = optimizer, traceInside = traceInside, bounds = bounds, SE = SE, return.Hinv = return.Hinv, tol = tol)
   }
@@ -789,14 +789,21 @@ EMM.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, n.thres
 #' @param REML You can choose which method you will use, "REML" or "ML".
 #' If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".
 #' @param pred If TRUE, the fitting values of y is returned.
-#'
+#' @param return.u.always If TRUE, BLUP (`u`; \eqn{u}) will be returned.
+#' @param return.u.each If TRUE, the function also computes each BLUP corresponding 
+#' to different kernels (when solving multi-kernel mixed-effects model). It takes 
+#' additional time compared to the one with `return.u.each = FALSE`.
+#' @param return.Hinv If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}} 
+#' will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.
+#' 
 #' @return
 #' \describe{
 #' \item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
 #' \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
 #' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 #' \item{$beta}{BLUE(\eqn{\beta})}
-#' \item{$u}{BLUP(\eqn{u})}
+#' \item{$u}{BLUP(Sum of \eqn{Zu})}
+#' \item{$u.each}{BLUP(Each \eqn{u})}
 #' \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
 #' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
 #' \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
@@ -815,8 +822,9 @@ EMM.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, n.thres
 #'
 #'
 #'
-EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = NULL, n.core = NA,
-                     optimizer = "nlminb", traceInside = 0, n.thres = 450, REML = TRUE, pred = TRUE){
+EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = NULL, n.core = NA,
+                    optimizer = "nlminb", traceInside = 0, n.thres = 450, REML = TRUE, pred = TRUE, 
+                    return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {
   n <- length(as.matrix(y))
   y <- matrix(y, n, 1)
   
@@ -831,14 +839,14 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
   lz <- length(ZETA)
   weights <- rep(1/lz, lz)
   
-  if(lz >= 2){
-    if(is.null(eigen.G)){
+  if (lz >= 2) {
+    if (is.null(eigen.G)) {
       Z <- c()
       ms <- rep(NA, lz)
       for (i in 1:lz) {
         Z.now <- ZETA[[i]]$Z
         
-        if(is.null(Z.now)){
+        if (is.null(Z.now)) {
           Z.now <- diag(n)
         }
         m <- ncol(Z.now)
@@ -884,13 +892,13 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
         eta <- res$eta
         phi <- res$phi
         
-        if(REML){
+        if (REML) {
           minimfunc <- function(delta) {
             (n - p) * log(sum(eta ^ 2/{
               lambda + delta
             })) + sum(log(lambda + delta))
           }
-        }else{
+        } else {
           minimfunc <- function(delta) {
             n * log(sum(eta ^ 2/{
               lambda + delta
@@ -938,7 +946,7 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
   for (i in 1:lz) {
     Z.now <- ZETA[[i]]$Z
     
-    if(is.null(Z.now)){
+    if (is.null(Z.now)) {
       Z.now <- diag(n)
     }
     m <- ncol(Z.now)
@@ -959,7 +967,7 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
   }
   
   Z <- Z[not.NA, , drop = FALSE]
-  if((lz == 1) | (!is.null(eigen.G))){
+  if ((lz == 1) | (!is.null(eigen.G))) {
     X <- X0[not.NA, , drop = FALSE]
     n <- length(not.NA)
     y <- matrix(y[not.NA], n, 1)
@@ -970,7 +978,7 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
   
   ZKZt <- matrix(0, nrow = n, ncol = n)
   Klist <- NULL
-  for(i in 1:lz){
+  for (i in 1:lz) {
     K.list <- list(ZETA[[i]]$K)
     Klist <- c(Klist, K.list)
   }
@@ -985,11 +993,11 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
   
   
   
-  if(is.null(eigen.G)){
-    if(nrow(Z) <= n.thres){
+  if (is.null(eigen.G)) {
+    if (nrow(Z) <= n.thres) {
       # return.SGS <- TRUE
       return.SGS <-  FALSE
-    }else{
+    } else {
       return.SGS <- FALSE
     }
     spectralG.res <- spectralG.cpp(ZETA = lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K)),
@@ -1000,16 +1008,18 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
     eigen.SGS <- spectralG.res[[2]]
   }
   
+  return.Hinv.EMM <- return.Hinv | return.u.each | return.u.always
   if (lz >= 2) {
     ZETA.list <- list(A = list(Z = diag(n), K = ZKZt))
     EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = eigen.G, 
                            eigen.SGS = eigen.SGS, n.core = n.core, 
                            traceInside = traceInside, optimizer = optimizer, 
-                           tol = tol, n.thres = n.thres, return.Hinv = TRUE, REML = REML)
+                           tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
   } else {
-    EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K)),
+    ZETA.list <- lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K))
+    EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list,
                            n.core = n.core, traceInside = traceInside, optimizer = optimizer, eigen.G = eigen.G,
-                           eigen.SGS = eigen.SGS, tol = tol, n.thres = n.thres, return.Hinv = TRUE, REML = REML)
+                           eigen.SGS = eigen.SGS, tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
   }
   
   
@@ -1017,47 +1027,102 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
   Ve <- EMM.cpp.res$Ve
   beta <- EMM.cpp.res$beta
   LL <- EMM.cpp.res$LL
-  Hinv <- EMM.cpp.res$Hinv
-  
-  
-  e <- (y - {X %*% beta})
-  Hinve <- Hinv %*% e
-  
-  u <- crossprod(ZK, Hinve)
-  Vinv <- (1 / Ve) * Hinv
-  namesu <- c()
-  for (i in 1:length(Klist)) {
-    namesu <- c(namesu, paste("K", i, colnames(ZETA[[i]]$K), sep = "_"))
+  if (n == nrow(X0)) {
+    u <- as.matrix(EMM.cpp.res$u)
+    rownames(u) <- rownames(ZETA.list[[1]]$K)
+  } else {
+    u <- NULL
   }
   
-  rownames(u) <- namesu
-  if(!pred){
-    return(list(y.pred = NULL, Vu = Vu, Ve = Ve, beta = beta,
-                u = u, weights = weights, LL = LL, Vinv = Vinv, Hinv = Hinv))
-  }else{
-    n.all <- nrow(ZETA[[1]]$Z)
+  
+  
+  if (pred & (!return.u.always)) {
+    return.u.always <- TRUE
+    message("`return.u.always` is switched to TRUE because you require predicted values.")
+  }
+  
+  
+  if (return.Hinv.EMM) {
+    Hinv <- EMM.cpp.res$Hinv
+    Vinv <- (1 / Vu) * Hinv
     
-    Z.all <- c()
-    for (i in 1:lz) {
-      if(is.null(Z.now)){
-        Z.now <- diag(n.all)
-      }else{
-        Z.now <- ZETA[[i]]$Z
+    
+    if (return.u.always | return.u.each) {
+      if ((length(ZETA) >= 2) | (is.null(u))) {
+        ZAll <- do.call(
+          what = cbind,
+          args = lapply(X = ZETA,
+                        FUN = function(x) {
+                          x$Z
+                        })
+        )
+        KAll <- Matrix::.bdiag(lst = sapply(X = 1:length(ZETA),
+                                            FUN = function(x) {
+                                              ZETA[[x]]$K * weights[x]
+                                            },
+                                            simplify = FALSE))
+        ZKAll <- as.matrix(ZAll %*% KAll)
+        
+        e <- y - X %*% beta
+        u.each <- crossprod(ZKAll[not.NA, ], Hinv %*% e)
+        
+        if (is.null(u)) {
+          u <- ZAll %*% u.each
+        }
+      } else {
+        u.each <- u
       }
-      Z.all <- cbind(Z.all, Z.now)
+      
+      rownames(u.each) <- paste0(
+        paste0("K_", rep(1:length(ZETA), 
+                         lapply(X = ZETA, 
+                                FUN = function(x) {
+                                  nrow(x$K)
+                                }))),
+        "_",
+        unlist(lapply(X = ZETA, 
+                      FUN = function(x) {
+                        rownames(x$K)
+                      }))
+      )
+    } else {
+      u.each <- NULL
     }
     
     
-    if(ncol(X) != 1){
-      y.pred <- c(X0 %*% beta) + c(Z.all %*% u)
-    }else{
-      y.pred <- rep(beta, n.all) + c(Z.all %*% u)
-    }
     
-    return(list(y.pred = y.pred, Vu = Vu, Ve = Ve, beta = beta,
-                u = u, weights = weights, LL = LL, Vinv = Vinv, Hinv = Hinv))
+    if (!return.Hinv) {
+      Vinv <- NULL
+      Hinv <- NULL
+    }
+  } else {
+    u.each <- Vinv <- Hinv <- NULL
   }
+  
+  
+  if (pred & (!is.null(u))) {
+    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+  } else {
+    y.pred <- NULL
+  }
+  
+  
+  
+  results <- list(y.pred = y.pred,
+                  Vu = Vu,
+                  Ve = Ve,
+                  beta = beta,
+                  u = u,
+                  u.each = u.each,
+                  weights = weights,
+                  LL = LL,
+                  Vinv = Vinv,
+                  Hinv = Hinv)
+  
+  return(results)
 }
+
+
 
 
 
@@ -1113,14 +1178,21 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
 #' @param REML You can choose which method you will use, "REML" or "ML".
 #' If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".
 #' @param pred If TRUE, the fitting values of y is returned.
-#'
+#' @param return.u.always If TRUE, BLUP (`u`; \eqn{u}) will be returned.
+#' @param return.u.each If TRUE, the function also computes each BLUP corresponding 
+#' to different kernels (when solving multi-kernel mixed-effects model). It takes 
+#' additional time compared to the one with `return.u.each = FALSE`.
+#' @param return.Hinv If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}} 
+#' will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.
+#' 
 #' @return
 #' \describe{
 #' \item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
 #' \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
 #' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 #' \item{$beta}{BLUE(\eqn{\beta})}
-#' \item{$u}{BLUP(\eqn{u})}
+#' \item{$u}{BLUP(Sum of \eqn{Zu})}
+#' \item{$u.each}{BLUP(Each \eqn{u})}
 #' \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
 #' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
 #' \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
@@ -1141,19 +1213,20 @@ EM3.cpp <- function (y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol =
 #'
 #'
 #'
-EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
-                            Gammas0 = lapply(Ws0, function(x) diag(ncol(x))), gammas.diag = TRUE,
-                            X.fix = TRUE, eigen.SGS = NULL, eigen.G = NULL, n.core = NA, tol = NULL,
-                            bounds = c(1e-06, 1e06), optimizer = "nlminb", traceInside = 0,
-                            n.thres = 450, spectral.method = NULL, REML = TRUE, pred = TRUE){
+EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
+                           Gammas0 = lapply(Ws0, function(x) diag(ncol(x))), gammas.diag = TRUE,
+                           X.fix = TRUE, eigen.SGS = NULL, eigen.G = NULL, n.core = 1, tol = NULL,
+                           bounds = c(1e-06, 1e06), optimizer = "nlminb", traceInside = 0,
+                           n.thres = 450, spectral.method = NULL, REML = TRUE, pred = TRUE, 
+                           return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {
   n0 <- length(as.matrix(y0))
   y0 <- matrix(y0, n0, 1)
   
-  if(is.null(ZETA)){
+  if (is.null(ZETA)) {
     Z0 <- diag(n0)
     K <- diag(n0)
-  }else{
-    if(length(ZETA) != 1){
+  } else {
+    if (length(ZETA) != 1) {
       stop("The kernel for cofounders should be one!")
     }
     Z0 <- ZETA[[1]]$Z
@@ -1176,13 +1249,13 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   
   ZETA <- list(A = list(Z = Z, K = K))
   
-  if(is.null(Zs0)){
+  if (is.null(Zs0)) {
     Zs0 <- lapply(Ws0, function(x) diag(nrow(x)))
   }
   Zs <- lapply(Zs0, function(x) x[not.NA, ])
   
   Ws <- NULL
-  for(i in 1:length(Ws0)){
+  for (i in 1:length(Ws0)) {
     Ws.part <- list(Zs[[i]] %*% Ws0[[i]])
     Ws <- c(Ws, Ws.part)
   }
@@ -1192,8 +1265,8 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   spI <- diag(n)
   
   
-  if(!REML){
-    if(is.null(eigen.G)){
+  if (!REML) {
+    if (is.null(eigen.G)) {
       eigen.G <- spectralG.cpp(ZETA = ZETA, X = X, return.G = TRUE,
                                return.SGS = FALSE, tol = tol, df.H = NULL)[[1]]
     }
@@ -1202,7 +1275,7 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   }
   
   
-  if((!X.fix) | (is.null(eigen.SGS))){
+  if ((!X.fix) | (is.null(eigen.SGS))) {
     eigen.SGS <- spectralG.cpp(ZETA = ZETA, X = X, return.G = FALSE,
                                return.SGS = TRUE, tol = tol, df.H = NULL)[[2]]
   }
@@ -1214,14 +1287,14 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   weights <- rep(1 / n.param, n.param + 1)
   weights[2:(n.param + 1)] <- weights[2:(n.param + 1)] / sum(weights[2:(n.param + 1)])
   
-  minimumfunctionouter <- function(weights){
+  minimumfunctionouter <- function(weights) {
     weights[2:(n.param + 1)] <- weights[2:(n.param + 1)] / sum(weights[2:(n.param + 1)])
     
     lambda <- weights[1] / weights[2]
     gammas <- weights[-(1:2)] / weights[2]
     
     Gammas <- NULL
-    for(i in 1:lw){
+    for (i in 1:lw) {
       Gammas[[i]] <- Gammas0[[i]] * gammas[i]
     }
     Gammas <- lapply(Gammas, as.matrix)
@@ -1231,9 +1304,9 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
     
     yPy <- c(crossprod(y, P %*% y))
     
-    if(REML){
+    if (REML) {
       LL <- llik_REML(n, p, yPy, lnP)
-    }else{
+    } else {
       Hinv.res <- P_calc(lambda, Ws, Gammas, U, as.matrix(delta), lw, FALSE, gammas.diag)
       Hinv <- Hinv.res$P
       lnHinv <- Hinv.res$lnP
@@ -1283,7 +1356,7 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   ZKZt <- weights[1] * tcrossprod(Z %*% K, Z)
   Klist <-  list(K.A = K)
   Klistweighted <- list(K.A = weights[1] * K)
-  for(i in 1:lw){
+  for (i in 1:lw) {
     Z.now <- Zs[[i]]
     Z0.now <- Zs0[[i]]
     K.now <- tcrossprod(Ws0[[i]] %*% Gammas0[[i]], Ws0[[i]])
@@ -1312,42 +1385,236 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   eigen.G.all <- spectralG.all[[1]]
   eigen.SGS.all <- spectralG.all[[2]]
   
+  return.Hinv.EMM <- return.Hinv | return.u.each | return.u.always
   EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = eigen.G.all,
                          eigen.SGS = eigen.SGS.all, n.core = n.core,
                          optimizer = optimizer, traceInside = traceInside, 
-                         n.thres = n.thres, return.Hinv = TRUE, REML = REML, tol = tol)
+                         n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML, tol = tol)
   
   Vu <- EMM.cpp.res$Vu
   Ve <- EMM.cpp.res$Ve
   beta <- EMM.cpp.res$beta
   LL <- EMM.cpp.res$LL
-  Hinv <- EMM.cpp.res$Hinv
-  
-  e <- (y - {X %*% as.matrix(beta)})
-  Hinve <- Hinv %*% e
-  
-  u <- crossprod(ZK, Hinve)
-  Vinv <- (1 / Ve) * Hinv
-  namesu <- c()
-  for (i in 1:length(Klist)) {
-    namesu <- c(namesu, paste("K", i, colnames(Klist[[i]]), sep = "_"))
+  if (n == nrow(X0)) {
+    u <- as.matrix(EMM.cpp.res$u)
+    rownames(u) <- rownames(ZETA.list[[1]]$K)
+  } else {
+    u <- NULL
   }
   
-  rownames(u) <- namesu
-  if (!pred) {
-    return(list(y.pred = NULL, Vu = Vu, Ve = Ve, beta = beta,
-                u = u, weights = weights, LL = LL, Vinv = Vinv, Hinv = Hinv))
-  } else {
-    if (ncol(X) != 1) {
-      y.pred <- c(X0 %*% beta) + c(Zs0.all %*% u)
+  
+  
+  if (pred & (!return.u.always)) {
+    return.u.always <- TRUE
+    message("`return.u.always` is switched to TRUE because you require predicted values.")
+  }
+  
+  
+  if (return.Hinv.EMM) {
+    Hinv <- EMM.cpp.res$Hinv
+    Vinv <- (1 / Vu) * Hinv
+    
+    
+    if (return.u.always | return.u.each) {
+      if ((length(ZETA) >= 2) | (is.null(u))) {
+        e <- y - X %*% beta
+        u.each <- crossprod(ZK, Hinv %*% e)
+        
+        if (is.null(u)) {
+          u <- Zs0.all %*% u.each
+        }
+      } else {
+        u.each <- u
+      }
+      
+      rownames(u.each) <- paste0(
+        paste0("K_", rep(1:length(Klist), 
+                         lapply(X = Klist, 
+                                FUN = nrow))),
+        "_",
+        unlist(lapply(X = Klist, 
+                      FUN = rownames))
+      )
     } else {
-      y.pred <- rep(beta, n0) + c(Zs0.all %*% u)
+      u.each <- NULL
     }
     
-    return(list(y.pred = y.pred, Vu = Vu, Ve = Ve, beta = beta,
-                u = u, weights = weights, LL = LL, Vinv = Vinv, Hinv = Hinv))
+    if (!return.Hinv) {
+      Vinv <- NULL
+      Hinv <- NULL
+    }
+  } else {
+    u.each <- Vinv <- Hinv <- NULL
   }
+  
+  
+  if (pred & (!is.null(u))) {
+    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+  } else {
+    y.pred <- NULL
+  }
+  
+  
+  
+  results <- list(y.pred = y.pred,
+                  Vu = Vu,
+                  Ve = Ve,
+                  beta = beta,
+                  u = u,
+                  u.each = u.each,
+                  weights = weights,
+                  LL = LL,
+                  Vinv = Vinv,
+                  Hinv = Hinv)
+  
+  return(results)
 }
+
+
+
+
+#' Equation of mixed model for multi-kernel including using other packages (with other packages, much faster than EM3.cpp)
+#'
+#' @description This function solves the following multi-kernel linear mixed effects model 
+#' using \code{\link[MM4LMM]{MMEst}} function in `MM4LMM` package, 
+#' \code{\link[gaston]{lmm.aireml}} or \code{\link[gaston]{lmm.diago}} functions in `gaston` package, 
+#' or \code{\link[RAINBOWR]{EM3.cpp}} function in `RAINBOWR` package.
+#'
+#' \eqn{y = X \beta + \sum _{l=1} ^ {L} Z _ {l} u _ {l} + \epsilon}
+#'
+#' where \eqn{Var[y] = \sum _{l=1} ^ {L} Z _ {l} K _ {l} Z _ {l}' \sigma _ {l} ^ 2 + I \sigma _ {e} ^ {2}}.
+#'
+#'
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X0 A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param ZETA A list of variance matrices and its design matrices of random effects. You can use more than one kernel matrix.
+#' For example, ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D)) (A for additive, D for dominance)
+#' Please set names of lists "Z" and "K"!
+#' @param eigen.G A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
+#' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
+#' If this argument is NULL, the eigen decomposition will be performed in this function.
+#' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param package Package name to be used in this function. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' @param tol The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
+#' Eigen vectors whose eigen values are less than "tol" argument will be omitted from results.
+#' If tol is NULL, top 'n' eigen values will be effective.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' (`n.core` will be replaced by 1 for `package = 'gaston'`)
+#' @param optimizer The function used in the optimization process. 
+#' We offer "optim", "optimx", and "nlminb" functions. 
+#' This argument is only valid when `package = 'RAINBOWR'`.
+#' @param REML You can choose which method you will use, "REML" or "ML".
+#' If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".
+#' @param pred If TRUE, the fitting values of y is returned.
+#' @param return.u.always When using the "gaston" package with missing values or 
+#' using the "MM4LMM" package (with/without missings), computing BLUP will take 
+#' some time in addition to solving the mixed-effects model. You can choose 
+#' whether BLUP (`u`; \eqn{u}) will be returned or not.
+#' @param return.u.each If TRUE, the function also computes each BLUP corresponding 
+#' to different kernels (when solving multi-kernel mixed-effects model). It takes 
+#' additional time compared to the one with `return.u.each = FALSE`  when using packages other than `RAINBOWR`.
+#' @param return.Hinv If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}} 
+#' will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.
+#' It will take some time in addition to solving the mixed-effects model when using packages other than `RAINBOWR`.
+#' @param recheck.RAINBOWR When you use the package other than `RAINBOWR` and the ratio of variance components 
+#' is out of the range of `var.ratio.range`, the function will solve the mixed-effects model again 
+#' with `RAINBOWR` package, if `recheck.RAINBOWR = TRUE`.
+#' @param var.ratio.range The range of variance components to check that the results by 
+#' the package other than RAINBOWR is correct or not when `recheck.RAINBOWR = TRUE`.
+#'
+#' @return
+#' \describe{
+#' \item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
+#' \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
+#' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
+#' \item{$beta}{BLUE(\eqn{\beta})}
+#' \item{$u}{BLUP(Sum of \eqn{Zu})}
+#' \item{$u.each}{BLUP(Each \eqn{u})}
+#' \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
+#' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+#' \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
+#' \item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I}}
+#' }
+#'
+#' @seealso \code{\link[MM4LMM]{MMEst}}, \code{\link[gaston]{lmm.aireml}}, \code{\link[gaston]{lmm.diago}}
+#' 
+#' @references Kang, H.M. et al. (2008) Efficient Control of Population Structure
+#'  in Model Organism Association Mapping. Genetics. 178(3): 1709-1723.
+#'
+#' Zhou, X. and Stephens, M. (2012) Genome-wide efficient mixed-model analysis
+#'  for association studies. Nat Genet. 44(7): 821-824.
+#'
+#' Johnson, D. L., & Thompson, R. (1995). Restricted maximum likelihood estimation of variance 
+#' components for univariate animal models using sparse matrix techniques and average information. 
+#' Journal of dairy science, 78(2), 449-456. 
+#' 
+#' Hunter, D. R., & Lange, K. (2004). A tutorial on MM algorithms. 
+#' The American Statistician, 58(1), 30-37. 
+#' 
+#' Zhou, H., Hu, L., Zhou, J., & Lange, K. (2015). MM algorithms for variance components models. 
+#' arXiv preprint arXiv:1509.07426.
+#' 
+#' Gilmour, A. R., Thompson, R., & Cullis, B. R. (1995), Average information REML: 
+#' an efficient algorithm for variance parameter estimation in linear mixed models, 
+#' Biometrics, 1440-1450.
+#' 
+#' 
+#'
+#' @example R/examples/EM3.general_example.R
+#'
+#'
+#'
+#'
+EM3.general <- function(y, X0 = NULL, ZETA, eigen.G = NULL, 
+                        package = "gaston", tol = NULL, n.core = 1, 
+                        optimizer = "nlminb", REML = TRUE, pred = TRUE, 
+                        return.u.always = TRUE, return.u.each = TRUE, 
+                        return.Hinv = TRUE, recheck.RAINBOWR = TRUE,
+                        var.ratio.range = c(1e-09, 1e07)) {
+  
+  if (package %in% c("MM4LMM", "gaston")) {
+    results <- try(
+      EM3.op(y = y, X0 = X0, ZETA = ZETA, eigen.G = eigen.G, 
+             package = package, tol = tol, n.core = n.core,
+             REML = REML, pred = pred, return.u.always = return.u.always, 
+             return.u.each = return.u.each, return.Hinv = return.Hinv),
+      silent = TRUE)
+    
+    if ("try-error" %in% class(results)) {
+      performRAINBOWR <- TRUE
+    } else if (recheck.RAINBOWR) {
+      varRatio <- results$Vu / results$Ve
+      if ((varRatio <= var.ratio.range[1]) | 
+          (varRatio >= var.ratio.range[2])) {
+        performRAINBOWR <- TRUE
+      } else {
+        performRAINBOWR <- FALSE
+      }
+    } else {
+      performRAINBOWR <- FALSE
+    }
+  } else {
+    performRAINBOWR <- TRUE
+  }
+  
+  if (performRAINBOWR) {
+    results <- EM3.cpp(y = y, X0 = X0, ZETA = ZETA, eigen.G = eigen.G, 
+                       eigen.SGS = NULL, tol = tol, n.core = n.core,
+                       optimizer = optimizer, traceInside = 0, n.thres = 450, 
+                       REML = REML, pred = pred, return.u.always = return.u.always,
+                       return.u.each = return.u.each, return.Hinv = return.Hinv)
+  }
+  
+  
+  return(results)
+}
+
+
 
 
 
@@ -1369,7 +1636,7 @@ EM3.linker.cpp <- function (y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
 #'
 #'
 #'
-score.cpp <- function(y, Gs, Gu, Ge, P0, chi0.mixture = 0.5){
+score.cpp <- function(y, Gs, Gu, Ge, P0, chi0.mixture = 0.5) {
   nuisance.no <- 2
   Gs.all <- c(Gs, list(Gu), list(Ge))
   
@@ -1407,11 +1674,11 @@ score.cpp <- function(y, Gs, Gu, Ge, P0, chi0.mixture = 0.5){
 #'
 #'
 #'
-score.linker.cpp <- function(y, Ws, Gammas, gammas.diag = TRUE, Gu, Ge, P0, chi0.mixture = 0.5){
+score.linker.cpp <- function(y, Ws, Gammas, gammas.diag = TRUE, Gu, Ge, P0, chi0.mixture = 0.5) {
   nuisance.no <- 2
-  if(gammas.diag){
+  if (gammas.diag) {
     W2s <- NULL
-    for(i in 1:length(Ws)){
+    for (i in 1:length(Ws)) {
       W2s.now <- t(t(Ws[[i]]) * sqrt(diag(Gammas[[i]])))
       W2s <- c(W2s, list(W2s.now))
     }
@@ -1421,7 +1688,7 @@ score.linker.cpp <- function(y, Ws, Gammas, gammas.diag = TRUE, Gu, Ge, P0, chi0
     l1 <- score_l1_linker_diag(y = as.matrix(y), p0 = P0, W2s = W2s, lw = length(W2s))
     F.info <- score_fisher_linker_diag(p0 = P0, Gs_all = Gs.all,
                                        nuisance_no = nuisance.no, lw_all = length(Gs.all))
-  }else{
+  } else {
     Gs.all <- c(Ws, list(Gu), list(Ge))
     
     l1 <- score_l1_linker(y = as.matrix(y), p0 = P0, Ws = Ws, Gammas = Gammas, lw = length(Ws))
@@ -1432,4 +1699,342 @@ score.linker.cpp <- function(y, Ws, Gammas, gammas.diag = TRUE, Gu, Ge, P0, chi0
   logp <- ifelse(score.stat <= 0, 0, -log10((1 - chi0.mixture) *
                                               pchisq(score.stat, df = length(Ws), lower.tail = FALSE)))
   return(logp)
+}
+
+
+
+
+
+
+#' Equation of mixed model for multi-kernel using other packages (much faster than EM3.cpp)
+#'
+#' @description This function solves the following multi-kernel linear mixed effects model 
+#' using \code{\link[MM4LMM]{MMEst}} function in `MM4LMM` package, 
+#' \code{\link[gaston]{lmm.aireml}} or \code{\link[gaston]{lmm.diago}} functions in `gaston` package, 
+#' or \code{\link[RAINBOWR]{EM3.cpp}} function in `RAINBOWR` package.
+#'
+#' \eqn{y = X \beta + \sum _{l=1} ^ {L} Z _ {l} u _ {l} + \epsilon}
+#'
+#' where \eqn{Var[y] = \sum _{l=1} ^ {L} Z _ {l} K _ {l} Z _ {l}' \sigma _ {l} ^ 2 + I \sigma _ {e} ^ {2}}.
+#'
+#'
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X0 A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param ZETA A list of variance matrices and its design matrices of random effects. You can use more than one kernel matrix.
+#' For example, ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D)) (A for additive, D for dominance)
+#' Please set names of lists "Z" and "K"!
+#' @param eigen.G A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
+#' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
+#' If this argument is NULL, the eigen decomposition will be performed in this function.
+#' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param package Package name to be used in this function. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' @param tol The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
+#' Eigen vectors whose eigen values are less than "tol" argument will be omitted from results.
+#' If tol is NULL, top 'n' eigen values will be effective.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores (only for `MM4LMM`).
+#' @param REML You can choose which method you will use, "REML" or "ML".
+#' If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".
+#' @param pred If TRUE, the fitting values of y is returned.
+#' @param return.u.always When using the "gaston" package with missing values or 
+#' using the "MM4LMM" package (with/without missings), computing BLUP will take 
+#' some time in addition to solving the mixed-effects model. You can choose 
+#' whether BLUP (`u`; \eqn{u}) will be returned or not.
+#' @param return.u.each If TRUE, the function also computes each BLUP corresponding 
+#' to different kernels (when solving multi-kernel mixed-effects model). It takes 
+#' additional time compared to the one with `return.u.each = FALSE`.
+#' @param return.Hinv If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}} 
+#' will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.
+#' It will take some time in addition to solving the mixed-effects model.
+#'
+#' @return
+#' \describe{
+#' \item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
+#' \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
+#' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
+#' \item{$beta}{BLUE(\eqn{\beta})}
+#' \item{$u}{BLUP(Sum of \eqn{Zu})}
+#' \item{$u.each}{BLUP(Each \eqn{u})}
+#' \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
+#' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+#' \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
+#' \item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I}}
+#' }
+#'
+#' @seealso \code{\link[MM4LMM]{MMEst}}, \code{\link[gaston]{lmm.aireml}}, \code{\link[gaston]{lmm.diago}}
+#' 
+#' @references Kang, H.M. et al. (2008) Efficient Control of Population Structure
+#'  in Model Organism Association Mapping. Genetics. 178(3): 1709-1723.
+#'
+#' Zhou, X. and Stephens, M. (2012) Genome-wide efficient mixed-model analysis
+#'  for association studies. Nat Genet. 44(7): 821-824.
+#'
+#' Johnson, D. L., & Thompson, R. (1995). Restricted maximum likelihood estimation of variance 
+#' components for univariate animal models using sparse matrix techniques and average information. 
+#' Journal of dairy science, 78(2), 449-456. 
+#' 
+#' Hunter, D. R., & Lange, K. (2004). A tutorial on MM algorithms. 
+#' The American Statistician, 58(1), 30-37. 
+#' 
+#' Zhou, H., Hu, L., Zhou, J., & Lange, K. (2015). MM algorithms for variance components models. 
+#' arXiv preprint arXiv:1509.07426.
+#' 
+#' Gilmour, A. R., Thompson, R., & Cullis, B. R. (1995), Average information REML: 
+#' an efficient algorithm for variance parameter estimation in linear mixed models, 
+#' Biometrics, 1440-1450.
+#' 
+#' 
+#'
+#'
+#'
+#'
+#'
+EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
+                   tol = NULL, n.core = 1, REML = TRUE, pred = TRUE, return.u.always = TRUE,
+                   return.u.each = TRUE, return.Hinv = TRUE) {
+  y <- as.matrix(y)
+  n <- nrow(y)
+  
+  not.NA <- which(!is.na(y))
+  
+  if (is.null(X0)) {
+    p <- 1
+    X0 <- matrix(rep(1, n), n, 1)
+  }
+  rownames(X0) <- rownames(ZETA[[1]]$Z)
+  p <- ncol(X0)
+  
+  X <- X0[not.NA, , drop = FALSE]
+  n <- length(not.NA)
+  y <- y[not.NA, , drop = FALSE]
+  rownames(y) <- rownames(X)
+  
+  
+  
+  if (package == "MM4LMM") {
+    if (REML) {
+      remlMethod <- "Reml"
+    } else {
+      remlMethod <- "ML"
+    }
+    
+    residVar <- diag(n)
+    rownames(residVar) <- colnames(residVar) <- rownames(X)
+    residZ <- residVar
+    
+    VarList <- c(lapply(X = ZETA,
+                        FUN = function(x) {
+                          x$K
+                        }),
+                 list(Resid = residVar))
+    
+    ZList <- c(lapply(X = ZETA,
+                      FUN = function(x) {
+                        x$Z[not.NA, , drop = FALSE]
+                      }),
+               list(Resid = residZ))
+    
+    mm4Res <- MM4LMM::MMEst(
+      Y = y,
+      Cofactor = X,
+      X = NULL,
+      VarList = VarList,
+      ZList = ZList,
+      Method = remlMethod,
+      NbCores = n.core
+    )[[1]]
+    
+    Vu <- sum(mm4Res$Sigma2[-length(VarList)])
+    weights <- mm4Res$Sigma2[-length(VarList)] / Vu
+    Ve <- mm4Res$Sigma2[length(VarList)]
+    beta <- mm4Res$Beta
+    u <- NULL
+    
+    mm4LL <- mm4Res$`LogLik (Reml)`
+    LL <- c(mm4LL - (((n - p) * log(2 * pi)) - 
+                       sum(log(eigen(crossprod(X))$values))) / 2)
+  } else if (package == "gaston") {
+    if (!REML) {
+      warning("We only offer REML solvers for `gaston` package, sorry... `REML` argument will switch to `TRUE`.")
+      REML <- TRUE
+    }
+    
+    n.core <- 1
+    
+    
+    if (length(ZETA) >= 2) {
+      KList <- lapply(X = ZETA,
+                      FUN = function(x) {
+                        whichExtract <- apply(x$Z[not.NA, ], 1, function(x) which(x == 1))
+                        x$K[whichExtract, whichExtract]
+                      })
+      gastonRes <- gaston::lmm.aireml(
+        Y = y,
+        X = X,
+        K = KList,
+        get.P = FALSE,
+        verbose = FALSE
+      )
+      gastonLL <- gastonRes$logL
+    } else if (length(ZETA) == 1) {
+      if (is.null(eigen.G)) {
+        ZETANonNA <- lapply(X = ZETA,
+                            FUN = function(x) {
+                              list(Z = x$Z[not.NA, ], K = x$K)
+                            })
+        eigen.G <- spectralG.cpp(ZETA = ZETANonNA,
+                                 X = X,
+                                 return.G = TRUE,
+                                 return.SGS = FALSE)$spectral.G
+      }
+      names(eigen.G) <- c("vectors", "values")
+      
+      if (is.null(tol)) {
+        tol <- .Machine$double.eps ^ 0.25
+      }
+      
+      
+      gastonRes <- gaston::lmm.diago(
+        Y = y,
+        X = X,
+        eigenK = eigen.G,
+        p = 0,
+        tol = tol,
+        verbose = FALSE
+      )
+      gastonLL <- gaston::lmm.diago.likelihood(tau = gastonRes$tau,
+                                               s2 = gastonRes$sigma2,
+                                               Y = y,
+                                               X = X,
+                                               eigenK = eigen.G,
+                                               p = 0)
+    } else {
+      stop("The length of `ZETA` should be equal to or larger than 1 !!")
+    }
+    
+    
+    Vu <- sum(gastonRes$tau)
+    weights <- gastonRes$tau / Vu
+    Ve <- gastonRes$sigma2
+    beta <- gastonRes$BLUP_beta
+    if (n == nrow(X0)) {
+      u <- as.matrix(gastonRes$BLUP_omega)
+      rownames(u) <- rownames(ZETA[[1]]$Z)
+    } else {
+      u <- NULL
+    }
+    
+    LL <- c(gastonLL - (((n - p) * log(2 * pi)) - 
+                          sum(log(eigen(crossprod(X))$values))) / 2)
+  } else {
+    stop("We only offer functions in three packages: 'RAINBOWR', 'MM4LMM', and 'gaston'. Please specify one of them.") 
+  }
+  
+  
+  if (pred & (!return.u.always)) {
+    return.u.always <- TRUE
+    message("`return.u.always` is switched to TRUE because you require predicted values.")
+  }
+  
+  
+  if (return.Hinv | return.u.each | return.u.always) {
+    if (is.null(eigen.G)) {
+      ZETANonNA <- lapply(X = ZETA,
+                          FUN = function(x) {
+                            list(Z = x$Z[not.NA, ], K = x$K)
+                          })
+      eigen.G <- spectralG.cpp(ZETA = ZETANonNA,
+                               X = X,
+                               weights = weights,
+                               return.G = TRUE,
+                               return.SGS = FALSE)$spectral.G
+    }
+    names(eigen.G) <- c("vectors", "values")
+    
+    eigenVal <- eigen.G$values
+    eigenVec <- eigen.G$vectors
+    eigenValForHinv <- matrix(data = rep(1 / (eigenVal + Ve / Vu),
+                                         nrow(eigenVec)),
+                              nrow = nrow(eigenVec),
+                              byrow = TRUE)
+    Hinv <- tcrossprod(eigenVec * eigenValForHinv, eigenVec)
+    rownames(Hinv) <- colnames(Hinv) <- rownames(X)
+    Vinv <- Hinv / Vu
+    
+    
+    if (return.u.always | return.u.each) {
+      if ((length(ZETA) >= 2) | (is.null(u))) {
+        ZAll <- do.call(
+          what = cbind,
+          args = lapply(X = ZETA,
+                        FUN = function(x) {
+                          x$Z
+                        })
+        )
+        KAll <- Matrix::.bdiag(lst = sapply(X = 1:length(ZETA),
+                                            FUN = function(x) {
+                                              ZETA[[x]]$K * weights[x]
+                                            },
+                                            simplify = FALSE))
+        ZKAll <- as.matrix(ZAll %*% KAll)
+        
+        e <- y - X %*% beta
+        u.each <- crossprod(ZKAll[not.NA, ], Hinv %*% e)
+        
+        if (is.null(u)) {
+          u <- ZAll %*% u.each
+        }
+      } else {
+        u.each <- u
+      }
+      
+      rownames(u.each) <- paste0(
+        paste0("K_", rep(1:length(ZETA), 
+                         lapply(X = ZETA, 
+                                FUN = function(x) {
+                                  nrow(x$K)
+                                }))),
+        "_",
+        unlist(lapply(X = ZETA, 
+                      FUN = function(x) {
+                        rownames(x$K)
+                      }))
+      )
+    } else {
+      u.each <- NULL
+    }
+    
+    
+    
+    if (!return.Hinv) {
+      Vinv <- NULL
+      Hinv <- NULL
+    }
+  } else {
+    u.each <- Vinv <- Hinv <- NULL
+  }
+  
+  
+  if (pred & (!is.null(u))) {
+    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+  } else {
+    y.pred <- NULL
+  }
+  
+  
+  
+  results <- list(y.pred = y.pred,
+                  Vu = Vu,
+                  Ve = Ve,
+                  beta = beta,
+                  u = u,
+                  u.each = u.each,
+                  weights = weights,
+                  LL = LL,
+                  Vinv = Vinv,
+                  Hinv = Hinv)
 }

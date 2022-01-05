@@ -34,14 +34,14 @@
   
   
   ### Solve multi-kernel linear mixed effects model (2 random efects)
-  EM3.res <- EM3.cpp(y = pheno.mat, X = NULL, ZETA = ZETA)
+  EM3.res <- EM3.cpp(y = pheno.mat, X0 = NULL, ZETA = ZETA)
   Vu <- EM3.res$Vu   ### estimated genetic variance
   Ve <- EM3.res$Ve   ### estimated residual variance
   weights <- EM3.res$weights   ### estimated proportion of two genetic variances
   herit <- Vu * weights / (Vu + Ve)   ### genomic heritability (additive, additive x additive)
   
   beta <- EM3.res$beta   ### Here, this is an intercept.
-  u <- EM3.res$u   ### estimated genotypic values (additive, additive x additive)
+  u.each <- EM3.res$u.each   ### estimated genotypic values (additive, additive x additive)
 }
 
 
@@ -85,15 +85,15 @@
   
   
   ### Solve multi-kernel linear mixed effects model (2 random efects)
-  EM3.res <- EM3.cpp(y = pheno.mat, X = NULL, ZETA = ZETA)
+  EM3.res <- EM3.cpp(y = pheno.mat, X0 = NULL, ZETA = ZETA)
   (Vu <- EM3.res$Vu)   ### estimated genetic variance
   (Ve <- EM3.res$Ve)   ### estimated residual variance
   (weights <- EM3.res$weights)   ### estimated proportion of two genetic variances
   (herit <- Vu * weights / (Vu + Ve))   ### genomic heritability (additive, additive x additive)
   
   (beta <- EM3.res$beta)   ### Here, this is an intercept.
-  u <- EM3.res$u   ### estimated genotypic values (additive, additive x additive)
-  See(u)
+  u.each <- EM3.res$u.each   ### estimated genotypic values (additive, additive x additive)
+  See(u.each)
   
   
   ### Perform genomic prediction with 10-fold cross validation (multi-kernel)
@@ -120,7 +120,7 @@
     yTrain <- phenoNoNA
     yTrain[idCV == noCV, ] <- NA   ### prepare test data
     
-    EM3.resCV <- EM3.cpp(y = yTrain, X = NULL, ZETA = ZETANoNA)   ### prediction
+    EM3.resCV <- EM3.cpp(y = yTrain, X0 = NULL, ZETA = ZETANoNA)   ### prediction
     yTest <-  EM3.resCV$y.pred     ### predicted values
     
     yPred[idCV == noCV] <- yTest[idCV == noCV]

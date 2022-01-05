@@ -13,6 +13,9 @@
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param covariate A \eqn{n \times 1} vector or a \eqn{n \times p _ 1} matrix. You can insert continuous values, such as other traits or genotype score for special markers.
 #' This argument is regarded as one of the fixed effects.
 #' @param covariate.factor A \eqn{n \times p _ 2} dataframe. You should assign a factor vector for each column.
@@ -22,7 +25,28 @@
 #' @param n.PC Number of principal components to include as fixed effects. Default is 0 (equals K model).
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is assigned a zero score.
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores (use only at UNIX command line).
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param check.size.epi This argument determines how many SNPs (around the SNP detected by normal GWAS) you will check epistasis.
 #' @param epistasis.percent This argument determines how many SNPs are detected by normal GWAS.
 #' For example, when epistasis.percent = 0.1, SNPs whose value of -log10(p) is in the top 0.1 percent are chosen as candidate for checking epistasis.
@@ -41,6 +65,8 @@
 #' @param dominance.eff If this argument is TRUE, dominance effect is included in the model,
 #' and additive x dominance and dominance x dominance are also tested as epistatic effects.
 #' When you use inbred lines, please set this argument FALSE.
+#' @param skip.self.int As default, the function also tests the self-interactions among the same SNP-sets.
+#' If you want to avoid this, please set `skip.self.int = TRUE`.
 #' @param haplotype If the number of lines of your data is large (maybe > 100), you should set haplotype = TRUE.
 #'             When haplotype = TRUE, haplotype-based kernel will be used for calculating -log10(p).
 #'             (So the dimension of this gram matrix will be smaller.)
@@ -82,6 +108,9 @@
 #' @param main.man.1 The title of manhattan plot for normal GWAS. If this argument is NULL, trait name is set as the title.
 #' @param main.epi.3d The title of 3d plot. If this argument is NULL, trait name is set as the title.
 #' @param main.epi.2d The title of 2d plot. If this argument is NULL, trait name is set as the title.
+#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
+#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+#' by setting `skip.check = TRUE`.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #' @param verbose2 If this argument is TRUE, welcome message will be shown.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
@@ -138,39 +167,50 @@
 #' @example R/examples/RGWAS.twostep.epi_example.R
 #'
 #'
-RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covariate.factor = NULL,
-                              structure.matrix = NULL, n.PC = 0, min.MAF = 0.02, n.core = 1,
+RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
+                              covariate = NULL, covariate.factor = NULL,
+                              structure.matrix = NULL, n.PC = 0, min.MAF = 0.02, 
+                              n.core = 1, parallel.method = "mclapply",
                               check.size.epi = 4, epistasis.percent = 0.05, check.epi.max = 200,
                               your.check = NULL, GWAS.res.first = NULL, P3D = TRUE, test.method = "LR",
-                              dominance.eff = TRUE, haplotype = TRUE, num.hap = NULL, optimizer = "nlminb",
+                              dominance.eff = TRUE, skip.self.int = FALSE,
+                              haplotype = TRUE, num.hap = NULL, optimizer = "nlminb",
                               window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
                               gene.set = NULL, sig.level = 0.05, method.thres = "BH", plot.qq.1 = TRUE, plot.Manhattan.1 = TRUE,
                               plot.epi.3d = TRUE, plot.epi.2d = TRUE, plot.method = 1,
                               plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
                               plot.type = "p", plot.pch = 16, saveName = NULL, main.qq.1 = NULL,
                               main.man.1 = NULL, main.epi.3d = NULL, main.epi.2d = NULL,
-                              verbose = TRUE, verbose2 = FALSE, count = TRUE, time = TRUE){
-
+                              skip.check = FALSE, verbose = TRUE, 
+                              verbose2 = FALSE, count = TRUE, time = TRUE) {
+  
   start <- Sys.time()
-  if(is.null(GWAS.res.first)){
+  if (is.null(GWAS.res.first)) {
     if (verbose) {
       print("The 1st step: Performing normal GWAS!")
     }
-    GWAS.res.first <- RGWAS.normal(pheno = pheno, geno = geno, ZETA = ZETA, covariate = covariate,
-                                   covariate.factor = covariate.factor, structure.matrix = structure.matrix,
-                                   n.PC = n.PC, min.MAF = min.MAF, P3D = P3D, n.core = n.core,
-                                   sig.level = sig.level, method.thres = method.thres, plot.qq = plot.qq.1, plot.Manhattan = plot.Manhattan.1,
+    GWAS.res.first <- RGWAS.normal(pheno = pheno, geno = geno, ZETA = ZETA, 
+                                   package.MM = package.MM, covariate = covariate,
+                                   covariate.factor = covariate.factor, 
+                                   structure.matrix = structure.matrix,
+                                   n.PC = n.PC, min.MAF = min.MAF, P3D = P3D, 
+                                   n.core = n.core, parallel.method = parallel.method,
+                                   sig.level = sig.level, method.thres = method.thres,
+                                   plot.qq = plot.qq.1, plot.Manhattan = plot.Manhattan.1,
                                    plot.method = plot.method, plot.col1 = plot.col1, plot.col2 = plot.col2,
-                                   plot.type = plot.type, plot.pch = plot.pch, saveName = saveName, optimizer = optimizer,
-                                   main.qq = main.qq.1, main.man = main.man.1, plot.add.last = FALSE, return.EMM.res = FALSE,
-                                   thres = FALSE, verbose = verbose, verbose2 = verbose2, count = count, time = time)
-  }else{
-    if (verbose){
-        print("The 1st step has already finished because you input 'GWAS.res.first'.")
-      }
+                                   plot.type = plot.type, plot.pch = plot.pch,
+                                   saveName = saveName, optimizer = optimizer,
+                                   main.qq = main.qq.1, main.man = main.man.1, 
+                                   plot.add.last = FALSE, return.EMM.res = FALSE,
+                                   thres = FALSE, skip.check = skip.check, verbose = verbose,
+                                   verbose2 = verbose2, count = count, time = time)
+  } else {
+    if (verbose) {
+      print("The 1st step has already finished because you input 'GWAS.res.first'.")
+    }
   }
-
-
+  
+  
   n.pheno <- ncol(GWAS.res.first) - 3
   trait.names <- colnames(GWAS.res.first)[4:(4 + n.pheno - 1)]
   map <- geno[, 1:3]
@@ -183,56 +223,56 @@ RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covari
   chr.cum <- cumsum(chr.tab)
   pos <- map[,3]
   cum.pos <- pos
-  if(length(chr.tab) != 1){
-    for(i in 1:(chr.max - 1)){
-      cum.pos[(chr.cum[i] + 1): (chr.cum[i + 1])] <- pos[(chr.cum[i] + 1):(chr.cum[i + 1])] + cum.pos[chr.cum[i]]
+  if (length(chr.tab) != 1) {
+    for (i in 1:(chr.max - 1)) {
+      cum.pos[(chr.cum[i] + 1):(chr.cum[i + 1])] <- pos[(chr.cum[i] + 1):(chr.cum[i + 1])] + cum.pos[chr.cum[i]]
     }
   }
-
-
-  if(n.pheno != 1){
+  
+  
+  if (n.pheno != 1) {
     all.epi.res <- rep(list(NA), n.pheno)
-  }else{
+  } else {
     all.epi.res <- NULL
   }
-
-
-
-  for(pheno.no in 1:n.pheno){
+  
+  
+  
+  for (pheno.no in 1:n.pheno) {
     trait.name <- trait.names[pheno.no]
     pheno.now <- pheno[, c(1, pheno.no + 1)]
-
-    if(is.null(your.check)){
+    
+    if (is.null(your.check)) {
       pval.first <- GWAS.res.first[, pheno.no + 3]
       ord.pval.first <- order(pval.first, decreasing = TRUE)
       check.epi.no.0 <- round(length(pval.first) * (epistasis.percent / 100), 0) * (check.size.epi + 1)
       check.epi.no <- ifelse(check.epi.no.0 >= check.epi.max, check.epi.max, check.epi.no.0)
       ord.pval.epi.percent <- ord.pval.first[1:check.epi.no]
-
+      
       check.size.epi.half <- check.size.epi / 2
       checks.mat <- matrix(NA, nrow = length(ord.pval.epi.percent) * (check.size.epi + 1),
                            ncol = length(ord.pval.epi.percent))
-      for(check.no in 1:length(ord.pval.epi.percent)){
+      for (check.no in 1:length(ord.pval.epi.percent)) {
         check <- sort(ord.pval.epi.percent)[check.no]
         checks.mat[, check.no] <- (check - check.size.epi.half):(check + check.size.epi.half)
       }
       checks <- unique(c(checks.mat))
       checks <- checks[(checks >= 1) & (checks <= length(pos))]
-    }else{
+    } else {
       checks <- your.check
       checks <- checks[(checks >= 1) & (checks <= length(pos))]
     }
-
+    
     n.checks <- length(checks)
     pseudo.chr <- rep(NA, n.checks)
     pseudo.chr[1] <- 1
-    for(k in 2:n.checks){
+    for (k in 2:n.checks) {
       pseudo.chr.now <- pseudo.chr[k - 1]
-
+      
       check.diff <- checks[k] - checks[k - 1]
-      if(check.diff == 1){
+      if (check.diff == 1) {
         pseudo.chr[k] <- pseudo.chr.now
-      }else{
+      } else {
         pseudo.chr[k] <- pseudo.chr.now + 1
       }
     }
@@ -242,63 +282,69 @@ RGWAS.twostep.epi <- function(pheno, geno, ZETA = NULL, covariate = NULL, covari
                              pos = pseudo.pos)
     M.check <- geno[checks, -c(1:3)]
     geno.check <- cbind(pseudo.map, M.check)
-
+    
     if (verbose) {
       print(paste("The 2nd step: Calculating -log10(p) of epistatic effects of", trait.name, "for", n.checks, "x", n.checks,"SNPs."))
     }
-    RGWAS.epistasis.res <- RGWAS.epistasis(pheno = pheno.now, geno = geno.check, ZETA = ZETA, covariate = covariate,
-                                           covariate.factor = covariate.factor, structure.matrix = structure.matrix,
-                                           n.PC = n.PC, min.MAF = min.MAF, n.core = n.core,
-                                           test.method = test.method, dominance.eff = dominance.eff, haplotype = haplotype,
-                                           num.hap = num.hap, window.size.half = window.size.half, window.slide = window.slide,
-                                           chi0.mixture = chi0.mixture, gene.set = gene.set, optimizer = optimizer,
+    RGWAS.epistasis.res <- RGWAS.epistasis(pheno = pheno.now, geno = geno.check, ZETA = ZETA, 
+                                           package.MM = package.MM, covariate = covariate,
+                                           covariate.factor = covariate.factor, 
+                                           structure.matrix = structure.matrix,
+                                           n.PC = n.PC, min.MAF = min.MAF, 
+                                           n.core = n.core, parallel.method = parallel.method,
+                                           test.method = test.method, dominance.eff = dominance.eff,
+                                           skip.self.int = skip.self.int, haplotype = haplotype,
+                                           num.hap = num.hap, window.size.half = window.size.half,
+                                           window.slide = window.slide, chi0.mixture = chi0.mixture, 
+                                           gene.set = gene.set, optimizer = optimizer,
                                            plot.epi.3d = FALSE, plot.epi.2d = FALSE, main.epi.3d = main.epi.3d,
-                                           main.epi.2d = main.epi.2d, saveName = saveName, verbose = verbose,
+                                           main.epi.2d = main.epi.2d, saveName = saveName, 
+                                           skip.check = TRUE, verbose = verbose,
                                            verbose2 = verbose2, count = count, time = time)
-
-
+    
+    
     check.tests <- as.numeric(rownames(RGWAS.epistasis.res$map))
     n.check.tests <- length(check.tests)
-
+    
     scores.epi <- RGWAS.epistasis.res$scores$scores
     rownames(scores.epi) <- colnames(scores.epi) <- check.tests
-
+    
     cum.pos2 <- cum.pos[check.tests]
     x.3d <- rep(cum.pos2, n.check.tests)
     y.3d <- rep(cum.pos2, each = n.check.tests)
     z.3d <- c(scores.epi)
-
+    
     epi.res <- list(scores = scores.epi, x = x.3d, y = y.3d, z = z.3d)
-
-    if(is.null(main.epi.3d)){
+    
+    if (is.null(main.epi.3d)) {
       main.epi.3d <- trait.name
     }
-    if(is.null(main.epi.2d)){
+    if (is.null(main.epi.2d)) {
       main.epi.2d <- trait.name
     }
-
+    
     if (verbose) {
       print("Now Plotting (3d plot for epistasis). Please Wait.")
     }
     manhattan3(input = epi.res, map = RGWAS.epistasis.res$map, cum.pos = cum.pos, plot.epi.3d = plot.epi.3d,
                plot.epi.2d = plot.epi.2d, main.epi.3d = main.epi.3d,
                main.epi.2d = main.epi.2d, saveName = saveName)
-
-    if(n.pheno >= 2){
+    
+    if (n.pheno >= 2) {
       all.epi.res[[pheno.no]] <- epi.res
       names(all.epi.res) <- trait.names
-    }else{
+    } else {
       all.epi.res <- epi.res
     }
   }
-
-
-
+  
+  
+  
   end <- Sys.time()
-
-  if(time){
+  
+  if (time) {
     print(end - start)
   }
-
+  
   return(list(first = GWAS.res.first, map.epi = RGWAS.epistasis.res$map, epistasis = all.epi.res))
 }

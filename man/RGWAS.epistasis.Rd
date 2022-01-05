@@ -8,14 +8,17 @@ RGWAS.epistasis(
   pheno,
   geno,
   ZETA = NULL,
+  package.MM = "gaston",
   covariate = NULL,
   covariate.factor = NULL,
   structure.matrix = NULL,
   n.PC = 0,
   min.MAF = 0.02,
   n.core = 1,
+  parallel.method = "mclapply",
   test.method = "LR",
   dominance.eff = TRUE,
+  skip.self.int = FALSE,
   haplotype = TRUE,
   num.hap = NULL,
   window.size.half = 5,
@@ -28,6 +31,7 @@ RGWAS.epistasis(
   main.epi.3d = NULL,
   main.epi.2d = NULL,
   saveName = NULL,
+  skip.check = FALSE,
   verbose = TRUE,
   verbose2 = FALSE,
   count = TRUE,
@@ -51,6 +55,10 @@ ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D))
 }
 For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.}
 
+\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+"RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+See more details at \code{\link{EM3.general}}.}
+
 \item{covariate}{A \eqn{n \times 1} vector or a \eqn{n \times p _ 1} matrix. You can insert continuous values, such as other traits or genotype score for special markers.
 This argument is regarded as one of the fixed effects.}
 
@@ -65,7 +73,29 @@ You should not use this argument with n.PC > 0.}
 \item{min.MAF}{Specifies the minimum minor allele frequency (MAF).
 If a marker has a MAF less than min.MAF, it is assigned a zero score.}
 
-\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores (use only at UNIX command line).}
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+This argument is not valid when `parallel.method = "furrr"`.}
+
+\item{parallel.method}{Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+
+When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+
+When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+
+When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+\code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+
+We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+this parallelization method is not supported. So, if you are Windows user, 
+we recommend that you use the option `parallel.method = "foreach"`.}
 
 \item{test.method}{RGWAS supports two methods to test effects of each SNP-set.
 \describe{
@@ -76,6 +106,9 @@ If a marker has a MAF less than min.MAF, it is assigned a zero score.}
 \item{dominance.eff}{If this argument is TRUE, dominance effect is included in the model,
 and additive x dominance and dominance x dominance are also tested as epistatic effects.
 When you use inbred lines, please set this argument FALSE.}
+
+\item{skip.self.int}{As default, the function also tests the self-interactions among the same SNP-sets.
+If you want to avoid this, please set `skip.self.int = TRUE`.}
 
 \item{haplotype}{If the number of lines of your data is large (maybe > 100), you should set haplotype = TRUE.
 When haplotype = TRUE, haplotype-based kernel will be used for calculating -log10(p).
@@ -113,6 +146,10 @@ which correspond to the marker names of "geno" argument.}
 
 \item{saveName}{When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
 When saveName = NULL, the plot is not saved.}
+
+\item{skip.check}{As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
+However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+by setting `skip.check = TRUE`.}
 
 \item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
 

@@ -16,7 +16,10 @@ EM3.cpp(
   traceInside = 0,
   n.thres = 450,
   REML = TRUE,
-  pred = TRUE
+  pred = TRUE,
+  return.u.always = TRUE,
+  return.u.each = TRUE,
+  return.Hinv = TRUE
 )
 }
 \arguments{
@@ -63,6 +66,15 @@ If tol is NULL, top 'n' eigen values will be effective.}
 If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".}
 
 \item{pred}{If TRUE, the fitting values of y is returned.}
+
+\item{return.u.always}{If TRUE, BLUP (`u`; \eqn{u}) will be returned.}
+
+\item{return.u.each}{If TRUE, the function also computes each BLUP corresponding 
+to different kernels (when solving multi-kernel mixed-effects model). It takes 
+additional time compared to the one with `return.u.each = FALSE`.}
+
+\item{return.Hinv}{If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}} 
+will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.}
 }
 \value{
 \describe{
@@ -70,7 +82,8 @@ If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "
 \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
 \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
 \item{$beta}{BLUE(\eqn{\beta})}
-\item{$u}{BLUP(\eqn{u})}
+\item{$u}{BLUP(Sum of \eqn{Zu})}
+\item{$u.each}{BLUP(Each \eqn{u})}
 \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
 \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
 \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
@@ -121,14 +134,14 @@ where \eqn{Var[y] = \sum _{l=1} ^ {L} Z _ {l} K _ {l} Z _ {l}' \sigma _ {l} ^ 2 
   
   
   ### Solve multi-kernel linear mixed effects model (2 random efects)
-  EM3.res <- EM3.cpp(y = pheno.mat, X = NULL, ZETA = ZETA)
+  EM3.res <- EM3.cpp(y = pheno.mat, X0 = NULL, ZETA = ZETA)
   Vu <- EM3.res$Vu   ### estimated genetic variance
   Ve <- EM3.res$Ve   ### estimated residual variance
   weights <- EM3.res$weights   ### estimated proportion of two genetic variances
   herit <- Vu * weights / (Vu + Ve)   ### genomic heritability (additive, additive x additive)
   
   beta <- EM3.res$beta   ### Here, this is an intercept.
-  u <- EM3.res$u   ### estimated genotypic values (additive, additive x additive)
+  u.each <- EM3.res$u.each   ### estimated genotypic values (additive, additive x additive)
 }
 
 
@@ -172,15 +185,15 @@ where \eqn{Var[y] = \sum _{l=1} ^ {L} Z _ {l} K _ {l} Z _ {l}' \sigma _ {l} ^ 2 
   
   
   ### Solve multi-kernel linear mixed effects model (2 random efects)
-  EM3.res <- EM3.cpp(y = pheno.mat, X = NULL, ZETA = ZETA)
+  EM3.res <- EM3.cpp(y = pheno.mat, X0 = NULL, ZETA = ZETA)
   (Vu <- EM3.res$Vu)   ### estimated genetic variance
   (Ve <- EM3.res$Ve)   ### estimated residual variance
   (weights <- EM3.res$weights)   ### estimated proportion of two genetic variances
   (herit <- Vu * weights / (Vu + Ve))   ### genomic heritability (additive, additive x additive)
   
   (beta <- EM3.res$beta)   ### Here, this is an intercept.
-  u <- EM3.res$u   ### estimated genotypic values (additive, additive x additive)
-  See(u)
+  u.each <- EM3.res$u.each   ### estimated genotypic values (additive, additive x additive)
+  See(u.each)
   
   
   ### Perform genomic prediction with 10-fold cross validation (multi-kernel)
@@ -207,7 +220,7 @@ where \eqn{Var[y] = \sum _{l=1} ^ {L} Z _ {l} K _ {l} Z _ {l}' \sigma _ {l} ^ 2 
     yTrain <- phenoNoNA
     yTrain[idCV == noCV, ] <- NA   ### prepare test data
     
-    EM3.resCV <- EM3.cpp(y = yTrain, X = NULL, ZETA = ZETANoNA)   ### prediction
+    EM3.resCV <- EM3.cpp(y = yTrain, X0 = NULL, ZETA = ZETANoNA)   ### prediction
     yTest <-  EM3.resCV$y.pred     ### predicted values
     
     yPred[idCV == noCV] <- yTest[idCV == noCV]

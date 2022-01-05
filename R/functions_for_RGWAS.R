@@ -5,14 +5,14 @@
 #'
 #'
 #'
-# welcome_to_RGWAS <- function(){
+# welcome_to_RGWAS <- function() {
 #   cat("#-------------------------------------------------------------------------------------------------# \n")
 #   cat("#          ^   ^   - - - -\\       Welcome to RAINBOWR GWAS!!!                                      #\n")
 #   cat("#        ( -   - )      (@_/      Reliable Association INference By Optimizing the Weight         #\n")
 #   cat("#       //   -   \\\\  - - -        Function for performing normal and kernel-based GWAS.           #\n")
 #   cat("#-------------------------------------------------------------------------------------------------# \n")
 # }
-welcome_to_RGWAS <- function(){
+welcome_to_RGWAS <- function() {
   if (getPackageName() == ".GlobalEnv") {
     version <- "devel"
   }
@@ -32,6 +32,202 @@ welcome_to_RGWAS <- function(){
 }
 
 
+
+
+
+#' Function to parallelize computation with various methods
+#'
+#'
+#'
+#' @param vec Numeric vector including the values that are computed in parallel.
+#' @param func The function to be applied to each element of `vec` argument. 
+#' This function must only have one argument.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
+#' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
+#'
+#' @return List of the results for each element of `vec` argument.
+#'
+#'
+parallel.compute <- function(vec,
+                             func,
+                             n.core = 2,
+                             parallel.method = "mclapply",
+                             count = TRUE) {
+  isWindows <- .Platform$OS.type == "windows"
+  if (parallel.method == "furrr") {
+    if (requireNamespace("furrr", quietly = TRUE) &
+        requireNamespace("future", quietly = TRUE)) {
+      parallel.method <- parallel.method
+      
+      if (requireNamespace("progressr", quietly = TRUE)) {
+        count <- count
+      } else {
+        warning(paste0("If you want to use 'furrr' with progress bar, please install `progressr` package! \n",
+                       "We switched `count = FALSE`."))
+        count <- FALSE
+      }
+    } else {
+      parallel.method <- ifelse(test = isWindows,
+                                yes = "foreach",
+                                no = "mclapply")
+      warning(paste0("If you want to use 'furrr', please install `furrr` and `future` packages from Bioconductor! \n",
+                     "We switched `parallel.method = ",
+                     parallel.method, "`."))      
+    }
+  }
+  
+  if (isWindows & (parallel.method == "mclapply")) {
+    warning(paste0("'mclapply' method is not offered for Windows OS. \n",
+                   "`parallel.method` is switched to 'foreach'."))
+    parallel.method <- "foreach"
+  }
+  
+  if (parallel.method == "foreach") {
+    if (requireNamespace("foreach", quietly = TRUE) &
+        requireNamespace("doParallel", quietly = TRUE)) {
+      parallel.method <- parallel.method
+    } else {
+      if (isWindows) {
+        stop("You have to install `foreach` and `doParallel` packages if you're Windows user!!")
+      } else {
+        parallel.method <- "mclapply"
+        warning(paste0("If you want to use 'foreach', please install `foreach` and `doParallel` packages! \n",
+                       "We switched `parallel.method = ",
+                       parallel.method, "`."))   
+      }
+    }
+  }
+  
+  
+  
+  
+  
+  if (parallel.method == "mclapply") {
+    if (count) {
+      all.res <- pbmcapply::pbmclapply(X = vec,
+                                       FUN = func, 
+                                       mc.cores = n.core)
+    } else {
+      all.res <- parallel::mclapply(X = vec, 
+                                    FUN = func, 
+                                    mc.cores = n.core)
+    }
+  } else if (parallel.method == "furrr") {
+    suppressWarnings(
+      future::plan(future::multisession(
+        gc = TRUE
+      ))
+    )
+    
+    func.pb <- function(xs) {
+      if (count) {
+        p <- progressr::progressor(along = xs)
+      }
+      all.res.pb <- suppressWarnings(
+        furrr::future_map(
+          .x = xs,
+          .f = function(x) {
+            if (count) {
+              p()
+            }
+            
+            return(func(x))
+          }
+        ) 
+      )
+      
+      return(all.res.pb)
+    }
+    
+    if (count) {
+      progressr::handlers(global = TRUE)
+      progressr::handlers("progress", "beepr")
+    }
+    
+    all.res <- func.pb(xs = vec)
+  } else if (parallel.method == "foreach") {
+    i <- 0
+    clust <- parallel::makeCluster(spec = n.core)
+    doParallel::registerDoParallel(cl = clust)
+    `%dopar%` <- foreach::`%dopar%`
+    
+    if (count) {
+      count.func <- function() {
+        pb <- utils::txtProgressBar(min = 1, max = length(vec) - 1, 
+                                    style = 3)
+        count.no <- 0
+        function(...) {
+          assign(x = "count.no",
+                 value = count.no + length(list(...)) - 1,
+                 envir = parent.env(env = environment()))
+          utils::setTxtProgressBar(pb, count.no)
+          utils::flush.console()
+          c(...)
+        }
+      }
+      all.res <- foreach::foreach(i = vec,
+                                  .combine = count.func()) %dopar% {
+                                    return(func(i))
+                                  }
+    } else {
+      all.res <- foreach::foreach(i = vec) %dopar% {
+        return(func(i))
+      }
+      
+    }
+    
+    parallel::stopCluster(cl = clust)
+    
+    if (count) {
+      cat("\n")
+    }
+    
+  } else {
+    stop("We only offer the three methods for `parallel.method`: 'mclapply', 'furrr', and 'foreach' !")
+  }
+  
+  
+  return(all.res)
+}
+
+
+
+#' Function to judge the square matrix whether it is diagonal matrix or not
+#'
+#' @param x Square matrix.
+#'
+#' @return If `x` is diagonal matrix, `TRUE`. Otherwise the function returns `FALSE`.
+#'
+is.diag <- function(x) {
+  stopifnot(is.matrix(x))
+  stopifnot(nrow(x) == ncol(x))
+  
+  diagX <- diag(diag(x))
+  dimnames(diagX) <- dimnames(x)
+  
+  return(identical(x, diagX))
+}
 
 
 #' Function to calculate threshold for GWAS
@@ -62,7 +258,7 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
   qvalue_tmp <- function(p) {
     smooth.df <- 3
     
-    if(min(p) < 0 || max(p) > 1) {
+    if (min(p) < 0 || max(p) > 1) {
       stop("P-values not in valid range.")
       return(0)
     }
@@ -71,7 +267,7 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
     m <- length(p)
     
     pi0 <- rep(0, length(lambda))
-    for(i in 1:length(lambda)) {
+    for (i in 1:length(lambda)) {
       pi0[i] <- mean(p >= lambda[i]) / (1 - lambda[i])
     }
     
@@ -79,7 +275,7 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
     pi0 <- predict(spi0, x = max(lambda))$y
     pi0 <- min(pi0, 1)
     
-    if(pi0 <= 0) {
+    if (pi0 <= 0) {
       stop("The estimated pi0 <= 0. Check that you have valid p-values.")
       return(0)
     }
@@ -107,7 +303,7 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
     
     qvalue <- pi0 * m * p / v
     qvalue[u[m]] <- min(qvalue[u[m]], 1)
-    for(i in (m-1):1) {
+    for (i in (m - 1):1) {
       qvalue[u[i]] <- min(qvalue[u[i]], qvalue[u[i + 1]], 1)
     }
     
@@ -124,11 +320,11 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
   n.thres <- length(methods)
   
   thresholds <- rep(NA, n.thres)
-  for(thres.no in 1:n.thres){
+  for (thres.no in 1:n.thres) {
     method.now <- methods[thres.no]
     sig.level.now <- sig.levels[thres.no]
     
-    if(method.now == "BH"){
+    if (method.now == "BH") {
       # input should be a result object of GWAS in {rrBLUP} package
       q.ans <- qvalue_tmp(10 ^ (- input[, 4]))
       temp <- cbind(q.ans, input[, 4])
@@ -143,12 +339,12 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
           last <- first + 3
         }
         
-        if(sum(is.na(qvals[first:last])) == 1){
+        if (sum(is.na(qvals[first:last])) == 1) {
           qvals[last] <- mean(qvals[first + 1] + qvals[first + 2])
           temp2[last] <- mean(temp2[first + 1] + temp2[first + 2])
         }
         
-        if(sum(is.na(qvals[first:last])) == 2){
+        if (sum(is.na(qvals[first:last])) == 2) {
           qvals[(last - 1):last] <- quantile(qvals[first:(first + 1)], probs = c(1 / 3, 2 / 3))
           temp2[(last - 1):last] <- quantile(temp2[first:(first + 1)], probs = c(1 / 3, 2 / 3))
         }
@@ -156,14 +352,15 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
         qvals <- sort(qvals)
         temp2 <- temp2[order(qvals)]
         
-        splin <- smooth.spline(x = qvals[first:last], y=temp2[first:last], df = 3)
+        splin <- smooth.spline(x = qvals[first:last], 
+                               y = temp2[first:last], df = 3)
         threshold <- predict(splin, x = sig.level.now)$y
-      }else{
+      } else {
         threshold <- NA
       }
     }
     
-    if(method.now == "Bonf"){
+    if (method.now == "Bonf") {
       n.mark <- nrow(input)
       threshold <- -log10(sig.level.now / n.mark)
     }
@@ -197,12 +394,12 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
 #' 
 #' Endelman, J.B. and Jannink, J.L. (2012) Shrinkage Estimation of the Realized Relationship Matrix. G3 Genes, Genomes, Genet. 2(11): 1405-1413.
 #'
-calcGRM = function(genoMat,
-                   methodGRM = "addNOIA",
-                   kernel.h = "tuned",
-                   returnWMat = FALSE,
-                   probaa = NULL,
-                   probAa = NULL) {
+calcGRM <- function(genoMat,
+                    methodGRM = "addNOIA",
+                    kernel.h = "tuned",
+                    returnWMat = FALSE,
+                    probaa = NULL,
+                    probAa = NULL) {
   supportedMethods <- c("addNOIA", "domNOIA", "A.mat", "linear",
                         "gaussian", "exponential", "correlation")
   stopifnot(methodGRM %in% supportedMethods)
@@ -228,8 +425,8 @@ calcGRM = function(genoMat,
       probAA <- 1 - probaa - probAa
       denominator <- probAA + probaa - (probAA - probaa) ^ 2
       replaceaa <- - 2 * probAA * probAa / denominator
-      replaceAa <- 4 * probAA * probaa /denominator
-      replaceAA <- - 2 * probaa * probAa /denominator
+      replaceAa <- 4 * probAA * probaa / denominator
+      replaceAA <- - 2 * probaa * probAa / denominator
     }
     
     HMat <- sapply(1:nMarkers, function(mrkNo) {
@@ -301,7 +498,7 @@ design.Z <- function(pheno.labels, geno.names) {
   
   match.pheno_geno <- match(pheno.labels, geno.names)
   
-  if(any(is.na(match.pheno_geno))){
+  if (any(is.na(match.pheno_geno))) {
     warning(paste("The following lines have phenotypes but no genotypes: ",
                   paste(pheno.labels[is.na(match.pheno_geno)], collapse = ", ")))
   }
@@ -348,16 +545,16 @@ modify.data <- function(pheno.mat, geno.mat, pheno.labels = NULL, geno.names = N
                         return.ZETA = TRUE, return.GWAS.format = FALSE) {
   pheno.mat <- as.matrix(pheno.mat)
   
-  if(is.null(pheno.labels)){
+  if (is.null(pheno.labels)) {
     pheno.labels <- as.character(rownames(pheno.mat))
-  }else{
+  } else {
     pheno.labels <- as.character(pheno.labels)
     rownames(pheno.mat) <- pheno.labels
   }
   
-  if(is.null(geno.names)){
+  if (is.null(geno.names)) {
     geno.names <- as.character(rownames(geno.mat))
-  }else{
+  } else {
     geno.names <- as.character(geno.names)
     rownames(geno.mat) <- geno.names
   }
@@ -368,7 +565,7 @@ modify.data <- function(pheno.mat, geno.mat, pheno.labels = NULL, geno.names = N
   match.geno <- match(geno.names, both.names)
   
   
-  if(any(is.na(match.pheno))){
+  if (any(is.na(match.pheno))) {
     warning(paste("The following lines have phenotypes but no genotypes: ",
                   paste(pheno.labels[is.na(match.pheno)], collapse = ", ")))
   }
@@ -382,22 +579,22 @@ modify.data <- function(pheno.mat, geno.mat, pheno.labels = NULL, geno.names = N
   geno.mat.modi <- geno.mat.match[order(match.geno[!is.na(match.geno)]), , drop = FALSE]
   geno.names.modi <- rownames(geno.mat.modi)
   
-  if(return.ZETA){
+  if (return.ZETA) {
     K.A <- calcGRM(genoMat = geno.mat.modi)
     Z.A <- design.Z(pheno.labels = pheno.labels.modi, geno.names = geno.names.modi)
     
     ZETA <- list(A = list(Z = Z.A, K = K.A))
-  }else{
+  } else {
     ZETA <- NULL
   }
   
-  if(return.GWAS.format & (!is.null(map))){
+  if (return.GWAS.format & (!is.null(map))) {
     pheno.GWAS <- data.frame(Sample_names = pheno.labels.modi, pheno.mat.modi)
     
     geno.GWAS <- data.frame(map, t(geno.mat.modi))
     rownames(geno.GWAS) <- 1:ncol(geno.mat.modi)
     colnames(geno.GWAS) <- c("marker", "chrom", "pos", geno.names.modi)
-  }else{
+  } else {
     pheno.GWAS <- geno.GWAS <- NULL
   }
   
@@ -492,11 +689,11 @@ genesetmap <- function(map, gene.set, cumulative = FALSE) {
     cum.pos.set.mean[k] <- mean(cum.pos.sel)
   }
   
-  if(!cumulative){
+  if (!cumulative) {
     map2 <- data.frame(marker = marker.now,
                        chr = chr.set.mean,
                        pos = pos.set.mean)
-  }else{
+  } else {
     map2 <- data.frame(marker = marker.now,
                        chr = chr.set.mean,
                        pos = pos.set.mean,
@@ -536,7 +733,7 @@ genesetmap <- function(map, gene.set, cumulative = FALSE) {
 manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
                       y.max = NULL, cex = 1, cex.lab = 1, lwd.thres = 1,
                       plot.col1 = c("dark blue", "cornflowerblue"),
-                      cex.axis.x = 1, cex.axis.y = 1, plot.type = "p", plot.pch = 16){
+                      cex.axis.x = 1, cex.axis.y = 1, plot.type = "p", plot.pch = 16) {
   input <- input[!is.na(input[, 4]), , drop = FALSE]
   input <- input[order(input[, 2], input[, 3]), ]
   chroms <- unique(input[, 2])
@@ -549,7 +746,7 @@ manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
     }
   }
   x.max <- chrom.start[n.chrom] + max(input[which(input[, 2] == chroms[n.chrom]), 3])
-  if(is.null(y.max)){
+  if (is.null(y.max)) {
     y.max <- max(input[, 4]) + 1
   }
   plot(0, 0, type = "n", xlim = c(0, x.max), ylim = c(0, y.max), ylab = expression(-log[10](italic(p))),
@@ -572,7 +769,7 @@ manhattan <- function(input, sig.level = 0.05, method.thres = "BH",
   
   
   threshold <- try(CalcThreshold(input, sig.level = sig.level, method = method.thres), silent = TRUE)
-  if((!("try-error" %in% class(threshold))) & (!is.na(threshold))){
+  if ((!("try-error" %in% class(threshold))) & (!is.na(threshold))) {
     lines(x = c(0, x.max), y = rep(threshold, 2), lty = 2, lwd = lwd.thres)
   }
   axis(side = 1, at = chrom.mid, labels = chroms, cex.axis = cex.axis.x)
@@ -664,10 +861,10 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", cex = 1, pl
   chr.tab <- table(chr)
   chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
-  if(is.null(cum.pos)){
+  if (is.null(cum.pos)) {
     cum.pos <- pos
-    if(length(chr.tab) != 1){
-      for(i in 1:(chr.max - 1)){
+    if (length(chr.tab) != 1) {
+      for (i in 1:(chr.max - 1)) {
         cum.pos[(chr.cum[i] + 1):(chr.cum[i + 1])] <- pos[(chr.cum[i] + 1):(chr.cum[i + 1])] + cum.pos[chr.cum[i]]
       }
     }
@@ -677,7 +874,7 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", cex = 1, pl
        cex.lab = cex.lab, cex.axis = cex.axis, cex = cex)
   
   threshold <- try(CalcThreshold(input, sig.level = sig.level, method = method.thres), silent = TRUE)
-  if((!("try-error" %in% class(threshold))) & (!is.na(threshold))){
+  if ((!("try-error" %in% class(threshold))) & (!is.na(threshold))) {
     lines(x = c(0, max(cum.pos)), y = rep(threshold, 2), lty = 2, lwd = lwd.thres)
   }
 }
@@ -705,17 +902,17 @@ manhattan2 <- function(input, sig.level = 0.05, method.thres = "BH", cex = 1, pl
 
 manhattan3 <- function(input, map, cum.pos, plot.epi.3d = TRUE,
                        plot.epi.2d = TRUE, main.epi.3d = NULL,
-                       main.epi.2d = NULL, saveName = NULL){
+                       main.epi.2d = NULL, saveName = NULL) {
   x <- input[[2]]
   y <- input[[3]]
   z <- input[[4]]
   col.id <- rainbow(n = 7, alpha = 1)
   quan <- seq(0, max(z, na.rm = TRUE), length = 8)
   col.num <- rep(NA, length(z))
-  for(j in 1:length(z)){
-    if(z[j] != 0){
+  for (j in 1:length(z)) {
+    if (z[j] != 0) {
       col.num[j] <- max(which(z[j] - quan > 0))
-    }else{
+    } else {
       col.num[j] <- 1
     }
   }
@@ -773,31 +970,31 @@ manhattan3 <- function(input, map, cum.pos, plot.epi.3d = TRUE,
     dataPlotly$minuslog10p <- round(dataPlotly$minuslog10p, 2)
     
     if (requireNamespace("plotly", quietly = TRUE)) {
-    plt <- plotly::plot_ly(data = dataPlotly,
-                           color = ~ col, 
-                           colors = col.id,
-                           hoverinfo = "text",
-                           text = paste0(apply(dataPlotly[, - ncol(dataPlotly)], 1, function(l) {
-                             paste(names(l), ":", l, collapse = "\n")
-                           }))) %>%
-      plotly::add_paths(data = dataPlotly,
-                        x = ~ cumsumPosX, 
-                        y = ~ cumsumPosY, 
-                        z = ~ minuslog10p) %>%
-      plotly::layout(title = list(text = main.epi.3d))
-    
-    if (!is.null(saveName)) {
-      saveFileEpistasis3d <- here::here(paste0(saveName, "_epistasis_3d_plotly"))
-      saveFileEpistasis3dHtml <- paste0(saveFileEpistasis3d, ".html")
-      saveFileEpistasis3dFiles <- paste0(saveFileEpistasis3d, "_files")
-      htmlwidgets::saveWidget(widget = plotly::partial_bundle(plt), 
-                              file = saveFileEpistasis3dHtml)
+      plt <- plotly::plot_ly(data = dataPlotly,
+                             color = ~ col, 
+                             colors = col.id,
+                             hoverinfo = "text",
+                             text = paste0(apply(dataPlotly[, - ncol(dataPlotly)], 1, function(l) {
+                               paste(names(l), ":", l, collapse = "\n")
+                             }))) %>%
+        plotly::add_paths(data = dataPlotly,
+                          x = ~ cumsumPosX, 
+                          y = ~ cumsumPosY, 
+                          z = ~ minuslog10p) %>%
+        plotly::layout(title = list(text = main.epi.3d))
       
-      unlink(x = saveFileEpistasis3dFiles,
-             recursive = TRUE)
-    } else {
-      print(plt)
-    }
+      if (!is.null(saveName)) {
+        saveFileEpistasis3d <- here::here(paste0(saveName, "_epistasis_3d_plotly"))
+        saveFileEpistasis3dHtml <- paste0(saveFileEpistasis3d, ".html")
+        saveFileEpistasis3dFiles <- paste0(saveFileEpistasis3d, "_files")
+        htmlwidgets::saveWidget(widget = plotly::partial_bundle(plt), 
+                                file = saveFileEpistasis3dHtml)
+        
+        unlink(x = saveFileEpistasis3dFiles,
+               recursive = TRUE)
+      } else {
+        print(plt)
+      }
     } else {
       warning("R package `plotly` should be correctly installed when you use the option `plot.epi.3d = TRUE` !")
     }
@@ -806,7 +1003,7 @@ manhattan3 <- function(input, map, cum.pos, plot.epi.3d = TRUE,
   if (plot.epi.2d) {
     pl.size <- 10 * z / max(z)
     
-    if(!is.null(saveName)){
+    if (!is.null(saveName)) {
       png(paste0(saveName, "_epistasis_2d_plot.png"), width = 600, height = 500)
     }
     
@@ -820,7 +1017,7 @@ manhattan3 <- function(input, map, cum.pos, plot.epi.3d = TRUE,
            pch = 1, col = rev(col.id), cex = 1)
     title(main = main.epi.2d)
     
-    if(!is.null(saveName)){
+    if (!is.null(saveName)) {
       dev.off()
     }
   }
@@ -857,16 +1054,18 @@ qq <- function(scores) {
 #' @description Calculate -log10(p) of each SNP by the Wald test.
 #'
 #'
-#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
 #' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
 #' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param Hinv The inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.
 #' @param P3D When P3D = TRUE, variance components are estimated by REML only once, without any markers in the model.
 #' When P3D = FALSE, variance components are estimated by REML for each marker separately.
-#' @param optimizer The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' @param eigen.G A list with
 #' \describe{
@@ -876,6 +1075,9 @@ qq <- function(scores) {
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param optimizer The function used in the optimization process. 
+#' We offer "optim", "optimx", and "nlminb" functions. 
+#' This argument is only valid when `package.MM = 'RAINBOWR'`.
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is assigned a zero score.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
@@ -896,14 +1098,15 @@ qq <- function(scores) {
 #'
 #'
 #'
-score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = "nlminb",
-                       eigen.G = NULL, n.core = NA, min.MAF = 0.02, count = TRUE) {
+score.calc <- function(M.now, ZETA.now, y, X.now, package.MM = "gaston",
+                       Hinv, P3D = TRUE, eigen.G = NULL, optimizer = "nlminb",
+                       n.core = 1, min.MAF = 0.02, count = TRUE) {
   n.mark <- ncol(M.now)
   scores <- array(NA, n.mark)
   
   lz <- length(ZETA.now)
   ZKZt <- matrix(0, nrow = length(y), ncol = length(y))
-  for(list.no in lz){
+  for (list.no in lz) {
     ZKZt.now <- tcrossprod(ZETA.now[[list.no]]$Z %*% ZETA.now[[list.no]]$K, ZETA.now[[list.no]]$Z)
     ZKZt <- ZKZt + ZKZt.now
   }
@@ -913,10 +1116,10 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
   n.mark2 <- n.mark - n.mark %% 100
   start.scorecalc <- Sys.time()
   for (i in 1:n.mark) {
-    if(count){
+    if (count) {
       setTxtProgressBar(pb, i)
-      if(n.mark > 100){
-        if(i == (n.mark2 / 100 + 1) | i == (n.mark2 / 10 + 1) | i == (n.mark2 / 2 + 1)){
+      if (n.mark > 100) {
+        if (i == (n.mark2 / 100 + 1) | i == (n.mark2 / 10 + 1) | i == (n.mark2 / 2 + 1)) {
           cat("\n")
           end.scorecalc <- Sys.time()
           jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.mark - i + 1) / (i - 1)
@@ -936,30 +1139,38 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
       ni <- as.integer(min(length(not.NA.geno), rank.ZKZt))
       yi <- as.matrix(y[not.NA.geno])
       Xi <- cbind(X.now[not.NA.geno, ], Mi[not.NA.geno])
-      p <- ncol(Xi)
-      v1 <- 1
-      v2 <- ni - p
+      p <- (ncol(X.now) + 1):ncol(Xi)
+      v1 <- length(p)
+      v2 <- ni - ncol(Xi)
       
       if (!P3D) {
-        Xi <- make.full(Xi)
-        if(length(ZETA.now) > 1){
-          EMM.res <- EM3.cpp(y = yi, X0 = Xi, ZETA = ZETA.now, eigen.G = eigen.G,
-                             n.core = n.core, optimizer = optimizer,
-                             tol = NULL, n.thres = 450, REML = TRUE, pred = FALSE)
-        }else{
-          EMM.res <- EMM.cpp(y = yi, X = Xi, ZETA = ZETA.now, eigen.G = eigen.G,
-                             n.core = n.core, optimizer = optimizer,
-                             tol = NULL, n.thres = 450, REML = TRUE)
-        }
+        Xi2 <- make.full(Xi)
+        # if (length(ZETA.now) > 1) {
+        #   EMM.res <- EM3.cpp(y = yi, X0 = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
+        #                      n.core = n.core, optimizer = optimizer,
+        #                      tol = NULL, n.thres = 450, REML = TRUE, pred = FALSE)
+        #   
+        # } else {
+        #   EMM.res <- EMM.cpp(y = yi, X = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
+        #                      n.core = n.core, optimizer = optimizer,
+        #                      tol = NULL, n.thres = 450, REML = TRUE)
+        # }
+        EMM.res <- EM3.general(y = yi, X0 = Xi2, ZETA = ZETA.now, 
+                               eigen.G = eigen.G, package = package.MM,
+                               n.core = n.core,  optimizer = optimizer, 
+                               tol = NULL, REML = TRUE, pred = FALSE,
+                               return.u.always = FALSE, 
+                               return.u.each = FALSE,
+                               return.Hinv = TRUE)
         H2inv <- EMM.res$Hinv
-      }else {
+      } else {
         H2inv <- Hinv[not.NA.geno, not.NA.geno]
       }
       
       beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
-                                   v1 = v1, v2 = v2, p = p), silent = TRUE)
+                                   v1 = v1, v2 = v2, p = as.matrix(p)), silent = TRUE)
       
-      if(!("try-error" %in% class(beta.stat))){
+      if (!("try-error" %in% class(beta.stat))) {
         scores[i] <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
       }
     }
@@ -978,17 +1189,40 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
 #' @description Calculate -log10(p) of each SNP by the Wald test.
 #'
 #'
-#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
 #' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
 #' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param Hinv The inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param P3D When P3D = TRUE, variance components are estimated by REML only once, without any markers in the model.
 #' When P3D = FALSE, variance components are estimated by REML for each marker separately.
-#' @param optimizer The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.
 #' @param eigen.G A list with
 #' \describe{
 #' \item{$values}{Eigen values}
@@ -997,6 +1231,9 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param optimizer The function used in the optimization process. 
+#' We offer "optim", "optimx", and "nlminb" functions. 
+#' This argument is only valid when `package.MM = 'RAINBOWR'`.
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is assigned a zero score.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
@@ -1017,13 +1254,16 @@ score.calc <- function(M.now, ZETA.now, y, X.now, Hinv, P3D = TRUE, optimizer = 
 #'
 #'
 #'
-score.calc.MC <- function(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRUE, optimizer = "nlminb",
-                          eigen.G = NULL,  min.MAF = 0.02, count = TRUE) {
+score.calc.MC <- function(M.now, ZETA.now, y, X.now, 
+                          package.MM = "gaston", Hinv, 
+                          n.core = 2, parallel.method = "mclapply",
+                          P3D = TRUE, eigen.G = NULL, optimizer = "nlminb",
+                          min.MAF = 0.02, count = TRUE) {
   n.mark <- ncol(M.now)
   
   lz <- length(ZETA.now)
   ZKZt <- matrix(0, nrow = length(y), ncol = length(y))
-  for(list.no in lz){
+  for (list.no in lz) {
     ZKZt.now <- tcrossprod(ZETA.now[[list.no]]$Z %*% ZETA.now[[list.no]]$K, ZETA.now[[list.no]]$Z)
     ZKZt <- ZKZt + ZKZt.now
   }
@@ -1031,6 +1271,11 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRU
   
   score.calc.MC.oneSNP <- function(markNo) {
     Mi <- M.now[, markNo]
+    
+    if (markNo %% 1000 == 0) {
+      gc(reset = TRUE); gc(reset = TRUE)
+    }
+    
     freq <- mean(Mi + 1, na.rm = TRUE) / 2
     MAF <- min(freq, 1 - freq)
     if (MAF >= min.MAF) {
@@ -1039,30 +1284,37 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRU
       ni <- as.integer(min(length(not.NA.geno), rank.ZKZt))
       yi <- as.matrix(y[not.NA.geno])
       Xi <- cbind(X.now[not.NA.geno, ], Mi[not.NA.geno])
-      p <- ncol(Xi)
-      v1 <- 1
-      v2 <- ni - p
+      p <- (ncol(X.now) + 1):ncol(Xi)
+      v1 <- length(p)
+      v2 <- ni - ncol(Xi)
       
       if (!P3D) {
-        Xi <- make.full(Xi)
-        if(length(ZETA.now) > 1){
-          EMM.res <- EM3.cpp(y = yi, X0 = Xi, ZETA = ZETA.now, eigen.G = eigen.G, 
-                             n.core = n.core, optimizer = optimizer,
-                             tol = NULL, n.thres = 450, REML = TRUE, pred = FALSE)
-        }else{
-          EMM.res <- EMM.cpp(y = yi, X = Xi, ZETA = ZETA.now, eigen.G = eigen.G, 
-                             n.core = n.core, optimizer = optimizer,
-                             tol = NULL, n.thres = 450, REML = TRUE)
-        }
+        Xi2 <- make.full(Xi)
+        # if (length(ZETA.now) > 1) {
+        #   EMM.res <- EM3.cpp(y = yi, X0 = Xi2, ZETA = ZETA.now, eigen.G = eigen.G, 
+        #                      n.core = 1, optimizer = optimizer,
+        #                      tol = NULL, n.thres = 450, REML = TRUE, pred = FALSE)
+        # } else {
+        #   EMM.res <- EMM.cpp(y = yi, X = Xi2, ZETA = ZETA.now, eigen.G = eigen.G, 
+        #                      n.core = 1, optimizer = optimizer,
+        #                      tol = NULL, n.thres = 450, REML = TRUE)
+        # }
+        EMM.res <- EM3.general(y = yi, X0 = Xi2, ZETA = ZETA.now, 
+                               eigen.G = eigen.G, package = package.MM,
+                               n.core = 1, optimizer = optimizer,
+                               tol = NULL, REML = TRUE, pred = FALSE,
+                               return.u.always = FALSE, 
+                               return.u.each = FALSE,
+                               return.Hinv = TRUE)
         H2inv <- EMM.res$Hinv
-      }else {
+      } else {
         H2inv <- Hinv[not.NA.geno, not.NA.geno]
       }
       
       beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
-                                   v1 = v1, v2 = v2, p = p), silent = TRUE)
+                                   v1 = v1, v2 = v2, p = as.matrix(p)), silent = TRUE)
       
-      if(!("try-error" %in% class(beta.stat))){
+      if (!("try-error" %in% class(beta.stat))) {
         scores.now <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
       } else {
         scores.now <- NA
@@ -1072,14 +1324,22 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRU
     }
     return(scores.now)
   }
+  
+  scores.list <- parallel.compute(vec = 1:n.mark, 
+                                  func = score.calc.MC.oneSNP, 
+                                  n.core = n.core,
+                                  parallel.method = parallel.method,
+                                  count = count)
+  scores <- unlist(scores.list)
+  
   if (count) {
     cat("\n")
   }
   
-  scores <- unlist(pbmcapply::pbmclapply(X = 1:n.mark, FUN = score.calc.MC.oneSNP, mc.cores = n.core))
   
   return(scores)
 }
+
 
 
 
@@ -1097,11 +1357,11 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now, Hinv, n.core = 2, P3D = TRU
 make.full <- function(X) {
   svd.X <- svd(X)
   r <- max(which(svd.X$d > 1e-08))
-  if(r < ncol(X)){
+  if (r < ncol(X)) {
     newX <- svd.X$u[, 1:r, drop = FALSE]
     rownames(newX) <- rownames(X)
     colnames(newX) <- paste0("svd", 1:r)
-  }else{
+  } else {
     newX <- X
   }
   return(newX)
@@ -1121,12 +1381,15 @@ make.full <- function(X) {
 #' follows the chi-square distribution.
 #'
 #'
-#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param LL0 The log-likelihood for the null model.
 #' @param eigen.SGS A list with
 #' \describe{
@@ -1195,12 +1458,14 @@ make.full <- function(X) {
 #'
 #'
 #'
-score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eigen.G = NULL, 
-                          n.core = NA, optimizer = "nlminb", map, kernel.method = "linear",
-                          kernel.h = "tuned", haplotype = TRUE, num.hap = NULL,
-                          test.effect = "additive", window.size.half = 5, window.slide = 1,
-                          chi0.mixture = 0.5, weighting.center = TRUE, weighting.other = NULL,
-                          gene.set = NULL, min.MAF = 0.02, count = TRUE){
+score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
+                          LL0, eigen.SGS = NULL, eigen.G = NULL, 
+                          n.core = 1, optimizer = "nlminb", map, 
+                          kernel.method = "linear", kernel.h = "tuned", 
+                          haplotype = TRUE, num.hap = NULL, test.effect = "additive", 
+                          window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
+                          weighting.center = TRUE, weighting.other = NULL,
+                          gene.set = NULL, min.MAF = 0.02, count = TRUE) {
   n <- length(y)
   
   chr <- map[, 2]
@@ -1209,18 +1474,18 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     n.scores <- sum(n.scores.each)
-  }else{
+  } else {
     gene.names <- as.character(gene.set[, 1])
     mark.id <- as.character(gene.set[, 2])
     gene.name <- as.character(unique(gene.names))
     n.scores <- length(unique(gene.set[, 1]))
   }
   
-  if(kernel.method == "linear"){
+  if (kernel.method == "linear") {
     scores <- matrix(NA, nrow = n.scores, ncol = length(test.effect))
-  }else{
+  } else {
     scores <- matrix(NA, nrow = n.scores, ncol =  1)
   }
   window.centers <- rep(NA, n.scores)
@@ -1236,10 +1501,10 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
   n.scores2 <- n.scores - n.scores %% 100
   start.scorecalc <- Sys.time()
   for (i in 1:n.scores) {
-    if(count){
+    if (count) {
       setTxtProgressBar(pb, i)
-      if(n.scores > 100){
-        if(i == (n.scores2 / 100 + 1) | i == (n.scores2 / 10 + 1) | i == (n.scores2 / 2 + 1)){
+      if (n.scores > 100) {
+        if (i == (n.scores2 / 100 + 1) | i == (n.scores2 / 10 + 1) | i == (n.scores2 / 2 + 1)) {
           cat("\n")
           end.scorecalc <- Sys.time()
           jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.scores - i + 1) / (i - 1)
@@ -1252,17 +1517,17 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
     
     
     
-    if(is.null(gene.set)){
+    if (is.null(gene.set)) {
       i.chr <- min(which(i - cum.n.scores <= 0))
-      if(i.chr >= 2){
+      if (i.chr >= 2) {
         window.center <- window.slide * (i - cum.n.scores[i.chr - 1] - 1) + chr.cum[i.chr - 1] + 1
-      }else{
+      } else {
         window.center <- window.slide * (i - 1) + 1
       }
       names(window.center) <- i.chr
       window.centers[i] <- window.center
       Theories1 <-  window.center < window.size.half + 1
-      for(r in 1:(chr.max - 1)){
+      for (r in 1:(chr.max - 1)) {
         Theory1 <- chr.cum[r] < window.center & window.center < window.size.half + 1 + chr.cum[r]
         Theories1 <- c(Theories1, Theory1)
       }
@@ -1270,7 +1535,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
       
       
       Theories2  <- NULL
-      for(r in 1:chr.max){
+      for (r in 1:chr.max) {
         Theory2 <- chr.cum[r] - (window.size.half + 1) < window.center & window.center <= chr.cum[r]
         Theories2 <- c(Theories2, Theory2)
       }
@@ -1278,26 +1543,26 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
       
       
       
-      if(rule1 & rule2){
+      if (rule1 & rule2) {
         Mis.range.0 <- which(chr == i.chr)
         Mis.range.02 <- which(chr == i.chr) - window.center + 1 + window.size.half
-      }else{
-        if(rule1){
+      } else {
+        if (rule1) {
           near.min <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
           Mis.range.0 <- (near.min + 1):(window.center + window.size.half)
           Mis.range.02 <- (2 * window.size.half + 2 - length(Mis.range.0)):(2 * window.size.half + 1)
-        }else{
-          if(rule2){
+        } else {
+          if (rule2) {
             near.max <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
             Mis.range.0 <- (window.center - window.size.half):near.max
             Mis.range.02 <- 1:length(Mis.range.0)
-          }else{
+          } else {
             Mis.range.0 <- (window.center - window.size.half):(window.center + window.size.half)
             Mis.range.02 <- 1:(2 * window.size.half + 1)
           }
         }
       }
-    }else{
+    } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.02 <- 1:length(Mis.range.0)
@@ -1306,20 +1571,20 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
     
     Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
     MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if(any(test.effect %in% c("dominance", "additive+dominance"))){
+    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
       Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
       MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    }else{
+    } else {
       MAF.cut.D <- rep(TRUE, length(MAF.cut))
     }
     
-    if(any(MAF.cut)){
+    if (any(MAF.cut)) {
       Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
       Mis.range <- Mis.range.0[MAF.cut]
       Mis.range2 <- Mis.range.02[MAF.cut]
       window.size <- ncol(Mis.0)
-      if(any(MAF.cut.D)){
-        if(any(test.effect %in% c("dominance", "additive+dominance"))){
+      if (any(MAF.cut.D)) {
+        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
           Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
           Mis.range.D <- Mis.range.0[MAF.cut.D]
           Mis.range2.D <- Mis.range.02[MAF.cut.D]
@@ -1327,15 +1592,15 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
         }
       }
       
-      if(haplotype){
-        if(is.null(num.hap)){
+      if (haplotype) {
+        if (is.null(num.hap)) {
           Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
           Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
           bango <- as.factor(as.numeric(Mis.fac))
           levels(bango) <- order(unique(bango))
           bango <- as.numeric(as.character(bango))
-          if(any(MAF.cut.D)){
-            if(any(test.effect %in% c("dominance", "additive+dominance"))){
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
               Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
               Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
               
@@ -1344,12 +1609,12 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
               bango.D <- as.numeric(as.character(bango.D))
             }
           }
-        }else{
+        } else {
           kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
-          if(any(MAF.cut.D)){
-            if(any(test.effect %in% c("dominance", "additive+dominance"))){
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
               kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
@@ -1358,66 +1623,66 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
         }
         Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
                                                  dims = c(nrow(M.now), nrow(Mis))))
-        if(any(MAF.cut.D)){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
+        if (any(MAF.cut.D)) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
             Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
                                                        dims = c(nrow(M.now), nrow(Mis.D))))
           }
         }
-      }else{
+      } else {
         Mis <- Mis.0
         Mis.D <- Mis.D.0
         Z.part <- Z.part.D <- diag(nrow(M.now))
       }
       
-      if(window.size != 1){
-        if(weighting.center){
+      if (window.size != 1) {
+        if (weighting.center) {
           weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
           weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if(!is.null(weighting.other)){
+          if (!is.null(weighting.other)) {
             weight.Mis <- weight.Mis * weighting.other[Mis.range]
           }
           weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
-        }else{
+        } else {
           weight.Mis <- rep(1, window.size)
           weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if(!is.null(weighting.other)){
+          if (!is.null(weighting.other)) {
             weight.Mis <- weight.Mis * weighting.other[Mis.range]
           }
           weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
         }
-      }else{
+      } else {
         weight.Mis <- 1
       }
       
-      if(any(MAF.cut.D)){
-        if(window.size != 1){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
-            if(weighting.center){
+      if (any(MAF.cut.D)) {
+        if (window.size != 1) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+            if (weighting.center) {
               weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
               weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if(!is.null(weighting.other)){
+              if (!is.null(weighting.other)) {
                 weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
               }
               weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            }else{
+            } else {
               weight.Mis.D <- rep(1, window.size.D)
               weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if(!is.null(weighting.other)){
+              if (!is.null(weighting.other)) {
                 weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
               }
               weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
             }
           }
-        }else{
+        } else {
           weight.Mis.D <- 1
         }
       }
       
-      if(kernel.method != "linear"){
-        if(ncol(Mis) != 1){
+      if (kernel.method != "linear") {
+        if (ncol(Mis) != 1) {
           Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
-        }else{
+        } else {
           Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
         }
         
@@ -1426,7 +1691,30 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
                          kernel.h = kernel.h,
                          returnWMat = FALSE)
         
-        if(length(ZETA.now) == 1){
+        # if (length(ZETA.now) == 1) {
+        #   Gammas0 <- list(K = K.SNP)
+        #   Ws0 <- list(W = Z.part)
+        #   Zs0 <- list(Z = diag(nrow(Mis.0)))
+        #   EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, optimizer = optimizer,
+        #                                  Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = n.core, 
+        #                                  gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
+        #                                  eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+        #                                  REML = TRUE, pred = FALSE), silent = TRUE)
+        #   if ("try-error" %in% class(EMM.res2)) {
+        #     ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+        #     EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, 
+        #                             n.core = n.core, optimizer = optimizer,
+        #                             REML = TRUE, pred = FALSE), silent = TRUE)
+        #   }
+        # } else {
+        #   ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+        #   EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, 
+        #                           n.core = n.core, optimizer = optimizer,
+        #                           REML = TRUE, pred = FALSE), silent = TRUE)
+        # }
+        
+        perform.general <- FALSE
+        if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
           Gammas0 <- list(K = K.SNP)
           Ws0 <- list(W = Z.part)
           Zs0 <- list(Z = diag(nrow(Mis.0)))
@@ -1434,33 +1722,41 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
                                          Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = n.core, 
                                          gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
                                          eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                         REML = TRUE, pred = FALSE), silent = TRUE)
-          if("try-error" %in% class(EMM.res2)){
-            ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-            EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, 
-                                    n.core = n.core, optimizer = optimizer,
-                                    REML = TRUE, pred = FALSE), silent = TRUE)
+                                         REML = TRUE, pred = FALSE, return.u.always = FALSE,
+                                         return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
+          if ("try-error" %in% class(EMM.res2)) {
+            perform.general <- TRUE
           }
-        }else{
-          ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-          EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, 
-                                  n.core = n.core, optimizer = optimizer,
-                                  REML = TRUE, pred = FALSE), silent = TRUE)
+        } else {
+          perform.general <- TRUE
         }
         
-        if(!("try-error" %in% class(EMM.res2))){
+        if (perform.general) {
+          ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+          EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
+                                      package = package.MM, tol = NULL, 
+                                      n.core = n.core, optimizer = optimizer,
+                                      REML = TRUE, pred = FALSE,
+                                      return.u.always = FALSE,
+                                      return.u.each = FALSE,
+                                      return.Hinv = FALSE), silent = TRUE)
+        }
+        
+        
+        if (!("try-error" %in% class(EMM.res2))) {
           LL2s <- EMM.res2$LL
-        }else{
+        } else {
           LL2s <- LL0
         }
+        
         df <- 1
-      }else{
+      } else {
         test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if(length(test.no) == 0){
+        if (length(test.no) == 0) {
           stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
         }
         
-        if(any(test.effect %in% c("additive", "additive+dominance"))){
+        if (any(test.effect %in% c("additive", "additive+dominance"))) {
           W.A <- calcGRM(genoMat = Mis,
                          methodGRM = "addNOIA",
                          returnWMat = TRUE,
@@ -1468,8 +1764,8 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
                          probAa = probAa[Mis.range])
         }
         
-        if(any(MAF.cut.D)){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
+        if (any(MAF.cut.D)) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
             W.D <- calcGRM(genoMat = Mis.D,
                            methodGRM = "domNOIA",
                            returnWMat = TRUE,
@@ -1478,165 +1774,326 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
           }
         }
         
-        if(length(ZETA.now) == 1){
-          if(1 %in% test.no){
+        # if (length(ZETA.now) == 1) {
+        #   if (1 %in% test.no) {
+        #     Ws0.A <- list(W.A = W.A)
+        #     Zs0.A <- list(W.A = Z.part)
+        #     Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
+        #   }
+        #   
+        #   if (any(MAF.cut.D)) {
+        #     if (2 %in% test.no) {
+        #       Ws0.D <- list(W.D = W.D)
+        #       Zs0.D <- list(W.D = Z.part.D)
+        #       Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
+        #     }
+        #     
+        #     if (3 %in% test.no) {
+        #       Ws0.AD <- list(W.A = W.A, W.D = W.D)
+        #       Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
+        #       Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
+        #     }
+        #   }
+        # } else {
+        #   if (1 %in% test.no) {
+        #     K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+        #     ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+        #   }
+        #   
+        #   if (any(MAF.cut.D)) {
+        #     if (2 %in% test.no) {
+        #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+        #       ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+        #     }
+        #     
+        #     if (3 %in% test.no) {
+        #       K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+        #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+        #       ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+        #                         list(part.D = list(Z = Z.part.D, K = K.D.part)))
+        #     }
+        #   }
+        # }
+        # 
+        # LL2s <- df <- rep(NA, length(test.no))
+        # test.names.now <- c("A", "D", "AD")
+        # for (j in 1:length(test.no)) {
+        #   test.no.now <- test.no[j]
+        #   if (length(ZETA.now) == 1) {
+        #     if (test.no.now == 1) {
+        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
+        #                                      n.core = n.core, optimizer = optimizer,
+        #                                      Zs0 = Zs0.A, Ws0 = Ws0.A, Gammas0 = Gammas0.A,
+        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if (test.no.now == 2) {
+        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
+        #                                      n.core = n.core, optimizer = optimizer,
+        #                                      Zs0 = Zs0.D, Ws0 = Ws0.D, Gammas0 = Gammas0.D,
+        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if (test.no.now == 3) {
+        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
+        #                                      n.core = n.core, optimizer = optimizer,
+        #                                      Zs0 = Zs0.AD, Ws0 = Ws0.AD, Gammas0 = Gammas0.AD,
+        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if ("try-error" %in% class(EMM.res2)) {
+        #       if (1 %in% test.no) {
+        #         K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+        #         ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+        #       }
+        #       
+        #       if (any(MAF.cut.D)) {
+        #         if (2 %in% test.no) {
+        #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+        #           ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+        #         }
+        #         
+        #         if (3 %in% test.no) {
+        #           K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+        #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+        #           ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+        #                             list(part.D = list(Z = Z.part.D, K = K.D.part)))
+        #         }
+        #       }
+        #       
+        #       if (test.no.now == 1) {
+        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL, 
+        #                                 n.core = n.core, optimizer = optimizer,
+        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+        #       }
+        #       
+        #       if (test.no.now == 2) {
+        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL, 
+        #                                 n.core = n.core, optimizer = optimizer,
+        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+        #       }
+        #       
+        #       if (test.no.now == 3) {
+        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
+        #                                 n.core = n.core, optimizer = optimizer,
+        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+        #       }
+        #     }
+        #   } else {
+        #     if (test.no.now == 1) {
+        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL, 
+        #                               n.core = n.core, optimizer = optimizer,
+        #                               REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if (test.no.now == 2) {
+        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL, 
+        #                               n.core = n.core, optimizer = optimizer,
+        #                               REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if (test.no.now == 3) {
+        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL, 
+        #                               n.core = n.core, optimizer = optimizer,
+        #                               REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #   }
+        #   
+        #   if (!("try-error" %in% class(EMM.res2))) {
+        #     LL2 <- EMM.res2$LL
+        #   } else {
+        #     LL2 <- LL0
+        #   }
+        #   LL2s[j] <- LL2
+        # }
+        # df[test.no == 1] <- 1
+        # df[test.no == 2] <- 1
+        # df[test.no == 3] <- 2
+        
+        
+        test.names <- c("A", "D", "AD")[test.no]
+        
+        if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+          Zs0.A <- Zs0.D <- Zs0.AD <- 
+            Ws0.A <- Ws0.D <- Ws0.AD <-
+            Gammas0.A <- Gammas0.D <- Gammas0.AD <- NULL
+          if ("A" %in% test.names) {
             Ws0.A <- list(W.A = W.A)
             Zs0.A <- list(W.A = Z.part)
             Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
           }
           
-          if(any(MAF.cut.D)){
-            if(2 %in% test.no){
+          if (any(MAF.cut.D)) {
+            if ("D" %in% test.names) {
               Ws0.D <- list(W.D = W.D)
               Zs0.D <- list(W.D = Z.part.D)
               Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
             }
             
-            if(3 %in% test.no){
+            if ("AD" %in% test.names) {
               Ws0.AD <- list(W.A = W.A, W.D = W.D)
               Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
               Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
             }
           }
-        }else{
-          if(1 %in% test.no){
+          
+          Zs0.list <- list(
+            A = Zs0.A,
+            D = Zs0.D,
+            AD = Zs0.AD
+          )
+          
+          Ws0.list <- list(
+            A = Ws0.A,
+            D = Ws0.D,
+            AD = Ws0.AD
+          )
+          
+          Gammas0.list <- list(
+            A = Gammas0.A,
+            D = Gammas0.D,
+            AD = Gammas0.AD
+          )
+        } else {
+          ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+          if ("A" %in% test.names) {
             K.A.part <- W.A %*% (t(W.A) * weight.Mis)
             ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
           }
           
-          if(any(MAF.cut.D)){
-            if(2 %in% test.no){
+          if (any(MAF.cut.D)) {
+            if ("D" %in% test.names) {
               K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
               ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
             }
             
-            if(3 %in% test.no){
+            if ("AD" %in% test.names) {
               K.A.part <- W.A %*% (t(W.A) * weight.Mis)
               K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
               ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
                                 list(part.D = list(Z = Z.part.D, K = K.D.part)))
             }
           }
+          
+          
+          ZETA.now2.list <- list(
+            A = ZETA.now2.A,
+            D = ZETA.now2.D,
+            AD = ZETA.now2.AD
+          )
         }
         
-        LL2s <- df <- rep(NA, length(test.no))
-        for(j in 1:length(test.no)){
-          test.no.now <- test.no[j]
-          if(length(ZETA.now) == 1){
-            if(test.no.now == 1){
-              EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
-                                             n.core = n.core, optimizer = optimizer,
-                                             Zs0 = Zs0.A, Ws0 = Ws0.A, Gammas0 = Gammas0.A,
-                                             gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-                                             eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                             REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if(test.no.now == 2){
-              EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
-                                             n.core = n.core, optimizer = optimizer,
-                                             Zs0 = Zs0.D, Ws0 = Ws0.D, Gammas0 = Gammas0.D,
-                                             gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-                                             eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                             REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if(test.no.now == 3){
-              EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
-                                             n.core = n.core, optimizer = optimizer,
-                                             Zs0 = Zs0.AD, Ws0 = Ws0.AD, Gammas0 = Gammas0.AD,
-                                             gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-                                             eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                             REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if("try-error" %in% class(EMM.res2)){
-              if(1 %in% test.no){
-                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-              }
-              
-              if(any(MAF.cut.D)){
-                if(2 %in% test.no){
-                  K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-                  ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-                }
-                
-                if(3 %in% test.no){
-                  K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                  K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-                  ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-                                    list(part.D = list(Z = Z.part.D, K = K.D.part)))
-                }
-              }
-              
-              if(test.no.now == 1){
-                EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL, 
-                                        n.core = n.core, optimizer = optimizer,
-                                        REML = TRUE, pred = FALSE), silent = TRUE)
-              }
-              
-              if(test.no.now == 2){
-                EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL, 
-                                        n.core = n.core, optimizer = optimizer,
-                                        REML = TRUE, pred = FALSE), silent = TRUE)
-              }
-              
-              if(test.no.now == 3){
-                EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
-                                        n.core = n.core, optimizer = optimizer,
-                                        REML = TRUE, pred = FALSE), silent = TRUE)
-              }
-            }
-          }else{
-            if(test.no.now == 1){
-              EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL, 
-                                      n.core = n.core, optimizer = optimizer,
-                                      REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if(test.no.now == 2){
-              EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL, 
-                                      n.core = n.core, optimizer = optimizer,
-                                      REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if(test.no.now == 3){
-              EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL, 
-                                      n.core = n.core, optimizer = optimizer,
-                                      REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-          }
-          
-          if(!("try-error" %in% class(EMM.res2))){
-            LL2 <- EMM.res2$LL
-          }else{
-            LL2 <- LL0
-          }
-          LL2s[j] <- LL2
-        }
-        df[test.no == 1] <- 1
-        df[test.no == 2] <- 1
-        df[test.no == 3] <- 2
+        
+        df <- c(1, 1, 2)[test.no]
+        LL2s <- sapply(X = test.names,
+                       FUN = function(test.name.now) {
+                         
+                         compute.LL <- TRUE
+                         if (!any(MAF.cut.D)) {
+                           if (test.name.now == "D") {
+                             LL2 <- LL0
+                             compute.LL <- FALSE
+                           } else if (test.name.now == "AD") {
+                             test.name.now <- "A"
+                           }
+                         }
+                         
+                         if (compute.LL) {
+                           perform.general <- FALSE
+                           if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+                             EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, 
+                                                            ZETA = ZETA.now, optimizer = optimizer,
+                                                            Zs0 = Zs0.list[[test.name.now]], 
+                                                            Ws0 = Ws0.list[[test.name.now]], 
+                                                            Gammas0 = Gammas0.list[[test.name.now]], 
+                                                            n.core = n.core, gammas.diag = FALSE, 
+                                                            X.fix = TRUE, tol = NULL,
+                                                            eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+                                                            REML = TRUE, pred = FALSE, return.u.always = FALSE,
+                                                            return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
+                             
+                             if ("try-error" %in% class(EMM.res2)) {
+                               perform.general <- TRUE
+                               
+                               
+                               ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+                               if ("A" %in% test.name.now) {
+                                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                 ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+                               }
+                               
+                               if ("D" %in% test.name.now) {
+                                 K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                 ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+                               }
+                               
+                               if ("AD" %in% test.name.now) {
+                                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                 K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                 ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+                                                   list(part.D = list(Z = Z.part.D, K = K.D.part)))
+                               }
+                               
+                               
+                               ZETA.now2.list <- list(
+                                 A = ZETA.now2.A,
+                                 D = ZETA.now2.D,
+                                 AD = ZETA.now2.AD
+                               )
+                             }
+                           } else {
+                             perform.general <- TRUE
+                           }
+                           
+                           if (perform.general) {
+                             EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.list[[test.name.now]],
+                                                         package = package.MM, tol = NULL, 
+                                                         n.core = n.core, optimizer = optimizer,
+                                                         REML = TRUE, pred = FALSE,
+                                                         return.u.always = FALSE,
+                                                         return.u.each = FALSE,
+                                                         return.Hinv = FALSE), silent = TRUE)
+                           }
+                           
+                           
+                           if (!("try-error" %in% class(EMM.res2))) {
+                             LL2 <- EMM.res2$LL
+                           } else {
+                             LL2 <- LL0
+                           }
+                         } 
+                         
+                         return(LL2)
+                       }, simplify = TRUE)
       }
       
       
       deviances <- 2 * (LL2s - LL0)
-      scores.now <- ifelse(deviances <= 0, 0, -log10((1 - chi0.mixture) *
-                                                       pchisq(q = deviances, df = df, lower.tail = FALSE)))
+      scores.now <- ifelse(
+        test = deviances <= 0, yes = 0, 
+        no = -log10((1 - chi0.mixture) * 
+                      pchisq(q = deviances, df = df, 
+                             lower.tail = FALSE))
+      )
       scores[i, ] <- scores.now
     }
   }
   
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     rownames(scores) <- window.centers
-  }else{
+  } else {
     rownames(scores) <- gene.name
   }
   
-  if(kernel.method == "linear"){
+  if (kernel.method == "linear") {
     colnames(scores) <- test.effect
-  }else{
+  } else {
     colnames(scores) <- kernel.method
   }
   
@@ -1645,6 +2102,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
   }
   return(scores)
 }
+
 
 
 
@@ -1662,12 +2120,15 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
 #' follows the chi-square distribution.
 #'
 #'
-#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param LL0 The log-likelihood for the null model.
 #' @param eigen.SGS A list with
 #' \describe{
@@ -1686,7 +2147,28 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
 #' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
 #' If this argument is NULL, the eigen decomposition will be performed in this function.
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param map Data frame of map information where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
 #' @param kernel.method It determines how to calculate kernel. There are three methods.
@@ -1736,11 +2218,17 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eige
 #'
 #'
 #'
-score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, eigen.G = NULL, n.core = 2,
-                             map, kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE, num.hap = NULL,
-                             test.effect = "additive", window.size.half = 5, window.slide = 1, optimizer = "nlminb",
-                             chi0.mixture = 0.5, weighting.center = TRUE, weighting.other = NULL,
-                             gene.set = NULL, min.MAF = 0.02, count = TRUE){
+score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, 
+                             package.MM = "gaston", LL0, 
+                             eigen.SGS = NULL, eigen.G = NULL, 
+                             n.core = 2, parallel.method = "mclapply",
+                             map, kernel.method = "linear", kernel.h = "tuned",
+                             haplotype = TRUE, num.hap = NULL,
+                             test.effect = "additive", window.size.half = 5, 
+                             window.slide = 1, optimizer = "nlminb",
+                             chi0.mixture = 0.5, weighting.center = TRUE, 
+                             weighting.other = NULL, gene.set = NULL, 
+                             min.MAF = 0.02, count = TRUE) {
   n <- length(y)
   
   chr <- map[, 2]
@@ -1749,18 +2237,18 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     n.scores <- sum(n.scores.each)
-  }else{
+  } else {
     gene.names <- as.character(gene.set[, 1])
     mark.id <- as.character(gene.set[, 2])
     gene.name <- as.character(unique(gene.names))
     n.scores <- length(unique(gene.set[, 1]))
   }
   
-  if(kernel.method == "linear"){
+  if (kernel.method == "linear") {
     ncol.scores <- length(test.effect)
-  }else{
+  } else {
     ncol.scores <- 1
   }
   window.centers <- rep(NA, n.scores)
@@ -1772,16 +2260,16 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
   
   
   score.calc.LR.MC.oneSNP <- function(markNo) {
-    if(is.null(gene.set)){
+    if (is.null(gene.set)) {
       markNo.chr <- min(which(markNo - cum.n.scores <= 0))
-      if(markNo.chr >= 2){
+      if (markNo.chr >= 2) {
         window.center <- window.slide * (markNo - cum.n.scores[markNo.chr - 1] - 1) + chr.cum[markNo.chr - 1] + 1
-      }else{
+      } else {
         window.center <- window.slide * (markNo - 1) + 1
       }
       names(window.center) <- markNo.chr
       Theories1 <-  window.center < window.size.half + 1
-      for(r in 1:(chr.max - 1)){
+      for (r in 1:(chr.max - 1)) {
         Theory1 <- chr.cum[r] < window.center & window.center < window.size.half + 1 + chr.cum[r]
         Theories1 <- c(Theories1, Theory1)
       }
@@ -1789,7 +2277,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
       
       
       Theories2  <- NULL
-      for(r in 1:chr.max){
+      for (r in 1:chr.max) {
         Theory2 <- chr.cum[r] - (window.size.half + 1) < window.center & window.center <= chr.cum[r]
         Theories2 <- c(Theories2, Theory2)
       }
@@ -1797,26 +2285,26 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
       
       
       
-      if(rule1 & rule2){
+      if (rule1 & rule2) {
         Mis.range.0 <- which(chr == markNo.chr)
         Mis.range.02 <- which(chr == markNo.chr) - window.center + 1 + window.size.half
-      }else{
-        if(rule1){
+      } else {
+        if (rule1) {
           near.min <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
           Mis.range.0 <- (near.min + 1):(window.center + window.size.half)
           Mis.range.02 <- (2 * window.size.half + 2 - length(Mis.range.0)):(2 * window.size.half + 1)
-        }else{
-          if(rule2){
+        } else {
+          if (rule2) {
             near.max <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
             Mis.range.0 <- (window.center - window.size.half):near.max
             Mis.range.02 <- 1:length(Mis.range.0)
-          }else{
+          } else {
             Mis.range.0 <- (window.center - window.size.half):(window.center + window.size.half)
             Mis.range.02 <- 1:(2 * window.size.half + 1)
           }
         }
       }
-    }else{
+    } else {
       mark.name.now <- mark.id[gene.names == gene.name[markNo]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.02 <- 1:length(Mis.range.0)
@@ -1825,20 +2313,20 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
     
     Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
     MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if(any(test.effect %in% c("dominance", "additive+dominance"))){
+    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
       Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
       MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    }else{
+    } else {
       MAF.cut.D <- rep(TRUE, length(MAF.cut))
     }
     
-    if(any(MAF.cut)){
+    if (any(MAF.cut)) {
       Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
       Mis.range <- Mis.range.0[MAF.cut]
       Mis.range2 <- Mis.range.02[MAF.cut]
       window.size <- ncol(Mis.0)
-      if(any(MAF.cut.D)){
-        if(any(test.effect %in% c("dominance", "additive+dominance"))){
+      if (any(MAF.cut.D)) {
+        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
           Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
           Mis.range.D <- Mis.range.0[MAF.cut.D]
           Mis.range2.D <- Mis.range.02[MAF.cut.D]
@@ -1846,15 +2334,15 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
         }
       }
       
-      if(haplotype){
-        if(is.null(num.hap)){
+      if (haplotype) {
+        if (is.null(num.hap)) {
           Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
           Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
           bango <- as.factor(as.numeric(Mis.fac))
           levels(bango) <- order(unique(bango))
           bango <- as.numeric(as.character(bango))
-          if(any(MAF.cut.D)){
-            if(any(test.effect %in% c("dominance", "additive+dominance"))){
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
               Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
               Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
               
@@ -1863,12 +2351,12 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
               bango.D <- as.numeric(as.character(bango.D))
             }
           }
-        }else{
+        } else {
           kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
-          if(any(MAF.cut.D)){
-            if(any(test.effect %in% c("dominance", "additive+dominance"))){
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
               kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
@@ -1877,66 +2365,66 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
         }
         Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
                                                  dims = c(nrow(M.now), nrow(Mis))))
-        if(any(MAF.cut.D)){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
+        if (any(MAF.cut.D)) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
             Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
                                                        dims = c(nrow(M.now), nrow(Mis.D))))
           }
         }
-      }else{
+      } else {
         Mis <- Mis.0
         Mis.D <- Mis.D.0
         Z.part <- Z.part.D <- diag(nrow(M.now))
       }
       
-      if(window.size != 1){
-        if(weighting.center){
+      if (window.size != 1) {
+        if (weighting.center) {
           weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
           weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if(!is.null(weighting.other)){
+          if (!is.null(weighting.other)) {
             weight.Mis <- weight.Mis * weighting.other[Mis.range]
           }
           weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
-        }else{
+        } else {
           weight.Mis <- rep(1, window.size)
           weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if(!is.null(weighting.other)){
+          if (!is.null(weighting.other)) {
             weight.Mis <- weight.Mis * weighting.other[Mis.range]
           }
           weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
         }
-      }else{
+      } else {
         weight.Mis <- 1
       }
       
-      if(any(MAF.cut.D)){
-        if(window.size != 1){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
-            if(weighting.center){
+      if (any(MAF.cut.D)) {
+        if (window.size != 1) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+            if (weighting.center) {
               weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
               weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if(!is.null(weighting.other)){
+              if (!is.null(weighting.other)) {
                 weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
               }
               weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            }else{
+            } else {
               weight.Mis.D <- rep(1, window.size.D)
               weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if(!is.null(weighting.other)){
+              if (!is.null(weighting.other)) {
                 weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
               }
               weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
             }
           }
-        }else{
+        } else {
           weight.Mis.D <- 1
         }
       }
       
-      if(kernel.method != "linear"){
-        if(ncol(Mis) != 1){
+      if (kernel.method != "linear") {
+        if (ncol(Mis) != 1) {
           Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
-        }else{
+        } else {
           Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
         }
         
@@ -1946,42 +2434,71 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
                          returnWMat = FALSE)
         
         
-        if(length(ZETA.now) == 1){
+        # if (length(ZETA.now) == 1) {
+        #   Gammas0 <- list(K = K.SNP)
+        #   Ws0 <- list(W = Z.part)
+        #   Zs0 <- list(Z = diag(nrow(Mis.0)))
+        #   EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
+        #                                  n.core = 1, optimizer = optimizer,
+        #                                  Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0,
+        #                                  gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
+        #                                  eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+        #                                  REML = TRUE, pred = FALSE), silent = TRUE)
+        #   if ("try-error" %in% class(EMM.res2)) {
+        #     ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+        #     EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, 
+        #                             n.core = 1, optimizer = optimizer,
+        #                             REML = TRUE, pred = FALSE), silent = TRUE)
+        #   }
+        # } else {
+        #   ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+        #   EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, 
+        #                           n.core = 1, optimizer = optimizer,
+        #                           REML = TRUE, pred = FALSE), silent = TRUE)
+        # }
+        
+        perform.general <- FALSE
+        if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
           Gammas0 <- list(K = K.SNP)
           Ws0 <- list(W = Z.part)
           Zs0 <- list(Z = diag(nrow(Mis.0)))
-          EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
-                                         n.core = n.core, optimizer = optimizer,
-                                         Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0,
+          EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, optimizer = optimizer,
+                                         Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = 1, 
                                          gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
                                          eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                         REML = TRUE, pred = FALSE), silent = TRUE)
-          if("try-error" %in% class(EMM.res2)){
-            ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-            EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, 
-                                    n.core = n.core, optimizer = optimizer,
-                                    REML = TRUE, pred = FALSE), silent = TRUE)
+                                         REML = TRUE, pred = FALSE, return.u.always = FALSE,
+                                         return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
+          if ("try-error" %in% class(EMM.res2)) {
+            perform.general <- TRUE
           }
-        }else{
-          ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-          EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL, 
-                                  n.core = n.core, optimizer = optimizer,
-                                  REML = TRUE, pred = FALSE), silent = TRUE)
+        } else {
+          perform.general <- TRUE
         }
         
-        if(!("try-error" %in% class(EMM.res2))){
+        if (perform.general) {
+          ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+          EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
+                                      package = package.MM, tol = NULL, 
+                                      n.core = 1, optimizer = optimizer,
+                                      REML = TRUE, pred = FALSE,
+                                      return.u.always = FALSE,
+                                      return.u.each = FALSE,
+                                      return.Hinv = FALSE), silent = TRUE)
+        }
+        
+        if (!("try-error" %in% class(EMM.res2))) {
           LL2s <- EMM.res2$LL
-        }else{
+        } else {
           LL2s <- LL0
         }
         df <- 1
-      }else{
+      } else {
         test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if(length(test.no) == 0){
+        if (length(test.no) == 0) {
           stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
         }
         
-        if(any(test.effect %in% c("additive", "additive+dominance"))){
+        if (any(test.effect %in% c("additive", "additive+dominance"))) {
           W.A <- calcGRM(genoMat = Mis,
                          methodGRM = "addNOIA",
                          returnWMat = TRUE,
@@ -1989,8 +2506,8 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
                          probAa = probAa[Mis.range])
         }
         
-        if(any(MAF.cut.D)){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
+        if (any(MAF.cut.D)) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
             W.D <- calcGRM(genoMat = Mis.D,
                            methodGRM = "domNOIA",
                            returnWMat = TRUE,
@@ -1999,177 +2516,354 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
           }
         }
         
-        if(length(ZETA.now) == 1){
-          if(1 %in% test.no){
+        # if (length(ZETA.now) == 1) {
+        #   if (1 %in% test.no) {
+        #     Ws0.A <- list(W.A = W.A)
+        #     Zs0.A <- list(W.A = Z.part)
+        #     Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
+        #   }
+        #   
+        #   if (any(MAF.cut.D)) {
+        #     if (2 %in% test.no) {
+        #       Ws0.D <- list(W.D = W.D)
+        #       Zs0.D <- list(W.D = Z.part.D)
+        #       Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
+        #     }
+        #     
+        #     if (3 %in% test.no) {
+        #       Ws0.AD <- list(W.A = W.A, W.D = W.D)
+        #       Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
+        #       Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
+        #     }
+        #   }
+        # } else {
+        #   if (1 %in% test.no) {
+        #     K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+        #     ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+        #   }
+        #   
+        #   if (any(MAF.cut.D)) {
+        #     if (2 %in% test.no) {
+        #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+        #       ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+        #     }
+        #     
+        #     if (3 %in% test.no) {
+        #       K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+        #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+        #       ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+        #                         list(part.D = list(Z = Z.part.D, K = K.D.part)))
+        #     }
+        #   }
+        # }
+        # 
+        # LL2s <- df <- rep(NA, length(test.no))
+        # for (j in 1:length(test.no)) {
+        #   test.no.now <- test.no[j]
+        #   if (length(ZETA.now) == 1) {
+        #     if (test.no.now == 1) {
+        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
+        #                                      n.core = 1, optimizer = optimizer,
+        #                                      Zs0 = Zs0.A, Ws0 = Ws0.A, Gammas0 = Gammas0.A,
+        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if (test.no.now == 2) {
+        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
+        #                                      n.core = 1, optimizer = optimizer,
+        #                                      Zs0 = Zs0.D, Ws0 = Ws0.D, Gammas0 = Gammas0.D,
+        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if (test.no.now == 3) {
+        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
+        #                                      n.core = 1, optimizer = optimizer,
+        #                                      Zs0 = Zs0.AD, Ws0 = Ws0.AD, Gammas0 = Gammas0.AD,
+        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if ("try-error" %in% class(EMM.res2)) {
+        #       if (1 %in% test.no) {
+        #         K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+        #         ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+        #       }
+        #       
+        #       if (any(MAF.cut.D)) {
+        #         if (2 %in% test.no) {
+        #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+        #           ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+        #         }
+        #         
+        #         if (3 %in% test.no) {
+        #           K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+        #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+        #           ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+        #                             list(part.D = list(Z = Z.part.D, K = K.D.part)))
+        #         }
+        #       }
+        #       
+        #       if (test.no.now == 1) {
+        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL, 
+        #                                 n.core = 1, optimizer = optimizer,
+        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+        #       }
+        #       
+        #       if (test.no.now == 2) {
+        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL, 
+        #                                 n.core = 1, optimizer = optimizer,
+        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+        #       }
+        #       
+        #       if (test.no.now == 3) {
+        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL, 
+        #                                 n.core = 1, optimizer = optimizer,
+        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+        #       }
+        #     }
+        #   } else {
+        #     if (test.no.now == 1) {
+        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL, 
+        #                               n.core = 1, optimizer = optimizer,
+        #                               REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if (test.no.now == 2) {
+        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
+        #                               n.core = 1, optimizer = optimizer,
+        #                               REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #     
+        #     if (test.no.now == 3) {
+        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL, 
+        #                               n.core = 1, optimizer = optimizer,
+        #                               REML = TRUE, pred = FALSE), silent = TRUE)
+        #     }
+        #   }
+        #   
+        #   if (!("try-error" %in% class(EMM.res2))) {
+        #     LL2 <- EMM.res2$LL
+        #   } else {
+        #     LL2 <- LL0
+        #   }
+        #   LL2s[j] <- LL2
+        # }
+        # df[test.no == 1] <- 1
+        # df[test.no == 2] <- 1
+        # df[test.no == 3] <- 2
+        
+        test.names <- c("A", "D", "AD")[test.no]
+        
+        if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+          Zs0.A <- Zs0.D <- Zs0.AD <- 
+            Ws0.A <- Ws0.D <- Ws0.AD <-
+            Gammas0.A <- Gammas0.D <- Gammas0.AD <- NULL
+          if ("A" %in% test.names) {
             Ws0.A <- list(W.A = W.A)
             Zs0.A <- list(W.A = Z.part)
             Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
           }
           
-          if(any(MAF.cut.D)){
-            if(2 %in% test.no){
+          if (any(MAF.cut.D)) {
+            if ("D" %in% test.names) {
               Ws0.D <- list(W.D = W.D)
               Zs0.D <- list(W.D = Z.part.D)
               Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
             }
             
-            if(3 %in% test.no){
+            if ("AD" %in% test.names) {
               Ws0.AD <- list(W.A = W.A, W.D = W.D)
               Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
               Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
             }
           }
-        }else{
-          if(1 %in% test.no){
+          
+          Zs0.list <- list(
+            A = Zs0.A,
+            D = Zs0.D,
+            AD = Zs0.AD
+          )
+          
+          Ws0.list <- list(
+            A = Ws0.A,
+            D = Ws0.D,
+            AD = Ws0.AD
+          )
+          
+          Gammas0.list <- list(
+            A = Gammas0.A,
+            D = Gammas0.D,
+            AD = Gammas0.AD
+          )
+        } else {
+          ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+          if ("A" %in% test.names) {
             K.A.part <- W.A %*% (t(W.A) * weight.Mis)
             ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
           }
           
-          if(any(MAF.cut.D)){
-            if(2 %in% test.no){
+          if (any(MAF.cut.D)) {
+            if ("D" %in% test.names) {
               K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
               ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
             }
             
-            if(3 %in% test.no){
+            if ("AD" %in% test.names) {
               K.A.part <- W.A %*% (t(W.A) * weight.Mis)
               K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
               ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
                                 list(part.D = list(Z = Z.part.D, K = K.D.part)))
             }
           }
+          
+          
+          ZETA.now2.list <- list(
+            A = ZETA.now2.A,
+            D = ZETA.now2.D,
+            AD = ZETA.now2.AD
+          )
         }
         
-        LL2s <- df <- rep(NA, length(test.no))
-        for(j in 1:length(test.no)){
-          test.no.now <- test.no[j]
-          if(length(ZETA.now) == 1){
-            if(test.no.now == 1){
-              EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
-                                             n.core = n.core, optimizer = optimizer,
-                                             Zs0 = Zs0.A, Ws0 = Ws0.A, Gammas0 = Gammas0.A,
-                                             gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-                                             eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                             REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if(test.no.now == 2){
-              EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
-                                             n.core = n.core, optimizer = optimizer,
-                                             Zs0 = Zs0.D, Ws0 = Ws0.D, Gammas0 = Gammas0.D,
-                                             gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-                                             eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                             REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if(test.no.now == 3){
-              EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, 
-                                             n.core = n.core, optimizer = optimizer,
-                                             Zs0 = Zs0.AD, Ws0 = Ws0.AD, Gammas0 = Gammas0.AD,
-                                             gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-                                             eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                             REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if("try-error" %in% class(EMM.res2)){
-              if(1 %in% test.no){
-                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-              }
-              
-              if(any(MAF.cut.D)){
-                if(2 %in% test.no){
-                  K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-                  ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-                }
-                
-                if(3 %in% test.no){
-                  K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                  K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-                  ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-                                    list(part.D = list(Z = Z.part.D, K = K.D.part)))
-                }
-              }
-              
-              if(test.no.now == 1){
-                EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL, 
-                                        n.core = n.core, optimizer = optimizer,
-                                        REML = TRUE, pred = FALSE), silent = TRUE)
-              }
-              
-              if(test.no.now == 2){
-                EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL, 
-                                        n.core = n.core, optimizer = optimizer,
-                                        REML = TRUE, pred = FALSE), silent = TRUE)
-              }
-              
-              if(test.no.now == 3){
-                EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL, 
-                                        n.core = n.core, optimizer = optimizer,
-                                        REML = TRUE, pred = FALSE), silent = TRUE)
-              }
-            }
-          }else{
-            if(test.no.now == 1){
-              EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL, 
-                                      n.core = n.core, optimizer = optimizer,
-                                      REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if(test.no.now == 2){
-              EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
-                                      n.core = n.core, optimizer = optimizer,
-                                      REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-            
-            if(test.no.now == 3){
-              EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL, 
-                                      n.core = n.core, optimizer = optimizer,
-                                      REML = TRUE, pred = FALSE), silent = TRUE)
-            }
-          }
-          
-          if(!("try-error" %in% class(EMM.res2))){
-            LL2 <- EMM.res2$LL
-          }else{
-            LL2 <- LL0
-          }
-          LL2s[j] <- LL2
-        }
-        df[test.no == 1] <- 1
-        df[test.no == 2] <- 1
-        df[test.no == 3] <- 2
+        
+        df <- c(1, 1, 2)[test.no]
+        LL2s <- sapply(X = test.names,
+                       FUN = function(test.name.now) {
+                         
+                         compute.LL <- TRUE
+                         if (!any(MAF.cut.D)) {
+                           if (test.name.now == "D") {
+                             LL2 <- LL0
+                             compute.LL <- FALSE
+                           } else if (test.name.now == "AD") {
+                             test.name.now <- "A"
+                           }
+                         }
+                         
+                         if (compute.LL) {
+                           perform.general <- FALSE
+                           if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+                             EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, 
+                                                            ZETA = ZETA.now, optimizer = optimizer,
+                                                            Zs0 = Zs0.list[[test.name.now]], 
+                                                            Ws0 = Ws0.list[[test.name.now]], 
+                                                            Gammas0 = Gammas0.list[[test.name.now]], 
+                                                            n.core = 1, gammas.diag = FALSE, 
+                                                            X.fix = TRUE, tol = NULL,
+                                                            eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+                                                            REML = TRUE, pred = FALSE, return.u.always = FALSE,
+                                                            return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
+                             
+                             if ("try-error" %in% class(EMM.res2)) {
+                               perform.general <- TRUE
+                               
+                               
+                               ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+                               if ("A" %in% test.name.now) {
+                                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                 ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+                               }
+                               
+                               if ("D" %in% test.name.now) {
+                                 K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                 ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+                               }
+                               
+                               if ("AD" %in% test.name.now) {
+                                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                 K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                 ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+                                                   list(part.D = list(Z = Z.part.D, K = K.D.part)))
+                               }
+                               
+                               
+                               ZETA.now2.list <- list(
+                                 A = ZETA.now2.A,
+                                 D = ZETA.now2.D,
+                                 AD = ZETA.now2.AD
+                               )
+                             }
+                           } else {
+                             perform.general <- TRUE
+                           }
+                           
+                           if (perform.general) {
+                             EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.list[[test.name.now]],
+                                                         package = package.MM, tol = NULL, 
+                                                         n.core = 1, optimizer = optimizer,
+                                                         REML = TRUE, pred = FALSE,
+                                                         return.u.always = FALSE,
+                                                         return.u.each = FALSE,
+                                                         return.Hinv = FALSE), silent = TRUE)
+                           }
+                           
+                           
+                           if (!("try-error" %in% class(EMM.res2))) {
+                             LL2 <- EMM.res2$LL
+                           } else {
+                             LL2 <- LL0
+                           }
+                         } 
+                         
+                         return(LL2)
+                       }, simplify = TRUE)
+        
       }
       
       
       deviances <- 2 * (LL2s - LL0)
-      scores.now <- ifelse(deviances <= 0, 0, -log10((1 - chi0.mixture) *
-                                                       pchisq(q = deviances, df = df, lower.tail = FALSE)))
+      scores.now <- ifelse(
+        test = deviances <= 0, yes = 0, 
+        no = -log10((1 - chi0.mixture) * 
+                      pchisq(q = deviances, df = df, 
+                             lower.tail = FALSE))
+      )
     } else {
       scores.now <- rep(NA, ncol.scores)
     }
     
-    if(is.null(gene.set)){
+    if (is.null(gene.set)) {
       return(list(scores = scores.now, window.center = window.center))
     } else {
       return(list(scores = scores.now))
     }
   }
   
-  all.res <- pbmcapply::pbmclapply(1:n.scores, score.calc.LR.MC.oneSNP, mc.cores = n.core)
-  scores <- unlist(lapply(all.res, function(x) x$scores))
-  scores <- matrix(scores, nrow = n.scores, ncol = ncol.scores, byrow = TRUE)
   
-  if(is.null(gene.set)){
-    window.centers <- unlist(lapply(all.res, function(x) x$window.center))
+  all.res <- parallel.compute(vec = 1:n.scores, 
+                              func = score.calc.LR.MC.oneSNP, 
+                              n.core = n.core,
+                              parallel.method = parallel.method,
+                              count = count)
+  
+  scores <- do.call(
+    what = rbind,
+    args = lapply(X = all.res,
+                  FUN = function(x) {
+                    return(x$scores)
+                  })
+  )
+  
+  
+  if (is.null(gene.set)) {
+    window.centers <- unlist(
+      x = lapply(X = all.res, 
+                 FUN = function(x) {
+                   return(x$window.center)
+                 })
+    )
     rownames(scores) <- window.centers
-  }else{
+  } else {
     rownames(scores) <- gene.name
   }
   
-  if(kernel.method == "linear"){
+  if (kernel.method == "linear") {
     colnames(scores) <- test.effect
-  }else{
+  } else {
     colnames(scores) <- kernel.method
   }
   
@@ -2196,7 +2890,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now, LL0, eigen.SGS = NULL, e
 #' Then it performs the score test by using the fact that the score statistic follows the chi-square distribution.
 #'
 #'
-#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
@@ -2260,25 +2954,25 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
                              map, kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE, num.hap = NULL,
                              test.effect = "additive", window.size.half = 5, window.slide = 1,
                              chi0.mixture = 0.5, weighting.center = TRUE, weighting.other = NULL,
-                             gene.set = NULL, min.MAF = 0.02, count = TRUE){
+                             gene.set = NULL, min.MAF = 0.02, count = TRUE) {
   chr <- map[, 2]
   chr.tab <- table(chr)
   chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     n.scores <- sum(n.scores.each)
-  }else{
+  } else {
     gene.names <- as.character(gene.set[, 1])
     mark.id <- as.character(gene.set[, 2])
     gene.name <- as.character(unique(gene.names))
     n.scores <- length(unique(gene.set[, 1]))
   }
   
-  if(kernel.method == "linear"){
+  if (kernel.method == "linear") {
     scores <- matrix(NA, nrow = n.scores, ncol = length(test.effect))
-  }else{
+  } else {
     scores <- matrix(NA, nrow = n.scores, ncol =  1)
   }
   
@@ -2294,10 +2988,10 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
   n.scores2 <- n.scores - n.scores %% 100
   start.scorecalc <- Sys.time()
   for (i in 1:n.scores) {
-    if(count){
+    if (count) {
       setTxtProgressBar(pb, i)
-      if(n.scores > 100){
-        if(i == (n.scores2 / 100 + 1) | i == (n.scores2 / 10 + 1) | i == (n.scores2 / 2 + 1)){
+      if (n.scores > 100) {
+        if (i == (n.scores2 / 100 + 1) | i == (n.scores2 / 10 + 1) | i == (n.scores2 / 2 + 1)) {
           cat("\n")
           end.scorecalc <- Sys.time()
           jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.scores - i + 1) / (i - 1)
@@ -2308,17 +3002,17 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
       }
     }
     
-    if(is.null(gene.set)){
+    if (is.null(gene.set)) {
       i.chr <- min(which(i - cum.n.scores <= 0))
-      if(i.chr >= 2){
+      if (i.chr >= 2) {
         window.center <- window.slide * (i - cum.n.scores[i.chr - 1] - 1) + chr.cum[i.chr - 1] + 1
-      }else{
+      } else {
         window.center <- window.slide * (i - 1) + 1
       }
       names(window.center) <- i.chr
       window.centers[i] <- window.center
       Theories1 <-  window.center < window.size.half + 1
-      for(r in 1:(chr.max - 1)){
+      for (r in 1:(chr.max - 1)) {
         Theory1 <- chr.cum[r] < window.center & window.center < window.size.half + 1 + chr.cum[r]
         Theories1 <- c(Theories1, Theory1)
       }
@@ -2326,33 +3020,33 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
       
       
       Theories2  <- NULL
-      for(r in 1:chr.max){
+      for (r in 1:chr.max) {
         Theory2 <- chr.cum[r] - (window.size.half + 1) < window.center & window.center <= chr.cum[r]
         Theories2 <- c(Theories2, Theory2)
       }
       rule2 <- sum(Theories2) != 0
       
       
-      if(rule1 & rule2){
+      if (rule1 & rule2) {
         Mis.range.0 <- which(chr == i.chr)
         Mis.range.02 <- which(chr == i.chr) - window.center + 1 + window.size.half
-      }else{
-        if(rule1){
+      } else {
+        if (rule1) {
           near.min <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
           Mis.range.0 <- (near.min + 1):(window.center + window.size.half)
           Mis.range.02 <- (2 * window.size.half + 2 - length(Mis.range.0)):(2 * window.size.half + 1)
-        }else{
-          if(rule2){
+        } else {
+          if (rule2) {
             near.max <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
             Mis.range.0 <- (window.center - window.size.half):near.max
             Mis.range.02 <- 1:length(Mis.range.0)
-          }else{
+          } else {
             Mis.range.0 <- (window.center - window.size.half):(window.center + window.size.half)
             Mis.range.02 <- 1:(2 * window.size.half + 1)
           }
         }
       }
-    }else{
+    } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.02 <- 1:length(Mis.range.0)
@@ -2361,20 +3055,20 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
     
     Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
     MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if(any(test.effect %in% c("dominance", "additive+dominance"))){
+    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
       Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
       MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    }else{
+    } else {
       MAF.cut.D <- rep(TRUE, length(MAF.cut))
     }
     
-    if(any(MAF.cut)){
+    if (any(MAF.cut)) {
       Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
       Mis.range <- Mis.range.0[MAF.cut]
       Mis.range2 <- Mis.range.02[MAF.cut]
       window.size <- ncol(Mis.0)
-      if(any(MAF.cut.D)){
-        if(any(test.effect %in% c("dominance", "additive+dominance"))){
+      if (any(MAF.cut.D)) {
+        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
           Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
           Mis.range.D <- Mis.range.0[MAF.cut.D]
           Mis.range2.D <- Mis.range.02[MAF.cut.D]
@@ -2382,16 +3076,16 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
         }
       }
       
-      if(haplotype){
-        if(is.null(num.hap)){
+      if (haplotype) {
+        if (is.null(num.hap)) {
           Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
           Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
           
           bango <- as.factor(as.numeric(Mis.fac))
           levels(bango) <- order(unique(bango))
           bango <- as.numeric(as.character(bango))
-          if(any(MAF.cut.D)){
-            if(any(test.effect %in% c("dominance", "additive+dominance"))){
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
               Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
               Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
               
@@ -2401,12 +3095,12 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
               bango.D <- as.numeric(as.character(bango.D))
             }
           }
-        }else{
+        } else {
           kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
-          if(any(MAF.cut.D)){
-            if(any(test.effect %in% c("dominance", "additive+dominance"))){
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
               kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
@@ -2415,66 +3109,66 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
         }
         Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
                                                  dims = c(nrow(M.now), nrow(Mis))))
-        if(any(MAF.cut.D)){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
+        if (any(MAF.cut.D)) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
             Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
                                                        dims = c(nrow(M.now), nrow(Mis.D))))
           }
         }
-      }else{
+      } else {
         Mis <- Mis.0
         Mis.D <- Mis.D.0
         Z.part <- Z.part.D <- diag(nrow(M.now))
       }
       
-      if(window.size != 1){
-        if(weighting.center){
+      if (window.size != 1) {
+        if (weighting.center) {
           weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
           weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if(!is.null(weighting.other)){
+          if (!is.null(weighting.other)) {
             weight.Mis <- weight.Mis * weighting.other[Mis.range]
           }
           weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
-        }else{
+        } else {
           weight.Mis <- rep(1, window.size)
           weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if(!is.null(weighting.other)){
+          if (!is.null(weighting.other)) {
             weight.Mis <- weight.Mis * weighting.other[Mis.range]
           }
           weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
         }
-      }else{
+      } else {
         weight.Mis <- 1
       }
       
-      if(any(MAF.cut.D)){
-        if(window.size != 1){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
-            if(weighting.center){
+      if (any(MAF.cut.D)) {
+        if (window.size != 1) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+            if (weighting.center) {
               weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
               weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if(!is.null(weighting.other)){
+              if (!is.null(weighting.other)) {
                 weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
               }
               weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            }else{
+            } else {
               weight.Mis.D <- rep(1, window.size.D)
               weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if(!is.null(weighting.other)){
+              if (!is.null(weighting.other)) {
                 weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
               }
               weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
             }
           }
-        }else{
+        } else {
           weight.Mis.D <- 1
         }
       }
       
-      if(kernel.method != "linear"){
-        if(ncol(Mis) != 1){
+      if (kernel.method != "linear") {
+        if (ncol(Mis) != 1) {
           Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
-        }else{
+        } else {
           Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
         }
         
@@ -2488,21 +3182,21 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
         scores.now <- score.linker.cpp(y, Ws = Ws, Gammas = Gammas,
                                        gammas.diag = FALSE, Gu = Gu, Ge = Ge,
                                        P0 = P0, chi0.mixture = chi0.mixture)
-      }else{
+      } else {
         test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if(length(test.no) == 0){
+        if (length(test.no) == 0) {
           stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
         }
         
-        if(any(test.effect %in% c("additive", "additive+dominance"))){
+        if (any(test.effect %in% c("additive", "additive+dominance"))) {
           W.A <- calcGRM(genoMat = Mis,
                          methodGRM = "addNOIA",
                          returnWMat = TRUE,
                          probaa = probaa[Mis.range],
                          probAa = probAa[Mis.range])
         }
-        if(any(MAF.cut.D)){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
+        if (any(MAF.cut.D)) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
             W.D <- calcGRM(genoMat = Mis.D,
                            methodGRM = "domNOIA",
                            returnWMat = TRUE,
@@ -2511,48 +3205,48 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
           }
         }
         
-        if(1 %in% test.no){
+        if (1 %in% test.no) {
           Ws.A <- list(W.A = Z.part %*% W.A)
           Gammas.A <- list(W.A = diag(weight.Mis ^ 2))
         }
         
-        if(any(MAF.cut.D)){
-          if(2 %in% test.no){
+        if (any(MAF.cut.D)) {
+          if (2 %in% test.no) {
             Ws.D <- list(W.D = Z.part.D %*% W.D)
             Gammas.D <- list(W.D = diag(weight.Mis.D ^ 2))
           }
           
-          if(3 %in% test.no){
+          if (3 %in% test.no) {
             Ws.AD <- list(W.A = Z.part %*% W.A, Z.part.D %*% W.D)
             Gammas.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
           }
         }
         
         scores.now <- rep(NA, length(test.no))
-        for(j in 1:length(test.no)){
+        for (j in 1:length(test.no)) {
           test.no.now <- test.no[j]
-          if(test.no.now == 1){
+          if (test.no.now == 1) {
             score.now <- score.linker.cpp(y, Ws = Ws.A, Gammas = Gammas.A,
                                           gammas.diag = TRUE, Gu = Gu, Ge = Ge,
                                           P0 = P0, chi0.mixture = chi0.mixture)
           }
           
-          if(test.no.now == 2){
-            if(any(MAF.cut.D)){
+          if (test.no.now == 2) {
+            if (any(MAF.cut.D)) {
               score.now <- score.linker.cpp(y, Ws = Ws.D, Gammas = Gammas.D,
                                             gammas.diag = TRUE, Gu = Gu, Ge = Ge,
                                             P0 = P0, chi0.mixture = chi0.mixture)
-            }else{
+            } else {
               score.now <- 0
             }
           }
           
-          if(test.no.now == 3){
-            if(any(MAF.cut.D)){
+          if (test.no.now == 3) {
+            if (any(MAF.cut.D)) {
               score.now <- score.linker.cpp(y, Ws = Ws.AD, Gammas = Gammas.AD,
                                             gammas.diag = TRUE, Gu = Gu, Ge = Ge,
                                             P0 = P0, chi0.mixture = chi0.mixture)
-            }else{
+            } else {
               score.now <- 0
             }
           }
@@ -2564,15 +3258,15 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
     }
   }
   
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     rownames(scores) <- window.centers
-  }else{
+  } else {
     rownames(scores) <- gene.name
   }
   
-  if(kernel.method == "linear"){
+  if (kernel.method == "linear") {
     colnames(scores) <- test.effect
-  }else{
+  } else {
     colnames(scores) <- kernel.method
   }
   
@@ -2594,7 +3288,7 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
 #' Then it performs the score test by using the fact that the score statistic follows the chi-square distribution.
 #'
 #'
-#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
@@ -2605,7 +3299,28 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
 #' @param Ge A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
 #' @param P0 A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
 #' \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param map Data frame of map information where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
 #' @param kernel.method It determines how to calculate kernel. There are three methods.
@@ -2655,29 +3370,32 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
 #'
 #'
 #'
-score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.core = 2,
-                                map, kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE, num.hap = NULL,
-                                test.effect = "additive", window.size.half = 5, window.slide = 1,
-                                chi0.mixture = 0.5, weighting.center = TRUE, weighting.other = NULL,
-                                gene.set = NULL, min.MAF = 0.02, count = TRUE){
+score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, 
+                                n.core = 2, parallel.method = "mclapply",
+                                map, kernel.method = "linear", kernel.h = "tuned",
+                                haplotype = TRUE, num.hap = NULL,
+                                test.effect = "additive", window.size.half = 5,
+                                window.slide = 1, chi0.mixture = 0.5, 
+                                weighting.center = TRUE, weighting.other = NULL,
+                                gene.set = NULL, min.MAF = 0.02, count = TRUE) {
   chr <- map[, 2]
   chr.tab <- table(chr)
   chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     n.scores <- sum(n.scores.each)
-  }else{
+  } else {
     gene.names <- as.character(gene.set[, 1])
     mark.id <- as.character(gene.set[, 2])
     gene.name <- as.character(unique(gene.names))
     n.scores <- length(unique(gene.set[, 1]))
   }
   
-  if(kernel.method == "linear"){
+  if (kernel.method == "linear") {
     ncol.scores <- length(test.effect)
-  }else{
+  } else {
     ncol.scores <- 1
   }
   
@@ -2689,16 +3407,16 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
   MAF.D <- pmin(probAa, 1 - probAa)
   
   score.calc.score.MC.oneSNP <- function(markNo) {
-    if(is.null(gene.set)){
+    if (is.null(gene.set)) {
       markNo.chr <- min(which(markNo - cum.n.scores <= 0))
-      if(markNo.chr >= 2){
+      if (markNo.chr >= 2) {
         window.center <- window.slide * (markNo - cum.n.scores[markNo.chr - 1] - 1) + chr.cum[markNo.chr - 1] + 1
-      }else{
+      } else {
         window.center <- window.slide * (markNo - 1) + 1
       }
       names(window.center) <- markNo.chr
       Theories1 <-  window.center < window.size.half + 1
-      for(r in 1:(chr.max - 1)){
+      for (r in 1:(chr.max - 1)) {
         Theory1 <- chr.cum[r] < window.center & window.center < window.size.half + 1 + chr.cum[r]
         Theories1 <- c(Theories1, Theory1)
       }
@@ -2706,33 +3424,33 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
       
       
       Theories2  <- NULL
-      for(r in 1:chr.max){
+      for (r in 1:chr.max) {
         Theory2 <- chr.cum[r] - (window.size.half + 1) < window.center & window.center <= chr.cum[r]
         Theories2 <- c(Theories2, Theory2)
       }
       rule2 <- sum(Theories2) != 0
       
       
-      if(rule1 & rule2){
+      if (rule1 & rule2) {
         Mis.range.0 <- which(chr == markNo.chr)
         Mis.range.02 <- which(chr == markNo.chr) - window.center + 1 + window.size.half
-      }else{
-        if(rule1){
+      } else {
+        if (rule1) {
           near.min <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
           Mis.range.0 <- (near.min + 1):(window.center + window.size.half)
           Mis.range.02 <- (2 * window.size.half + 2 - length(Mis.range.0)):(2 * window.size.half + 1)
-        }else{
-          if(rule2){
+        } else {
+          if (rule2) {
             near.max <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
             Mis.range.0 <- (window.center - window.size.half):near.max
             Mis.range.02 <- 1:length(Mis.range.0)
-          }else{
+          } else {
             Mis.range.0 <- (window.center - window.size.half):(window.center + window.size.half)
             Mis.range.02 <- 1:(2 * window.size.half + 1)
           }
         }
       }
-    }else{
+    } else {
       mark.name.now <- mark.id[gene.names == gene.name[markNo]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.02 <- 1:length(Mis.range.0)
@@ -2741,20 +3459,20 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
     
     Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
     MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if(any(test.effect %in% c("dominance", "additive+dominance"))){
+    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
       Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
       MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    }else{
+    } else {
       MAF.cut.D <- rep(TRUE, length(MAF.cut))
     }
     
-    if(any(MAF.cut)){
+    if (any(MAF.cut)) {
       Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
       Mis.range <- Mis.range.0[MAF.cut]
       Mis.range2 <- Mis.range.02[MAF.cut]
       window.size <- ncol(Mis.0)
-      if(any(MAF.cut.D)){
-        if(any(test.effect %in% c("dominance", "additive+dominance"))){
+      if (any(MAF.cut.D)) {
+        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
           Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
           Mis.range.D <- Mis.range.0[MAF.cut.D]
           Mis.range2.D <- Mis.range.02[MAF.cut.D]
@@ -2762,16 +3480,16 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
         }
       }
       
-      if(haplotype){
-        if(is.null(num.hap)){
+      if (haplotype) {
+        if (is.null(num.hap)) {
           Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
           Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
           
           bango <- as.factor(as.numeric(Mis.fac))
           levels(bango) <- order(unique(bango))
           bango <- as.numeric(as.character(bango))
-          if(any(MAF.cut.D)){
-            if(any(test.effect %in% c("dominance", "additive+dominance"))){
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
               Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
               Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
               
@@ -2780,12 +3498,12 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
               bango.D <- as.numeric(as.character(bango.D))
             }
           }
-        }else{
+        } else {
           kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
-          if(any(MAF.cut.D)){
-            if(any(test.effect %in% c("dominance", "additive+dominance"))){
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
               kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
@@ -2794,66 +3512,66 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
         }
         Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
                                                  dims = c(nrow(M.now), nrow(Mis))))
-        if(any(MAF.cut.D)){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
+        if (any(MAF.cut.D)) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
             Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
                                                        dims = c(nrow(M.now), nrow(Mis.D))))
           }
         }
-      }else{
+      } else {
         Mis <- Mis.0
         Mis.D <- Mis.D.0
         Z.part <- Z.part.D <- diag(nrow(M.now))
       }
       
-      if(window.size != 1){
-        if(weighting.center){
+      if (window.size != 1) {
+        if (weighting.center) {
           weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
           weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if(!is.null(weighting.other)){
+          if (!is.null(weighting.other)) {
             weight.Mis <- weight.Mis * weighting.other[Mis.range]
           }
           weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
-        }else{
+        } else {
           weight.Mis <- rep(1, window.size)
           weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if(!is.null(weighting.other)){
+          if (!is.null(weighting.other)) {
             weight.Mis <- weight.Mis * weighting.other[Mis.range]
           }
           weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
         }
-      }else{
+      } else {
         weight.Mis <- 1
       }
       
-      if(any(MAF.cut.D)){
-        if(window.size != 1){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
-            if(weighting.center){
+      if (any(MAF.cut.D)) {
+        if (window.size != 1) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+            if (weighting.center) {
               weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
               weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if(!is.null(weighting.other)){
+              if (!is.null(weighting.other)) {
                 weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
               }
               weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            }else{
+            } else {
               weight.Mis.D <- rep(1, window.size.D)
               weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if(!is.null(weighting.other)){
+              if (!is.null(weighting.other)) {
                 weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
               }
               weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
             }
           }
-        }else{
+        } else {
           weight.Mis.D <- 1
         }
       }
       
-      if(kernel.method != "linear"){
-        if(ncol(Mis) != 1){
+      if (kernel.method != "linear") {
+        if (ncol(Mis) != 1) {
           Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
-        }else{
+        } else {
           Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
         }
         
@@ -2868,21 +3586,21 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
         scores.now <- score.linker.cpp(y, Ws = Ws, Gammas = Gammas,
                                        gammas.diag = FALSE, Gu = Gu, Ge = Ge,
                                        P0 = P0, chi0.mixture = chi0.mixture)
-      }else{
+      } else {
         test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if(length(test.no) == 0){
+        if (length(test.no) == 0) {
           stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
         }
         
-        if(any(test.effect %in% c("additive", "additive+dominance"))){
+        if (any(test.effect %in% c("additive", "additive+dominance"))) {
           W.A <- calcGRM(genoMat = Mis,
                          methodGRM = "addNOIA",
                          returnWMat = TRUE,
                          probaa = probaa[Mis.range],
                          probAa = probAa[Mis.range])
         }
-        if(any(MAF.cut.D)){
-          if(any(test.effect %in% c("dominance", "additive+dominance"))){
+        if (any(MAF.cut.D)) {
+          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
             W.D <- calcGRM(genoMat = Mis.D,
                            methodGRM = "domNOIA",
                            returnWMat = TRUE,
@@ -2891,48 +3609,48 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
           }
         }
         
-        if(1 %in% test.no){
+        if (1 %in% test.no) {
           Ws.A <- list(W.A = Z.part %*% W.A)
           Gammas.A <- list(W.A = diag(weight.Mis ^ 2))
         }
         
-        if(any(MAF.cut.D)){
-          if(2 %in% test.no){
+        if (any(MAF.cut.D)) {
+          if (2 %in% test.no) {
             Ws.D <- list(W.D = Z.part.D %*% W.D)
             Gammas.D <- list(W.D = diag(weight.Mis.D ^ 2))
           }
           
-          if(3 %in% test.no){
+          if (3 %in% test.no) {
             Ws.AD <- list(W.A = Z.part %*% W.A, Z.part.D %*% W.D)
             Gammas.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
           }
         }
         
         scores.now <- rep(NA, length(test.no))
-        for(j in 1:length(test.no)){
+        for (j in 1:length(test.no)) {
           test.no.now <- test.no[j]
-          if(test.no.now == 1){
+          if (test.no.now == 1) {
             score.now <- score.linker.cpp(y, Ws = Ws.A, Gammas = Gammas.A,
                                           gammas.diag = TRUE, Gu = Gu, Ge = Ge,
                                           P0 = P0, chi0.mixture = chi0.mixture)
           }
           
-          if(test.no.now == 2){
-            if(any(MAF.cut.D)){
+          if (test.no.now == 2) {
+            if (any(MAF.cut.D)) {
               score.now <- score.linker.cpp(y, Ws = Ws.D, Gammas = Gammas.D,
                                             gammas.diag = TRUE, Gu = Gu, Ge = Ge,
                                             P0 = P0, chi0.mixture = chi0.mixture)
-            }else{
+            } else {
               score.now <- 0
             }
           }
           
-          if(test.no.now == 3){
-            if(any(MAF.cut.D)){
+          if (test.no.now == 3) {
+            if (any(MAF.cut.D)) {
               score.now <- score.linker.cpp(y, Ws = Ws.AD, Gammas = Gammas.AD,
                                             gammas.diag = TRUE, Gu = Gu, Ge = Ge,
                                             P0 = P0, chi0.mixture = chi0.mixture)
-            }else{
+            } else {
               score.now <- 0
             }
           }
@@ -2944,28 +3662,45 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
       scores.now <- rep(NA, ncol.scores)
     }
     
-    if(is.null(gene.set)){
+    if (is.null(gene.set)) {
       return(list(scores = scores.now, window.center = window.center))
     } else {
       return(list(scores = scores.now))
     }
   }
   
-  all.res <- pbmcapply::pbmclapply(1:n.scores, score.calc.score.MC.oneSNP, mc.cores = n.core)
-  scores <- unlist(lapply(all.res, function(x) x$scores))
-  scores <- matrix(scores, nrow = n.scores, ncol = ncol.scores, byrow = TRUE)
   
   
-  if(is.null(gene.set)){
-    window.centers <- unlist(lapply(all.res, function(x) x$window.center))
+  all.res <- parallel.compute(vec = 1:n.scores, 
+                              func = score.calc.score.MC.oneSNP, 
+                              n.core = n.core,
+                              parallel.method = parallel.method,
+                              count = count)
+  
+  scores <- do.call(
+    what = rbind,
+    args = lapply(X = all.res,
+                  FUN = function(x) {
+                    return(x$scores)
+                  })
+  )
+  
+  
+  if (is.null(gene.set)) {
+    window.centers <- unlist(
+      x = lapply(X = all.res, 
+                 FUN = function(x) {
+                   return(x$window.center)
+                 })
+    )
     rownames(scores) <- window.centers
-  }else{
+  } else {
     rownames(scores) <- gene.name
   }
   
-  if(kernel.method == "linear"){
+  if (kernel.method == "linear") {
     colnames(scores) <- test.effect
-  }else{
+  } else {
     colnames(scores) <- kernel.method
   }
   
@@ -2983,12 +3718,15 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
 #' Calculate -log10(p) of epistatic effects by LR test
 #'
 #'
-#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
-#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
-#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param eigen.SGS A list with
 #' \describe{
 #' \item{$values}{Eigen values}
@@ -3031,6 +3769,8 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
 #' @param dominance.eff If this argument is TRUE, dominance effect is included in the model,
 #' and additive x dominance and dominance x dominance are also tested as epistatic effects.
 #' When you use inbred lines, please set this argument FALSE.
+#' @param skip.self.int As default, the function also tests the self-interactions among the same SNP-sets.
+#' If you want to avoid this, please set `skip.self.int = TRUE`.
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is assigned a zero score.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
@@ -3047,20 +3787,22 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0, n.co
 #'
 #'
 #'
-score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL, eigen.G = NULL, 
-                                    n.core = NA, optimizer = "nlminb", map, haplotype = TRUE,
+score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
+                                    eigen.SGS = NULL, eigen.G = NULL, 
+                                    n.core = 1, optimizer = "nlminb", map, haplotype = TRUE,
                                     num.hap = NULL, window.size.half = 5, window.slide = 1,
                                     chi0.mixture = 0.5, gene.set = NULL, dominance.eff = TRUE,
-                                    min.MAF = 0.02, count = TRUE){
+                                    skip.self.int = FALSE, min.MAF = 0.02, count = TRUE) {
+  n.line <- nrow(M.now)
   chr <- map[, 2]
   chr.tab <- table(chr)
   chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     n.scores <- sum(n.scores.each)
-  }else{
+  } else {
     gene.names <- as.character(gene.set[, 1])
     mark.id <- as.character(gene.set[, 2])
     gene.name <- as.character(unique(gene.names))
@@ -3080,22 +3822,20 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
   Z.normal <- diag(n.sample.now)
   W.A.list <- W.A.0.list  <- W.D.list <- W.D.0.list <-
     Z.A.part.list <- Z.D.part.list <- rep(list(NA), n.scores)
-  pb <- txtProgressBar(min = 1, max = n.scores, style = 3)
   n.scores2 <- n.scores - n.scores %% 100
-  start.scorecalc <- Sys.time()
   
-  for(i in 1:n.scores){
-    if(is.null(gene.set)){
+  for (i in 1:n.scores) {
+    if (is.null(gene.set)) {
       i.chr <- min(which(i - cum.n.scores <= 0))
-      if(i.chr >= 2){
+      if (i.chr >= 2) {
         window.center <- window.slide * (i - cum.n.scores[i.chr - 1] - 1) + chr.cum[i.chr - 1] + 1
-      }else{
+      } else {
         window.center <- window.slide * (i - 1) + 1
       }
       names(window.center) <- i.chr
       window.centers[i] <- window.center
       Theories1 <-  window.center < window.size.half + 1
-      for(r in 1:(chr.max - 1)){
+      for (r in 1:(chr.max - 1)) {
         Theory1 <- chr.cum[r] < window.center & window.center < window.size.half + 1 + chr.cum[r]
         Theories1 <- c(Theories1, Theory1)
       }
@@ -3103,7 +3843,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
       
       
       Theories2  <- NULL
-      for(r in 1:chr.max){
+      for (r in 1:chr.max) {
         Theory2 <- chr.cum[r] - (window.size.half + 1) < window.center & window.center <= chr.cum[r]
         Theories2 <- c(Theories2, Theory2)
       }
@@ -3111,26 +3851,26 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
       
       
       
-      if(rule1 & rule2){
+      if (rule1 & rule2) {
         Mis.range.0 <- which(chr == i.chr)
         Mis.range.02 <- which(chr == i.chr) - window.center + 1 + window.size.half
-      }else{
-        if(rule1){
+      } else {
+        if (rule1) {
           near.min <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
           Mis.range.0 <- (near.min + 1):(window.center + window.size.half)
           Mis.range.02 <- (2 * window.size.half + 2 - length(Mis.range.0)):(2 * window.size.half + 1)
-        }else{
-          if(rule2){
+        } else {
+          if (rule2) {
             near.max <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
             Mis.range.0 <- (window.center - window.size.half):near.max
             Mis.range.02 <- 1:length(Mis.range.0)
-          }else{
+          } else {
             Mis.range.0 <- (window.center - window.size.half):(window.center + window.size.half)
             Mis.range.02 <- 1:(2 * window.size.half + 1)
           }
         }
       }
-    }else{
+    } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.02 <- 1:length(Mis.range.0)
@@ -3139,21 +3879,21 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
     
     Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
     MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if(dominance.eff){
+    if (dominance.eff) {
       Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
       MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    }else{
+    } else {
       MAF.cut.D <- rep(TRUE, length(MAF.cut))
     }
     
     
-    if(any(MAF.cut)){
+    if (any(MAF.cut)) {
       Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
       Mis.range <- Mis.range.0[MAF.cut]
       Mis.range2 <- Mis.range.02[MAF.cut]
       window.size <- ncol(Mis.0)
-      if(any(MAF.cut.D)){
-        if(dominance.eff){
+      if (any(MAF.cut.D)) {
+        if (dominance.eff) {
           Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
           Mis.range.D <- Mis.range.0[MAF.cut.D]
           Mis.range2.D <- Mis.range.02[MAF.cut.D]
@@ -3161,16 +3901,16 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
         }
       }
       
-      if(haplotype){
-        if(is.null(num.hap)){
+      if (haplotype) {
+        if (is.null(num.hap)) {
           Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
           Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
           
           bango <- as.factor(as.numeric(Mis.fac))
           levels(bango) <- order(unique(bango))
           bango <- as.numeric(as.character(bango))
-          if(any(MAF.cut.D)){
-            if(dominance.eff){
+          if (any(MAF.cut.D)) {
+            if (dominance.eff) {
               Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
               Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
               
@@ -3179,12 +3919,12 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
               bango.D <- as.numeric(as.character(bango.D))
             }
           }
-        }else{
+        } else {
           kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
-          if(any(MAF.cut.D)){
-            if(dominance.eff){
+          if (any(MAF.cut.D)) {
+            if (dominance.eff) {
               kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
@@ -3193,13 +3933,13 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
         }
         Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
                                                  dims = c(nrow(M.now), nrow(Mis))))
-        if(any(MAF.cut.D)){
-          if(dominance.eff){
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
             Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
                                                        dims = c(nrow(M.now), nrow(Mis.D))))
           }
         }
-      }else{
+      } else {
         Mis <- Mis.0
         Mis.D <- Mis.D.0        
         Z.part <- Z.part.D <- diag(nrow(M.now))
@@ -3222,8 +3962,8 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
       Z.A.part.list[[i]] <- Z.part
       W.A.0.list[[i]] <- W.A.0
       
-      if(any(MAF.cut.D)){
-        if(dominance.eff){
+      if (any(MAF.cut.D)) {
+        if (dominance.eff) {
           W.D <- calcGRM(genoMat = Mis.D,
                          methodGRM = "domNOIA",
                          returnWMat = TRUE,
@@ -3244,33 +3984,44 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
     }
   }
   
-  n.calc <- n.scores * (n.scores + 1) / 2
+  
+  if (skip.self.int) {
+    i.end <- n.scores - 1
+    n.calc <- n.scores * (n.scores - 1) / 2
+  } else {
+    i.end <- n.scores
+    n.calc <- n.scores * (n.scores + 1) / 2
+  }
+  
   pb <- txtProgressBar(min = 1, max = n.calc, style = 3)
   n.calc2 <- n.calc - n.calc %% 100
   start.scorecalc <- Sys.time()
-  
-  
-  for(i in 1:n.scores){
+  num.now <- 0
+  for (i in 1:i.end) {
     W.A.1 <- W.A.list[[i]]
     Z.A.1.part <- Z.A.part.list[[i]]
     W.A.0.1 <- W.A.0.list[[i]]
     m.A.1 <- ncol(W.A.0.1)
     
-    if(dominance.eff){
+    if (dominance.eff) {
       W.D.1 <- W.D.list[[i]]
       Z.D.1.part <- Z.D.part.list[[i]]
       W.D.0.1 <- W.D.0.list[[i]]
       isna.1 <- any(is.na(W.D.0.1))
       m.D.1 <- ncol(W.D.0.1)
-    }else{
+    } else {
       isna.1 <- TRUE
     }
-    for(j in i:n.scores){
-      num.now <- (i - 1) * n.scores + (j - i + 1)
-      if(count){
+    
+    
+    j.start <- ifelse(test = skip.self.int,
+                      yes = i + 1, no = i)
+    for (j in j.start:n.scores) {
+      num.now <- num.now + 1
+      if (count) {
         setTxtProgressBar(pb, num.now)
-        if(n.calc > 100){
-          if(num.now == (n.calc2 / 100 + 1) | num.now == (n.calc2 / 10 + 1) | num.now == (n.calc2 / 2 + 1)){
+        if (n.calc > 100) {
+          if (num.now == (n.calc2 / 100 + 1) | num.now == (n.calc2 / 10 + 1) | num.now == (n.calc2 / 2 + 1)) {
             cat("\n")
             end.scorecalc <- Sys.time()
             jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.calc - num.now + 1) / (num.now - 1)
@@ -3281,84 +4032,142 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
         }
       }
       
-      if(i == j){
-        if((!dominance.eff) | isna.1){
-          W.AA <- W.A.0.1 ^ 2
-          W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
+      if (i == j) {
+        if ((!dominance.eff) | isna.1) {
+          if (((ncol(W.A.1) ^ 2) < n.line) & (package.MM == "RAINBOWR")) {
+            W.AA <- t(sapply(X = 1:nrow(W.A.1),
+                             FUN = function(i) {
+                               kronecker(W.A.1[i, ], W.A.1[i, ])
+                             }))
+            W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            Ws0.null <- list(W.A = W.A.1)
+            Ws0.alt <- list(W.A = W.A.1, W.AA = W.AA)
+            
+            Zs0.null <- list(W.A = Z.A.1.part)
+            Zs0.alt <- list(W.A = Z.A.1.part, W.AA = Z.A.1.part)
+            
+            lin.method <- TRUE
+          } else {
+            K.A.1.part <- tcrossprod(W.A.1)
+            
+            K.AA.part <- K.A.1.part ^ 2
+            K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+            
+            ZETA.now2.null <- c(ZETA.now, list(A.part = list(Z = Z.A.1.part, K = K.A.1.part)))
+            
+            ZETA.now2.alt <- c(ZETA.now, list(A.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                               list(AA.part = list(Z = Z.A.1.part, K = K.AA.part)))
+            
+            lin.method <- FALSE
+          }
           
-          Ws0.null <- list(W.A = W.A.1)
-          Ws0.alt <- list(W.A = W.A.1, W.AA = W.AA)
-          
-          Zs0.null <- list(W.A = Z.A.1.part)
-          Zs0.alt <- list(W.A = Z.A.1.part, W.AA = Z.normal)
-          
-          lin.method <- TRUE
           df <- 1
-        }else{
-          if(m.A.1 == m.D.1){
-            W.AA <- W.A.0.1 ^ 2
-            W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
-            W.AD <- W.A.0.1 * W.D.0.1
-            W.AD <- W.AD * sqrt(nrow(W.AD) / sum(W.AD * W.AD))
-            W.DD <- W.D.0.1 ^ 2
-            W.DD <- W.DD * sqrt(nrow(W.DD) / sum(W.DD * W.DD))
+        } else {
+          if (((ncol(W.A.1) ^ 2) < n.line) &
+              ((ncol(W.D.1) ^ 2) < n.line) &
+              ((m.A.1 * m.D.1) < n.line) &
+              (package.MM == "RAINBOWR")) {
+            W.AA <- t(sapply(X = 1:nrow(W.A.1),
+                             FUN = function(i) {
+                               kronecker(W.A.1[i, ], W.A.1[i, ])
+                             }))
+            W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            W.AD <- t(sapply(X = 1:n.line,
+                             FUN = function(i) {
+                               kronecker(W.A.0.1[i, ], W.D.0.1[i, ])
+                             }))
+            W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            W.DD <- t(sapply(X = 1:nrow(W.D.1),
+                             FUN = function(i) {
+                               kronecker(W.D.1[i, ], W.D.1[i, ])
+                             }))
+            W.DD <- W.DD / sqrt(mean(apply(X = W.DD,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
             
             Ws0.null <- list(W.A = W.A.1, W.D = W.D.1)
             Ws0.alt <- list(W.A = W.A.1, W.D = W.D.1, W.AA = W.AA, W.AD = W.AD, W.DD = W.DD)
             Zs0.null <- list(W.A = Z.A.1.part, W.D = Z.D.1.part)
-            Zs0.alt <- list(W.A = Z.A.1.part, W.D = Z.D.1.part, W.AA = Z.normal,
-                            W.AD = Z.normal, W.DD = Z.normal)
+            Zs0.alt <- list(W.A = Z.A.1.part, W.D = Z.D.1.part, W.AA = Z.A.1.part,
+                            W.AD = Z.normal, W.DD = Z.D.1.part)
             
             lin.method <- TRUE
-          }else{
+          } else {
             K.A.1.part <- tcrossprod(W.A.1)
             K.D.1.part <- tcrossprod(W.D.1)
             
             K.A.0.1.part <- tcrossprod(W.A.0.1)
             K.D.0.1.part <- tcrossprod(W.D.0.1)
-            K.AA.part <- K.A.0.1.part ^ 2
-            K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
+            
+            K.AA.part <- K.A.1.part ^ 2
+            K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
             K.AD.part <- K.A.0.1.part * K.D.0.1.part
-            K.AD.part <- K.AD.part * sqrt(nrow(K.AD.part) / sum(K.AD.part * K.AD.part))
-            K.DD.part <- K.D.0.1.part ^ 2
-            K.DD.part <- K.DD.part * sqrt(nrow(K.DD.part) / sum(K.DD.part * K.DD.part))
+            K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+            K.DD.part <- K.D.1.part ^ 2
+            K.DD.part <- K.DD.part * nrow(K.DD.part) / sum(diag(K.DD.part))
             
             ZETA.now2.null <- c(ZETA.now, list(A.part = list(Z = Z.A.1.part, K = K.A.1.part)),
                                 list(D.part = list(Z = Z.D.1.part, K = K.D.1.part)))
             
             ZETA.now2.alt <- c(ZETA.now, list(A.part = list(Z = Z.A.1.part, K = K.A.1.part)),
                                list(D.part = list(Z = Z.D.1.part, K = K.D.1.part)),
-                               list(AA.part = list(Z = Z.normal, K = K.AA.part)),
+                               list(AA.part = list(Z = Z.A.1.part, K = K.AA.part)),
                                list(AD.part = list(Z = Z.normal, K = K.AD.part)),
-                               list(DD.part = list(Z = Z.normal, K = K.DD.part)))
+                               list(DD.part = list(Z = Z.D.1.part, K = K.DD.part)))
             
             lin.method <- FALSE
           }
+          
           df <- 3
         }
-      }else{
+      } else {
         W.A.2 <- W.A.list[[j]]
         Z.A.2.part <- Z.A.part.list[[j]]
         W.A.0.2 <- W.A.0.list[[j]]
         m.A.2 <- ncol(W.A.0.2)
         
-        if(dominance.eff){
+        if (dominance.eff) {
           W.D.2 <- W.D.list[[j]]
           Z.D.2.part <- Z.D.part.list[[j]]
           W.D.0.2 <- W.D.0.list[[j]]
           isna.2 <- any(is.na(W.D.0.2))
           m.D.2 <- ncol(W.D.0.2)
-          
-          isnas <- c(isna.1, isna.2)
-        }else{
+        } else {
           isna.2 <- TRUE
-          isnas <- c(isna.1, isna.2)
         }
+        isnas <- c(isna.1, isna.2)
         
-        if((!dominance.eff) | all(isnas)){
-          if(m.A.1 == m.A.2){
-            W.AA <- W.A.0.1 * W.A.0.2
-            W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
+        if ((!dominance.eff) | all(isnas)) {
+          
+          if (((m.A.1 * m.A.2) < n.line) &
+              (package.MM == "RAINBOWR")) {
+            W.AA <- t(sapply(X = 1:n.line,
+                             FUN = function(i) {
+                               kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                             }))
+            W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
             
             Ws0.null <- list(W.A.1 = W.A.1, W.A.2 = W.A.2)
             Ws0.alt <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.AA = W.AA)
@@ -3367,32 +4176,50 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
             Zs0.alt <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part, W.AA = Z.normal)
             
             lin.method <- TRUE
-          }else{
+          } else {
             K.A.1.part <- tcrossprod(W.A.1)
             K.A.2.part <- tcrossprod(W.A.2)
             
             K.A.0.1.part <- tcrossprod(W.A.0.1)
             K.A.0.2.part <- tcrossprod(W.A.0.2)
             K.AA.part <- K.A.0.1.part * K.A.0.2.part
-            K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
+            K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
             
             ZETA.now2.null <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
                                 list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)))
-            
             ZETA.now2.alt <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
                                list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
                                list(AA.part = list(Z = Z.normal, K = K.AA.part)))
             
             lin.method <- FALSE
           }
+          
           df <- 1
-        }else{
-          if(isna.1){
-            if(all(c(m.A.2, m.D.2) == m.A.1)){
-              W.AA <- W.A.0.1 * W.A.0.2
-              W.AD <- W.A.0.1 * W.D.0.2
-              W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
-              W.AD <- W.AD * sqrt(nrow(W.AD) / sum(W.AD * W.AD))
+        } else {
+          if (isna.1) {
+            if (((m.A.1 * m.A.2) < n.line) &
+                ((m.A.1 * m.D.2) < n.line) &
+                (package.MM == "RAINBOWR")) {
+              W.AA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.AD <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.D.0.2[i, ])
+                               }))
+              W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
               
               Ws0.null <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.2 = W.D.2)
               Ws0.alt <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.2 = W.D.2,
@@ -3403,7 +4230,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                               W.AA = Z.normal, W.AD = Z.normal)
               
               lin.method <- TRUE
-            }else{
+            } else {
               K.A.1.part <- tcrossprod(W.A.1)
               K.A.2.part <- tcrossprod(W.A.2)
               K.D.2.part <- tcrossprod(W.D.2)
@@ -3413,8 +4240,8 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
               K.D.0.2.part <- tcrossprod(W.D.0.2)
               K.AA.part <- K.A.0.1.part * K.A.0.2.part
               K.AD.part <- K.A.0.1.part * K.D.0.2.part
-              K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
-              K.AD.part <- K.AD.part * sqrt(nrow(K.AD.part) / sum(K.AD.part * K.AD.part))
+              K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+              K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
               
               ZETA.now2.null <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
                                   list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
@@ -3428,14 +4255,33 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
               
               lin.method <- FALSE
             }
+            
             df <- 2
-          }else{
-            if(isna.2){
-              if(all(c(m.A.1, m.D.1) == m.A.2)){
-                W.AA <- W.A.0.1 * W.A.0.2
-                W.DA <- W.D.0.1 * W.A.0.2
-                W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
-                W.DA <- W.DA * sqrt(nrow(W.DA) / sum(W.DA * W.DA))
+          } else {
+            if (isna.2) {
+              if (((m.A.1 * m.A.2) < n.line) &
+                  ((m.D.1 * m.A.2) < n.line) &
+                  (package.MM == "RAINBOWR")) {
+                W.AA <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                                 }))
+                W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                W.DA <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.D.0.1[i, ], W.A.0.2[i, ])
+                                 }))
+                W.DA <- W.DA / sqrt(mean(apply(X = W.DA,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
                 
                 Ws0.null <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.1 = W.D.1)
                 Ws0.alt <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.1 = W.D.1,
@@ -3446,7 +4292,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                                 W.AA = Z.normal, W.DA = Z.normal)
                 
                 lin.method <- TRUE
-              }else{
+              } else {
                 K.A.1.part <- tcrossprod(W.A.1)
                 K.A.2.part <- tcrossprod(W.A.2)
                 K.D.1.part <- tcrossprod(W.D.1)
@@ -3456,8 +4302,8 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                 K.D.0.1.part <- tcrossprod(W.D.0.1)
                 K.AA.part <- K.A.0.1.part * K.A.0.2.part
                 K.DA.part <- K.D.0.1.part * K.A.0.2.part
-                K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
-                K.DA.part <- K.DA.part * sqrt(nrow(K.DA.part) / sum(K.DA.part * K.DA.part))
+                K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+                K.DA.part <- K.DA.part * nrow(K.DA.part) / sum(diag(K.DA.part))
                 
                 ZETA.now2.null <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
                                     list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
@@ -3471,17 +4317,55 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                 
                 lin.method <- FALSE
               }
+              
               df <- 2
-            }else{
-              if(all(c(m.D.1, m.A.2, m.D.2) == m.A.1)){
-                W.AA <- W.A.0.1 * W.A.0.2
-                W.AD <- W.A.0.1 * W.D.0.2
-                W.DA <- W.D.0.1 * W.A.0.2
-                W.DD <- W.D.0.1 * W.D.0.2
-                W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
-                W.AD <- W.AD * sqrt(nrow(W.AD) / sum(W.AD * W.AD))
-                W.DA <- W.DA * sqrt(nrow(W.DA) / sum(W.DA * W.DA))
-                W.DD <- W.DD * sqrt(nrow(W.DD) / sum(W.DD * W.DD))
+            } else {
+              if (((m.A.1 * m.A.2) < n.line) &
+                  ((m.A.1 * m.D.2) < n.line) &
+                  ((m.D.1 * m.A.2) < n.line) &
+                  ((m.D.1 * m.D.2) < n.line) &
+                  (package.MM == "RAINBOWR")) {
+                W.AA <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                                 }))
+                W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                W.AD <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.A.0.1[i, ], W.D.0.2[i, ])
+                                 }))
+                W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                W.DA <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.D.0.1[i, ], W.A.0.2[i, ])
+                                 }))
+                W.DA <- W.DA / sqrt(mean(apply(X = W.DA,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                W.DD <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.D.0.1[i, ], W.D.0.2[i, ])
+                                 }))
+                W.DD <- W.DD / sqrt(mean(apply(X = W.DD,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                
                 
                 Ws0.null <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.1 = W.D.1, W.D.2 = W.D.2)
                 Ws0.alt <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.1 = W.D.1, W.D.2 = W.D.2,
@@ -3495,7 +4379,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                                 W.DA = Z.normal, W.DD = Z.normal)
                 
                 lin.method <- TRUE
-              }else{
+              } else {
                 K.A.1.part <- tcrossprod(W.A.1)
                 K.A.2.part <- tcrossprod(W.A.2)
                 K.D.1.part <- tcrossprod(W.D.1)
@@ -3509,10 +4393,10 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                 K.AD.part <- K.A.0.1.part * K.D.0.2.part
                 K.DA.part <- K.D.0.1.part * K.A.0.2.part
                 K.DD.part <- K.D.0.1.part * K.D.0.2.part
-                K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
-                K.AD.part <- K.AD.part * sqrt(nrow(K.AD.part) / sum(K.AD.part * K.AD.part))
-                K.DA.part <- K.DA.part * sqrt(nrow(K.DA.part) / sum(K.DA.part * K.DA.part))
-                K.DD.part <- K.DD.part * sqrt(nrow(K.DD.part) / sum(K.DD.part * K.DD.part))
+                K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+                K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+                K.DA.part <- K.DA.part * nrow(K.DA.part) / sum(diag(K.DA.part))
+                K.DD.part <- K.DD.part * nrow(K.DD.part) / sum(diag(K.DD.part))
                 
                 
                 ZETA.now2.null <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
@@ -3532,6 +4416,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                 
                 lin.method <- FALSE
               }
+              
               df <- 4
             }
           }
@@ -3539,14 +4424,17 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
       }
       
       
-      if(lin.method){
+      if (lin.method) {
         Gammas0.null <- lapply(Ws0.null, function(x) diag(ncol(x)))
         EMM.res.null <-  try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, tol = NULL, 
                                             n.core = n.core, optimizer = optimizer,
                                             Zs0 = Zs0.null, Ws0 = Ws0.null, Gammas0 = Gammas0.null,
                                             gammas.diag = TRUE, X.fix = TRUE,
                                             eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                            REML = TRUE, pred = FALSE), silent = TRUE)
+                                            REML = TRUE, pred = FALSE,
+                                            return.u.always = FALSE,
+                                            return.u.each = FALSE,
+                                            return.Hinv = FALSE), silent = TRUE)
         
         Gammas0.alt <- lapply(Ws0.alt, function(x) diag(ncol(x)))
         EMM.res.alt <-  try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, tol = NULL, 
@@ -3554,18 +4442,29 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
                                            Zs0 = Zs0.alt, Ws0 = Ws0.alt, Gammas0 = Gammas0.alt,
                                            gammas.diag = TRUE, X.fix = TRUE,
                                            eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                           REML = TRUE, pred = FALSE), silent = TRUE)
-      }else{
-        EMM.res.null <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.null, tol = NULL,
-                                    n.core = n.core, optimizer = optimizer,
-                                    REML = TRUE, pred = FALSE), silent = TRUE)
+                                           REML = TRUE, pred = FALSE,
+                                           return.u.always = FALSE,
+                                           return.u.each = FALSE,
+                                           return.Hinv = FALSE), silent = TRUE)
+      } else {
+        EMM.res.null <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.null,
+                                        package = package.MM, tol = NULL,
+                                        n.core = n.core, optimizer = optimizer,
+                                        REML = TRUE, pred = FALSE,
+                                        return.u.always = FALSE,
+                                        return.u.each = FALSE,
+                                        return.Hinv = FALSE), silent = TRUE)
         
-        EMM.res.alt <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.alt, tol = NULL, 
-                                   n.core = n.core, optimizer = optimizer,
-                                   REML = TRUE, pred = FALSE), silent = TRUE)
+        EMM.res.alt <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.alt, 
+                                       package = package.MM, tol = NULL, 
+                                       n.core = n.core, optimizer = optimizer,
+                                       REML = TRUE, pred = FALSE,
+                                       return.u.always = FALSE,
+                                       return.u.each = FALSE,
+                                       return.Hinv = FALSE), silent = TRUE)
       }
       
-      if(!("try-error" %in% c(class(EMM.res.null), class(EMM.res.alt)))){
+      if (!("try-error" %in% c(class(EMM.res.null), class(EMM.res.alt)))) {
         LL.null <- EMM.res.null$LL
         LL.alt <- EMM.res.alt$LL
         
@@ -3580,9 +4479,9 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
   scores <- scores + t(scores)
   diag(scores) <- diag(scores) / 2
   
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     rownames(scores) <- colnames(scores) <- window.centers
-  }else{
+  } else {
     rownames(scores) <- colnames(scores) <- gene.name
   }
   
@@ -3598,15 +4497,832 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
 
 
 
-#' Calculate -log10(p) of epistatic effects with score test
+#' Calculate -log10(p) of epistatic effects by LR test (multi-cores)
 #'
 #'
-#' @param M.now A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
 #' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
 #' For example, ZETA = list(A = list(Z = Z, K = K))
 #' Please set names of list "Z" and "K"!
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
+#' @param eigen.SGS A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
+#' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
+#' You can use "spectralG.cpp" function in RAINBOWR.
+#' If this argument is NULL, the eigen decomposition will be performed in this function.
+#' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param eigen.G A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
+#' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
+#' If this argument is NULL, the eigen decomposition will be performed in this function.
+#' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
+#' @param map Data frame of map information where the first column is the marker names,
+#' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
+#' @param haplotype If the number of lines of your data is large (maybe > 100), you should set haplotype = TRUE.
+#'             When haplotype = TRUE, haplotype-based kernel will be used for calculating -log10(p).
+#'             (So the dimension of this gram matrix will be smaller.)
+#'             The result won't be changed, but the time for the calculation will be shorter.
+#' @param num.hap When haplotype = TRUE, you can set the number of haplotypes which you expect.
+#'           Then similar arrays are considered as the same haplotype, and then make kernel(K.SNP) whose dimension is num.hap x num.hap.
+#'           When num.hap = NULL (default), num.hap will be set as the maximum number which reflects the difference between lines.
+#' @param optimizer The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.
+#' @param window.size.half This argument decides how many SNPs (around the SNP you want to test) are used to calculated K.SNP.
+#' More precisely, the number of SNPs will be 2 * window.size.half + 1.
+#' @param window.slide This argument determines how often you test markers. If window.slide = 1, every marker will be tested.
+#' If you want to perform SNP set by bins, please set window.slide = 2 * window.size.half + 1.
+#' @param chi0.mixture RAINBOWR assumes the tdeviance is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
+#' where r is the degree of freedom.
+#' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
+#' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
+#'            You should assign your gene information to gene.set in the form of a "data.frame" (whose dimension is (the number of gene) x 2).
+#'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
+#'            which correspond to the marker names of "geno" argument.
+#' @param dominance.eff If this argument is TRUE, dominance effect is included in the model,
+#' and additive x dominance and dominance x dominance are also tested as epistatic effects.
+#' When you use inbred lines, please set this argument FALSE.
+#' @param skip.self.int As default, the function also tests the self-interactions among the same SNP-sets.
+#' If you want to avoid this, please set `skip.self.int = TRUE`.
+#' @param min.MAF Specifies the minimum minor allele frequency (MAF).
+#' If a marker has a MAF less than min.MAF, it is assigned a zero score.
+#' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
+#'
+#' @return -log10(p) of epistatic effects for each SNP-set
+#'
+#' @references Listgarten, J. et al. (2013) A powerful and efficient set test
+#'  for genetic markers that handles confounders. Bioinformatics. 29(12): 1526-1533.
+#'
+#' Lippert, C. et al. (2014) Greater power and computational efficiency for kernel-based
+#'  association testing of sets of genetic variants. Bioinformatics. 30(22): 3206-3214.
+#'
+#' Jiang, Y. and Reif, J.C. (2015) Modeling epistasis in genomic selection. Genetics. 201(2): 759-768.
+#'
+#'
+#'
+score.calc.epistasis.LR.MC <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
+                                       eigen.SGS = NULL, eigen.G = NULL, 
+                                       n.core = 2, parallel.method = "mclapply",
+                                       optimizer = "nlminb", map, haplotype = TRUE,
+                                       num.hap = NULL, window.size.half = 5, window.slide = 1,
+                                       chi0.mixture = 0.5, gene.set = NULL, dominance.eff = TRUE,
+                                       skip.self.int = FALSE, min.MAF = 0.02, count = TRUE) {
+  n.line <- nrow(M.now)
+  chr <- map[, 2]
+  chr.tab <- table(chr)
+  chr.max <- length(chr.tab)
+  chr.cum <- cumsum(chr.tab)
+  n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
+  cum.n.scores <- cumsum(n.scores.each)
+  if (is.null(gene.set)) {
+    n.scores <- sum(n.scores.each)
+  } else {
+    gene.names <- as.character(gene.set[, 1])
+    mark.id <- as.character(gene.set[, 2])
+    gene.name <- as.character(unique(gene.names))
+    n.scores <- length(unique(gene.set[, 1]))
+  }
+  
+  scores <- matrix(0, nrow = n.scores, ncol = n.scores)
+  window.centers <- rep(NA, n.scores)
+  probaa <- apply(M.now == -1, 2, mean)
+  probAa <- apply(M.now == 0, 2, mean)
+  freq <- probaa + probAa / 2
+  MAF <- pmin(freq, 1 - freq)
+  MAF.D <- pmin(probAa, 1 - probAa)
+  
+  
+  n.sample.now <- nrow(M.now)
+  Z.normal <- diag(n.sample.now)
+  W.A.list <- W.A.0.list  <- W.D.list <- W.D.0.list <-
+    Z.A.part.list <- Z.D.part.list <- rep(list(NA), n.scores)
+  n.scores2 <- n.scores - n.scores %% 100
+  
+  for (i in 1:n.scores) {
+    if (is.null(gene.set)) {
+      i.chr <- min(which(i - cum.n.scores <= 0))
+      if (i.chr >= 2) {
+        window.center <- window.slide * (i - cum.n.scores[i.chr - 1] - 1) + chr.cum[i.chr - 1] + 1
+      } else {
+        window.center <- window.slide * (i - 1) + 1
+      }
+      names(window.center) <- i.chr
+      window.centers[i] <- window.center
+      Theories1 <-  window.center < window.size.half + 1
+      for (r in 1:(chr.max - 1)) {
+        Theory1 <- chr.cum[r] < window.center & window.center < window.size.half + 1 + chr.cum[r]
+        Theories1 <- c(Theories1, Theory1)
+      }
+      rule1 <- sum(Theories1) != 0
+      
+      
+      Theories2  <- NULL
+      for (r in 1:chr.max) {
+        Theory2 <- chr.cum[r] - (window.size.half + 1) < window.center & window.center <= chr.cum[r]
+        Theories2 <- c(Theories2, Theory2)
+      }
+      rule2 <- sum(Theories2) != 0
+      
+      
+      
+      if (rule1 & rule2) {
+        Mis.range.0 <- which(chr == i.chr)
+        Mis.range.02 <- which(chr == i.chr) - window.center + 1 + window.size.half
+      } else {
+        if (rule1) {
+          near.min <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
+          Mis.range.0 <- (near.min + 1):(window.center + window.size.half)
+          Mis.range.02 <- (2 * window.size.half + 2 - length(Mis.range.0)):(2 * window.size.half + 1)
+        } else {
+          if (rule2) {
+            near.max <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
+            Mis.range.0 <- (window.center - window.size.half):near.max
+            Mis.range.02 <- 1:length(Mis.range.0)
+          } else {
+            Mis.range.0 <- (window.center - window.size.half):(window.center + window.size.half)
+            Mis.range.02 <- 1:(2 * window.size.half + 1)
+          }
+        }
+      }
+    } else {
+      mark.name.now <- mark.id[gene.names == gene.name[i]]
+      Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.02 <- 1:length(Mis.range.0)
+      weighting.center <- FALSE
+    }
+    
+    Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+    MAF.cut <- MAF[Mis.range.0] >= min.MAF
+    if (dominance.eff) {
+      Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut.D <- MAF.D[Mis.range.0] > 0
+    } else {
+      MAF.cut.D <- rep(TRUE, length(MAF.cut))
+    }
+    
+    
+    if (any(MAF.cut)) {
+      Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
+      Mis.range <- Mis.range.0[MAF.cut]
+      Mis.range2 <- Mis.range.02[MAF.cut]
+      window.size <- ncol(Mis.0)
+      if (any(MAF.cut.D)) {
+        if (dominance.eff) {
+          Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
+          Mis.range.D <- Mis.range.0[MAF.cut.D]
+          Mis.range2.D <- Mis.range.02[MAF.cut.D]
+          window.size.D <- ncol(Mis.D.0)
+        }
+      }
+      
+      if (haplotype) {
+        if (is.null(num.hap)) {
+          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+          
+          bango <- as.factor(as.numeric(Mis.fac))
+          levels(bango) <- order(unique(bango))
+          bango <- as.numeric(as.character(bango))
+          if (any(MAF.cut.D)) {
+            if (dominance.eff) {
+              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+              
+              bango.D <- as.factor(as.numeric(Mis.D.fac))
+              levels(bango.D) <- order(unique(bango.D))
+              bango.D <- as.numeric(as.character(bango.D))
+            }
+          }
+        } else {
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+          Mis <- kmed.res$medoids
+          bango <- kmed.res$clustering
+          if (any(MAF.cut.D)) {
+            if (dominance.eff) {
+              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+              Mis.D <- kmed.res.D$medoids
+              bango.D <- kmed.res.D$clustering
+            }
+          }
+        }
+        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                 dims = c(nrow(M.now), nrow(Mis))))
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                       dims = c(nrow(M.now), nrow(Mis.D))))
+          }
+        }
+      } else {
+        Mis <- Mis.0
+        Mis.D <- Mis.D.0        
+        Z.part <- Z.part.D <- diag(nrow(M.now))
+      }
+      
+      
+      W.A <- calcGRM(genoMat = Mis,
+                     methodGRM = "addNOIA",
+                     returnWMat = TRUE,
+                     probaa = probaa[Mis.range],
+                     probAa = probAa[Mis.range])
+      
+      W.A.0 <- calcGRM(genoMat = Mis.0.0,
+                       methodGRM = "addNOIA",
+                       returnWMat = TRUE,
+                       probaa = probaa[Mis.range.0],
+                       probAa = probAa[Mis.range.0])
+      
+      W.A.list[[i]] <- W.A
+      Z.A.part.list[[i]] <- Z.part
+      W.A.0.list[[i]] <- W.A.0
+      
+      if (any(MAF.cut.D)) {
+        if (dominance.eff) {
+          W.D <- calcGRM(genoMat = Mis.D,
+                         methodGRM = "domNOIA",
+                         returnWMat = TRUE,
+                         probaa = probaa[Mis.range.D],
+                         probAa = probAa[Mis.range.D])
+          
+          W.D.0 <- calcGRM(genoMat = Mis.0.0,
+                           methodGRM = "domNOIA",
+                           returnWMat = TRUE,
+                           probaa = probaa[Mis.range.0],
+                           probAa = probAa[Mis.range.0])
+          
+          W.D.list[[i]] <- W.D
+          Z.D.part.list[[i]] <- Z.part.D
+          W.D.0.list[[i]] <- W.D.0
+        }
+      }
+    }
+  }
+  
+  
+  test.cands.mat <- expand.grid(
+    rep(list(1:n.scores), 2)
+  )
+  test.cands.mat <- test.cands.mat[,c(2, 1)]
+  
+  if (skip.self.int) {
+    test.cands.mat <- test.cands.mat[test.cands.mat[, 1] < test.cands.mat[, 2], ]
+    i.end <- n.scores - 1
+  } else {
+    test.cands.mat <- test.cands.mat[test.cands.mat[, 1] <= test.cands.mat[, 2], ]
+    i.end <- n.scores
+    n.calc <- n.scores * (n.scores + 1) / 2
+  }
+  n.calc <- nrow(test.cands.mat)
+  
+  score.calc.epistasis.LR.MC.oneInt <- function(k) {
+    i <- test.cands.mat[k, 1]
+    j <- test.cands.mat[k, 2]
+    
+    W.A.1 <- W.A.list[[i]]
+    Z.A.1.part <- Z.A.part.list[[i]]
+    W.A.0.1 <- W.A.0.list[[i]]
+    m.A.1 <- ncol(W.A.0.1)
+    
+    if (dominance.eff) {
+      W.D.1 <- W.D.list[[i]]
+      Z.D.1.part <- Z.D.part.list[[i]]
+      W.D.0.1 <- W.D.0.list[[i]]
+      isna.1 <- any(is.na(W.D.0.1))
+      m.D.1 <- ncol(W.D.0.1)
+    } else {
+      isna.1 <- TRUE
+    }
+    
+    
+    if (i == j) {
+      if ((!dominance.eff) | isna.1) {
+        if (((ncol(W.A.1) ^ 2) < n.line) & (package.MM == "RAINBOWR")) {
+          W.AA <- t(sapply(X = 1:nrow(W.A.1),
+                           FUN = function(i) {
+                             kronecker(W.A.1[i, ], W.A.1[i, ])
+                           }))
+          W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          Ws0.null <- list(W.A = W.A.1)
+          Ws0.alt <- list(W.A = W.A.1, W.AA = W.AA)
+          
+          Zs0.null <- list(W.A = Z.A.1.part)
+          Zs0.alt <- list(W.A = Z.A.1.part, W.AA = Z.A.1.part)
+          
+          lin.method <- TRUE
+        } else {
+          K.A.1.part <- tcrossprod(W.A.1)
+          
+          K.AA.part <- K.A.1.part ^ 2
+          K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+          
+          ZETA.now2.null <- c(ZETA.now, list(A.part = list(Z = Z.A.1.part, K = K.A.1.part)))
+          
+          ZETA.now2.alt <- c(ZETA.now, list(A.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                             list(AA.part = list(Z = Z.A.1.part, K = K.AA.part)))
+          
+          lin.method <- FALSE
+        }
+        
+        df <- 1
+      } else {
+        if (((ncol(W.A.1) ^ 2) < n.line) &
+            ((ncol(W.D.1) ^ 2) < n.line) &
+            ((m.A.1 * m.D.1) < n.line) &
+            (package.MM == "RAINBOWR")) {
+          W.AA <- t(sapply(X = 1:nrow(W.A.1),
+                           FUN = function(i) {
+                             kronecker(W.A.1[i, ], W.A.1[i, ])
+                           }))
+          W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          W.AD <- t(sapply(X = 1:n.line,
+                           FUN = function(i) {
+                             kronecker(W.A.0.1[i, ], W.D.0.1[i, ])
+                           }))
+          W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          W.DD <- t(sapply(X = 1:nrow(W.D.1),
+                           FUN = function(i) {
+                             kronecker(W.D.1[i, ], W.D.1[i, ])
+                           }))
+          W.DD <- W.DD / sqrt(mean(apply(X = W.DD,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          
+          Ws0.null <- list(W.A = W.A.1, W.D = W.D.1)
+          Ws0.alt <- list(W.A = W.A.1, W.D = W.D.1, W.AA = W.AA, W.AD = W.AD, W.DD = W.DD)
+          Zs0.null <- list(W.A = Z.A.1.part, W.D = Z.D.1.part)
+          Zs0.alt <- list(W.A = Z.A.1.part, W.D = Z.D.1.part, W.AA = Z.A.1.part,
+                          W.AD = Z.normal, W.DD = Z.D.1.part)
+          
+          lin.method <- TRUE
+        } else {
+          K.A.1.part <- tcrossprod(W.A.1)
+          K.D.1.part <- tcrossprod(W.D.1)
+          
+          K.A.0.1.part <- tcrossprod(W.A.0.1)
+          K.D.0.1.part <- tcrossprod(W.D.0.1)
+          
+          K.AA.part <- K.A.1.part ^ 2
+          K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+          K.AD.part <- K.A.0.1.part * K.D.0.1.part
+          K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+          K.DD.part <- K.D.1.part ^ 2
+          K.DD.part <- K.DD.part * nrow(K.DD.part) / sum(diag(K.DD.part))
+          
+          ZETA.now2.null <- c(ZETA.now, list(A.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                              list(D.part = list(Z = Z.D.1.part, K = K.D.1.part)))
+          
+          ZETA.now2.alt <- c(ZETA.now, list(A.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                             list(D.part = list(Z = Z.D.1.part, K = K.D.1.part)),
+                             list(AA.part = list(Z = Z.A.1.part, K = K.AA.part)),
+                             list(AD.part = list(Z = Z.normal, K = K.AD.part)),
+                             list(DD.part = list(Z = Z.D.1.part, K = K.DD.part)))
+          
+          lin.method <- FALSE
+        }
+        
+        df <- 3
+      }
+    } else {
+      W.A.2 <- W.A.list[[j]]
+      Z.A.2.part <- Z.A.part.list[[j]]
+      W.A.0.2 <- W.A.0.list[[j]]
+      m.A.2 <- ncol(W.A.0.2)
+      
+      if (dominance.eff) {
+        W.D.2 <- W.D.list[[j]]
+        Z.D.2.part <- Z.D.part.list[[j]]
+        W.D.0.2 <- W.D.0.list[[j]]
+        isna.2 <- any(is.na(W.D.0.2))
+        m.D.2 <- ncol(W.D.0.2)
+      } else {
+        isna.2 <- TRUE
+      }
+      isnas <- c(isna.1, isna.2)
+      
+      if ((!dominance.eff) | all(isnas)) {
+        
+        if (((m.A.1 * m.A.2) < n.line) &
+            (package.MM == "RAINBOWR")) {
+          W.AA <- t(sapply(X = 1:n.line,
+                           FUN = function(i) {
+                             kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                           }))
+          W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          Ws0.null <- list(W.A.1 = W.A.1, W.A.2 = W.A.2)
+          Ws0.alt <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.AA = W.AA)
+          
+          Zs0.null <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part)
+          Zs0.alt <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part, W.AA = Z.normal)
+          
+          lin.method <- TRUE
+        } else {
+          K.A.1.part <- tcrossprod(W.A.1)
+          K.A.2.part <- tcrossprod(W.A.2)
+          
+          K.A.0.1.part <- tcrossprod(W.A.0.1)
+          K.A.0.2.part <- tcrossprod(W.A.0.2)
+          K.AA.part <- K.A.0.1.part * K.A.0.2.part
+          K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+          
+          ZETA.now2.null <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                              list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)))
+          ZETA.now2.alt <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                             list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
+                             list(AA.part = list(Z = Z.normal, K = K.AA.part)))
+          
+          lin.method <- FALSE
+        }
+        
+        df <- 1
+      } else {
+        if (isna.1) {
+          if (((m.A.1 * m.A.2) < n.line) &
+              ((m.A.1 * m.D.2) < n.line) &
+              (package.MM == "RAINBOWR")) {
+            W.AA <- t(sapply(X = 1:n.line,
+                             FUN = function(i) {
+                               kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                             }))
+            W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            W.AD <- t(sapply(X = 1:n.line,
+                             FUN = function(i) {
+                               kronecker(W.A.0.1[i, ], W.D.0.2[i, ])
+                             }))
+            W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            
+            Ws0.null <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.2 = W.D.2)
+            Ws0.alt <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.2 = W.D.2,
+                            W.AA = W.AA, W.AD = W.AD)
+            
+            Zs0.null <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part, W.D.2 = Z.D.2.part)
+            Zs0.alt <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part, W.D.2 = Z.D.2.part,
+                            W.AA = Z.normal, W.AD = Z.normal)
+            
+            lin.method <- TRUE
+          } else {
+            K.A.1.part <- tcrossprod(W.A.1)
+            K.A.2.part <- tcrossprod(W.A.2)
+            K.D.2.part <- tcrossprod(W.D.2)
+            
+            K.A.0.1.part <- tcrossprod(W.A.0.1)
+            K.A.0.2.part <- tcrossprod(W.A.0.2)
+            K.D.0.2.part <- tcrossprod(W.D.0.2)
+            K.AA.part <- K.A.0.1.part * K.A.0.2.part
+            K.AD.part <- K.A.0.1.part * K.D.0.2.part
+            K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+            K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+            
+            ZETA.now2.null <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                                list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
+                                list(D.2.part = list(Z = Z.D.2.part, K = K.D.2.part)))
+            
+            ZETA.now2.alt <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                               list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
+                               list(D.2.part = list(Z = Z.D.2.part, K = K.D.2.part)),
+                               list(AA.part = list(Z = Z.normal, K = K.AA.part)),
+                               list(AD.part = list(Z = Z.normal, K = K.AD.part)))
+            
+            lin.method <- FALSE
+          }
+          
+          df <- 2
+        } else {
+          if (isna.2) {
+            if (((m.A.1 * m.A.2) < n.line) &
+                ((m.D.1 * m.A.2) < n.line) &
+                (package.MM == "RAINBOWR")) {
+              W.AA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.DA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.D.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.DA <- W.DA / sqrt(mean(apply(X = W.DA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              
+              Ws0.null <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.1 = W.D.1)
+              Ws0.alt <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.1 = W.D.1,
+                              W.AA = W.AA, W.DA = W.DA)
+              
+              Zs0.null <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part, W.D.1 = Z.D.1.part)
+              Zs0.alt <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part, W.D.1 = Z.D.1.part,
+                              W.AA = Z.normal, W.DA = Z.normal)
+              
+              lin.method <- TRUE
+            } else {
+              K.A.1.part <- tcrossprod(W.A.1)
+              K.A.2.part <- tcrossprod(W.A.2)
+              K.D.1.part <- tcrossprod(W.D.1)
+              
+              K.A.0.1.part <- tcrossprod(W.A.0.1)
+              K.A.0.2.part <- tcrossprod(W.A.0.2)
+              K.D.0.1.part <- tcrossprod(W.D.0.1)
+              K.AA.part <- K.A.0.1.part * K.A.0.2.part
+              K.DA.part <- K.D.0.1.part * K.A.0.2.part
+              K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+              K.DA.part <- K.DA.part * nrow(K.DA.part) / sum(diag(K.DA.part))
+              
+              ZETA.now2.null <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                                  list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
+                                  list(D.1.part = list(Z = Z.D.1.part, K = K.D.1.part)))
+              
+              ZETA.now2.alt <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                                 list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
+                                 list(D.1.part = list(Z = Z.D.1.part, K = K.D.1.part)),
+                                 list(AA.part = list(Z = Z.normal, K = K.AA.part)),
+                                 list(DA.part = list(Z = Z.normal, K = K.DA.part)))
+              
+              lin.method <- FALSE
+            }
+            
+            df <- 2
+          } else {
+            if (((m.A.1 * m.A.2) < n.line) &
+                ((m.A.1 * m.D.2) < n.line) &
+                ((m.D.1 * m.A.2) < n.line) &
+                ((m.D.1 * m.D.2) < n.line) &
+                (package.MM == "RAINBOWR")) {
+              W.AA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.AD <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.D.0.2[i, ])
+                               }))
+              W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.DA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.D.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.DA <- W.DA / sqrt(mean(apply(X = W.DA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.DD <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.D.0.1[i, ], W.D.0.2[i, ])
+                               }))
+              W.DD <- W.DD / sqrt(mean(apply(X = W.DD,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              
+              
+              Ws0.null <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.1 = W.D.1, W.D.2 = W.D.2)
+              Ws0.alt <- list(W.A.1 = W.A.1, W.A.2 = W.A.2, W.D.1 = W.D.1, W.D.2 = W.D.2,
+                              W.AA = W.AA, W.AD = W.AD, W.DA = W.DA, W.DD = W.DD)
+              
+              Zs0.null <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part,
+                               W.D.1 = Z.D.1.part, W.D.2 = Z.D.2.part)
+              Zs0.alt <- list(W.A.1 = Z.A.1.part, W.A.2 = Z.A.2.part,
+                              W.D.1 = Z.D.1.part, W.D.2 = Z.D.2.part,
+                              W.AA = Z.normal, W.AD = Z.normal,
+                              W.DA = Z.normal, W.DD = Z.normal)
+              
+              lin.method <- TRUE
+            } else {
+              K.A.1.part <- tcrossprod(W.A.1)
+              K.A.2.part <- tcrossprod(W.A.2)
+              K.D.1.part <- tcrossprod(W.D.1)
+              K.D.2.part <- tcrossprod(W.D.2)
+              
+              K.A.0.1.part <- tcrossprod(W.A.0.1)
+              K.A.0.2.part <- tcrossprod(W.A.0.2)
+              K.D.0.1.part <- tcrossprod(W.D.0.1)
+              K.D.0.2.part <- tcrossprod(W.D.0.2)
+              K.AA.part <- K.A.0.1.part * K.A.0.2.part
+              K.AD.part <- K.A.0.1.part * K.D.0.2.part
+              K.DA.part <- K.D.0.1.part * K.A.0.2.part
+              K.DD.part <- K.D.0.1.part * K.D.0.2.part
+              K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+              K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+              K.DA.part <- K.DA.part * nrow(K.DA.part) / sum(diag(K.DA.part))
+              K.DD.part <- K.DD.part * nrow(K.DD.part) / sum(diag(K.DD.part))
+              
+              
+              ZETA.now2.null <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                                  list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
+                                  list(D.1.part = list(Z = Z.D.1.part, K = K.D.1.part)),
+                                  list(D.2.part = list(Z = Z.D.2.part, K = K.D.2.part)))
+              
+              ZETA.now2.alt <- c(ZETA.now, list(A.1.part = list(Z = Z.A.1.part, K = K.A.1.part)),
+                                 list(A.2.part = list(Z = Z.A.2.part, K = K.A.2.part)),
+                                 list(D.1.part = list(Z = Z.D.1.part, K = K.D.1.part)),
+                                 list(D.2.part = list(Z = Z.D.2.part, K = K.D.2.part)),
+                                 list(AA.part = list(Z = Z.normal, K = K.AA.part)),
+                                 list(AD.part = list(Z = Z.normal, K = K.AD.part)),
+                                 list(DA.part = list(Z = Z.normal, K = K.DA.part)),
+                                 list(DD.part = list(Z = Z.normal, K = K.DD.part)))
+              
+              
+              lin.method <- FALSE
+            }
+            
+            df <- 4
+          }
+        }
+      }
+    }
+    
+    
+    if (lin.method) {
+      Gammas0.null <- lapply(Ws0.null, function(x) diag(ncol(x)))
+      EMM.res.null <-  try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, tol = NULL, 
+                                          n.core = 1, optimizer = optimizer,
+                                          Zs0 = Zs0.null, Ws0 = Ws0.null, Gammas0 = Gammas0.null,
+                                          gammas.diag = TRUE, X.fix = TRUE,
+                                          eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+                                          REML = TRUE, pred = FALSE,
+                                          return.u.always = FALSE,
+                                          return.u.each = FALSE,
+                                          return.Hinv = FALSE), silent = TRUE)
+      
+      Gammas0.alt <- lapply(Ws0.alt, function(x) diag(ncol(x)))
+      EMM.res.alt <-  try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, tol = NULL, 
+                                         n.core = 1, optimizer = optimizer,
+                                         Zs0 = Zs0.alt, Ws0 = Ws0.alt, Gammas0 = Gammas0.alt,
+                                         gammas.diag = TRUE, X.fix = TRUE,
+                                         eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+                                         REML = TRUE, pred = FALSE,
+                                         return.u.always = FALSE,
+                                         return.u.each = FALSE,
+                                         return.Hinv = FALSE), silent = TRUE)
+    } else {
+      EMM.res.null <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.null,
+                                      package = package.MM, tol = NULL,
+                                      n.core = 1, optimizer = optimizer,
+                                      REML = TRUE, pred = FALSE,
+                                      return.u.always = FALSE,
+                                      return.u.each = FALSE,
+                                      return.Hinv = FALSE), silent = TRUE)
+      
+      EMM.res.alt <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.alt, 
+                                     package = package.MM, tol = NULL, 
+                                     n.core = 1, optimizer = optimizer,
+                                     REML = TRUE, pred = FALSE,
+                                     return.u.always = FALSE,
+                                     return.u.each = FALSE,
+                                     return.Hinv = FALSE), silent = TRUE)
+    }
+    
+    if (!("try-error" %in% c(class(EMM.res.null), class(EMM.res.alt)))) {
+      LL.null <- EMM.res.null$LL
+      LL.alt <- EMM.res.alt$LL
+      
+      deviance <- 2 * (LL.alt - LL.null)
+      score.now <- ifelse(deviance <= 0, 0, -log10((1 - chi0.mixture) *
+                                                     pchisq(q = deviance, df = df, lower.tail = FALSE)))
+      
+    } else {
+      score.now <- 0
+    }
+    
+    return(score.now)
+  }
+  
+  
+  
+  scores.list <- parallel.compute(vec = 1:n.calc, 
+                                  func = score.calc.epistasis.LR.MC.oneInt, 
+                                  n.core = n.core,
+                                  parallel.method = parallel.method,
+                                  count = count)
+  scores.vec <- unlist(scores.list)
+  
+  k <- 0
+  for (i in 1:i.end) {
+    j.start <- ifelse(test = skip.self.int,
+                      yes = i + 1, no = i)
+    for (j in j.start:n.scores) {
+      k <- k + 1
+      scores[i, j] <- scores.vec[k]
+    }
+  }
+  
+  scores <- scores + t(scores)
+  diag(scores) <- diag(scores) / 2
+  
+  if (is.null(gene.set)) {
+    rownames(scores) <- colnames(scores) <- window.centers
+  } else {
+    rownames(scores) <- colnames(scores) <- gene.name
+  }
+  
+  if (count) {
+    cat("\n")
+  }
+  return(scores)
+}
+
+
+
+
+
+
+
+
+
+
+#' Calculate -log10(p) of epistatic effects with score test
+#'
+#'
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
 #' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
 #' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
+#' For example, ZETA = list(A = list(Z = Z, K = K))
+#' Please set names of list "Z" and "K"!
 #' @param Gu A \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
 #' @param Ge A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
 #' @param P0 A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
@@ -3634,6 +5350,8 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
 #' @param dominance.eff If this argument is TRUE, dominance effect is included in the model,
 #' and additive x dominance and dominance x dominance are also tested as epistatic effects.
 #' When you use inbred lines, please set this argument FALSE.
+#' @param skip.self.int As default, the function also tests the self-interactions among the same SNP-sets.
+#' If you want to avoid this, please set `skip.self.int = TRUE`.
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is assigned a zero score.
 #' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
@@ -3653,16 +5371,17 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, eigen.SGS = NULL,
 score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                                        map, haplotype = TRUE, num.hap = NULL, window.size.half = 5, window.slide = 1,
                                        chi0.mixture = 0.5, gene.set = NULL, dominance.eff = TRUE,
-                                       min.MAF = 0.02, count = TRUE){
+                                       skip.self.int = FALSE, min.MAF = 0.02, count = TRUE) {
+  n.line <- nrow(M.now)
   chr <- map[, 2]
   chr.tab <- table(chr)
   chr.max <- length(chr.tab)
   chr.cum <- cumsum(chr.tab)
   n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
   cum.n.scores <- cumsum(n.scores.each)
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     n.scores <- sum(n.scores.each)
-  }else{
+  } else {
     gene.names <- as.character(gene.set[, 1])
     mark.id <- as.character(gene.set[, 2])
     gene.name <- as.character(unique(gene.names))
@@ -3682,22 +5401,20 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
   Z.normal <- diag(n.sample.now)
   W.A.list <- W.A.0.list  <- W.D.list <- W.D.0.list <-
     Z.A.part.list <- Z.D.part.list <- rep(list(NA), n.scores)
-  pb <- txtProgressBar(min = 1, max = n.scores, style = 3)
   n.scores2 <- n.scores - n.scores %% 100
-  start.scorecalc <- Sys.time()
   
-  for(i in 1:n.scores){
-    if(is.null(gene.set)){
+  for (i in 1:n.scores) {
+    if (is.null(gene.set)) {
       i.chr <- min(which(i - cum.n.scores <= 0))
-      if(i.chr >= 2){
+      if (i.chr >= 2) {
         window.center <- window.slide * (i - cum.n.scores[i.chr - 1] - 1) + chr.cum[i.chr - 1] + 1
-      }else{
+      } else {
         window.center <- window.slide * (i - 1) + 1
       }
       names(window.center) <- i.chr
       window.centers[i] <- window.center
       Theories1 <-  window.center < window.size.half + 1
-      for(r in 1:(chr.max - 1)){
+      for (r in 1:(chr.max - 1)) {
         Theory1 <- chr.cum[r] < window.center & window.center < window.size.half + 1 + chr.cum[r]
         Theories1 <- c(Theories1, Theory1)
       }
@@ -3705,33 +5422,33 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
       
       
       Theories2  <- NULL
-      for(r in 1:chr.max){
+      for (r in 1:chr.max) {
         Theory2 <- chr.cum[r] - (window.size.half + 1) < window.center & window.center <= chr.cum[r]
         Theories2 <- c(Theories2, Theory2)
       }
       rule2 <- sum(Theories2) != 0
       
       
-      if(rule1 & rule2){
+      if (rule1 & rule2) {
         Mis.range.0 <- which(chr == i.chr)
         Mis.range.02 <- which(chr == i.chr) - window.center + 1 + window.size.half
-      }else{
-        if(rule1){
+      } else {
+        if (rule1) {
           near.min <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
           Mis.range.0 <- (near.min + 1):(window.center + window.size.half)
           Mis.range.02 <- (2 * window.size.half + 2 - length(Mis.range.0)):(2 * window.size.half + 1)
-        }else{
-          if(rule2){
+        } else {
+          if (rule2) {
             near.max <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
             Mis.range.0 <- (window.center - window.size.half):near.max
             Mis.range.02 <- 1:length(Mis.range.0)
-          }else{
+          } else {
             Mis.range.0 <- (window.center - window.size.half):(window.center + window.size.half)
             Mis.range.02 <- 1:(2 * window.size.half + 1)
           }
         }
       }
-    }else{
+    } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.02 <- 1:length(Mis.range.0)
@@ -3740,21 +5457,21 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
     
     Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
     MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if(dominance.eff){
+    if (dominance.eff) {
       Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
       MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    }else{
+    } else {
       MAF.cut.D <- rep(TRUE, length(MAF.cut))
     }
     
     
-    if(any(MAF.cut)){
+    if (any(MAF.cut)) {
       Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
       Mis.range <- Mis.range.0[MAF.cut]
       Mis.range2 <- Mis.range.02[MAF.cut]
       window.size <- ncol(Mis.0)
-      if(any(MAF.cut.D)){
-        if(dominance.eff){
+      if (any(MAF.cut.D)) {
+        if (dominance.eff) {
           Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
           Mis.range.D <- Mis.range.0[MAF.cut.D]
           Mis.range2.D <- Mis.range.02[MAF.cut.D]
@@ -3762,15 +5479,15 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
         }
       }
       
-      if(haplotype){
-        if(is.null(num.hap)){
+      if (haplotype) {
+        if (is.null(num.hap)) {
           Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
           Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
           bango <- as.factor(as.numeric(Mis.fac))
           levels(bango) <- order(unique(bango))
           bango <- as.numeric(as.character(bango))
-          if(any(MAF.cut.D)){
-            if(dominance.eff){
+          if (any(MAF.cut.D)) {
+            if (dominance.eff) {
               Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
               Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
               
@@ -3779,12 +5496,12 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
               bango.D <- as.numeric(as.character(bango.D))
             }
           }
-        }else{
+        } else {
           kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
           Mis <- kmed.res$medoids
           bango <- kmed.res$clustering
-          if(any(MAF.cut.D)){
-            if(dominance.eff){
+          if (any(MAF.cut.D)) {
+            if (dominance.eff) {
               kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
               Mis.D <- kmed.res.D$medoids
               bango.D <- kmed.res.D$clustering
@@ -3793,13 +5510,13 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
         }
         Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
                                                  dims = c(nrow(M.now), nrow(Mis))))
-        if(any(MAF.cut.D)){
-          if(dominance.eff){
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
             Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
                                                        dims = c(nrow(M.now), nrow(Mis.D))))
           }
         }
-      }else{
+      } else {
         Mis <- Mis.0
         Mis.D <- Mis.D.0
         Z.part <- Z.part.D <- diag(nrow(M.now))
@@ -3822,8 +5539,8 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
       Z.A.part.list[[i]] <- Z.part
       W.A.0.list[[i]] <- W.A.0
       
-      if(any(MAF.cut.D)){
-        if(dominance.eff){
+      if (any(MAF.cut.D)) {
+        if (dominance.eff) {
           W.D <- calcGRM(genoMat = Mis.D,
                          methodGRM = "domNOIA",
                          returnWMat = TRUE,
@@ -3844,33 +5561,45 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
     }
   }
   
-  n.calc <- n.scores * (n.scores + 1) / 2
+  
+  
+  if (skip.self.int) {
+    i.end <- n.scores - 1
+    n.calc <- n.scores * (n.scores - 1) / 2
+  } else {
+    i.end <- n.scores
+    n.calc <- n.scores * (n.scores + 1) / 2
+  }
+  
+  
   pb <- txtProgressBar(min = 1, max = n.calc, style = 3)
   n.calc2 <- n.calc - n.calc %% 100
   start.scorecalc <- Sys.time()
-  
-  
-  for(i in 1:n.scores){
+  num.now <- 0
+  for (i in 1:i.end) {
     W.A.1 <- W.A.list[[i]]
     Z.A.1.part <- Z.A.part.list[[i]]
     W.A.0.1 <- W.A.0.list[[i]]
     m.A.1 <- ncol(W.A.0.1)
     
-    if(dominance.eff){
+    if (dominance.eff) {
       W.D.1 <- W.D.list[[i]]
       Z.D.1.part <- Z.D.part.list[[i]]
       W.D.0.1 <- W.D.0.list[[i]]
       isna.1 <- any(is.na(W.D.0.1))
       m.D.1 <- ncol(W.D.0.1)
-    }else{
+    } else {
       isna.1 <- TRUE
     }
-    for(j in i:n.scores){
-      num.now <- (i - 1) * n.scores + (j - i + 1)
-      if(count){
+    
+    j.start <- ifelse(test = skip.self.int,
+                      yes = i + 1, no = i)
+    for (j in j.start:n.scores) {
+      num.now <- num.now + 1
+      if (count) {
         setTxtProgressBar(pb, num.now)
-        if(n.calc > 100){
-          if(num.now == (n.calc2 / 100 + 1) | num.now == (n.calc2 / 10 + 1) | num.now == (n.calc2 / 2 + 1)){
+        if (n.calc > 100) {
+          if (num.now == (n.calc2 / 100 + 1) | num.now == (n.calc2 / 10 + 1) | num.now == (n.calc2 / 2 + 1)) {
             cat("\n")
             end.scorecalc <- Sys.time()
             jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.calc - num.now + 1) / (num.now - 1)
@@ -3881,46 +5610,98 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
         }
       }
       
-      if(i == j){
-        if((!dominance.eff) | isna.1){
-          W.AA <- W.A.0.1 ^ 2
-          W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
+      if (i == j) {
+        if ((!dominance.eff) | isna.1) {
+          if ((ncol(W.A.1) ^ 2) < n.line) {
+            W.AA <- t(sapply(X = 1:nrow(W.A.1),
+                             FUN = function(i) {
+                               kronecker(W.A.1[i, ], W.A.1[i, ])
+                             }))
+            W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            Ws.null <- list(W.A = Z.A.1.part %*% W.A.1)
+            Ws.alt <- list(W.A = Z.A.1.part %*% W.A.1, 
+                           W.AA = Z.A.1.part %*% W.AA)
+            
+            gammas.diag <- TRUE
+          } else {
+            K.A.1.part <- tcrossprod(W.A.1)
+            
+            K.AA.part <- K.A.1.part ^ 2
+            K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+            
+            Ws.null <- list(A.part = Z.A.1.part)
+            Ws.alt <- list(A.part = Z.A.1.part,
+                           AA.part = Z.A.1.part)
+            
+            Gammas.null <- list(A.part = K.A.1.part)
+            Gammas.alt <- list(A.part = K.A.1.part,
+                               AA.part = K.AA.part)            
+            gammas.diag <- FALSE
+          }
           
-          Ws.null <- list(W.A = Z.A.1.part %*% W.A.1)
-          Ws.alt <- list(W.A = Z.A.1.part %*% W.A.1, W.AA = W.AA)
-          
-          gammas.diag <- TRUE
           df <- 1
-        }else{
-          if(m.A.1 == m.D.1){
-            W.AA <- W.A.0.1 ^ 2
-            W.AD <- W.A.0.1 * W.D.0.1
-            W.DD <- W.D.0.1 ^ 2
-            W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
-            W.AD <- W.AD * sqrt(nrow(W.AD) / sum(W.AD * W.AD))
-            W.DD <- W.DD * sqrt(nrow(W.DD) / sum(W.DD * W.DD))
+        } else {
+          if (((ncol(W.A.1) ^ 2) < n.line) &
+              ((ncol(W.D.1) ^ 2) < n.line) &
+              ((m.A.1 * m.D.1) < n.line)) {
+            W.AA <- t(sapply(X = 1:nrow(W.A.1),
+                             FUN = function(i) {
+                               kronecker(W.A.1[i, ], W.A.1[i, ])
+                             }))
+            W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            W.AD <- t(sapply(X = 1:n.line,
+                             FUN = function(i) {
+                               kronecker(W.A.0.1[i, ], W.D.0.1[i, ])
+                             }))
+            W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            W.DD <- t(sapply(X = 1:nrow(W.D.1),
+                             FUN = function(i) {
+                               kronecker(W.D.1[i, ], W.D.1[i, ])
+                             }))
+            W.DD <- W.DD / sqrt(mean(apply(X = W.DD,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
             
             Ws.null <- list(W.A = Z.A.1.part %*% W.A.1, W.D = Z.D.1.part %*% W.D.1)
             Ws.alt <- list(W.A = Z.A.1.part %*% W.A.1, W.D = Z.D.1.part %*% W.D.1,
-                           W.AA = W.AA, W.AD = W.AD, W.DD = W.DD)
+                           W.AA = Z.A.1.part %*% W.AA, W.AD = W.AD, 
+                           W.DD = Z.D.1.part %*% W.DD)
             
             gammas.diag <- TRUE
-          }else{
+          } else {
             K.A.1.part <- tcrossprod(W.A.1)
             K.D.1.part <- tcrossprod(W.D.1)
             
             K.A.0.1.part <- tcrossprod(W.A.0.1)
             K.D.0.1.part <- tcrossprod(W.D.0.1)
-            K.AA.part <- K.A.0.1.part ^ 2
+            K.AA.part <- K.A.1.part ^ 2
             K.AD.part <- K.A.0.1.part * K.D.0.1.part
-            K.DD.part <- K.D.0.1.part ^ 2
-            K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
-            K.AD.part <- K.AD.part * sqrt(nrow(K.AD.part) / sum(K.AD.part * K.AD.part))
-            K.DD.part <- K.DD.part * sqrt(nrow(K.DD.part) / sum(K.DD.part * K.DD.part))
+            K.DD.part <- K.D.1.part ^ 2
+            K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+            K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+            K.DD.part <- K.DD.part * nrow(K.DD.part) / sum(diag(K.DD.part))
             
             Ws.null <- list(A.part = Z.A.1.part, D.part = Z.D.1.part)
             Ws.alt <- list(A.part = Z.A.1.part, D.part = Z.D.1.part,
-                           AA.part = Z.normal, AD.part = Z.normal, DD.part = Z.normal)
+                           AA.part = Z.A.1.part, AD.part = Z.normal,
+                           DD.part = Z.D.1.part)
             
             Gammas.null <- list(A.part = K.A.1.part, D.part = K.D.1.part)
             Gammas.alt <- list(A.part = K.A.1.part, D.part = K.D.1.part,
@@ -3929,61 +5710,87 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
             
             gammas.diag <- FALSE
           }
+          
           df <- 3
         }
-      }else{
+      } else {
         W.A.2 <- W.A.list[[j]]
         Z.A.2.part <- Z.A.part.list[[j]]
         W.A.0.2 <- W.A.0.list[[j]]
         m.A.2 <- ncol(W.A.0.2)
         
-        if(dominance.eff){
+        if (dominance.eff) {
           W.D.2 <- W.D.list[[j]]
           Z.D.2.part <- Z.D.part.list[[j]]
           W.D.0.2 <- W.D.0.list[[j]]
           isna.2 <- any(is.na(W.D.0.2))
           m.D.2 <- ncol(W.D.0.2)
-          
-          isnas <- c(isna.1, isna.2)
-        }else{
+        } else {
           isna.2 <- TRUE
-          isnas <- c(isna.1, isna.2)
         }
+        isnas <- c(isna.1, isna.2)
         
-        if((!dominance.eff) | all(isnas)){
-          if(m.A.1 == m.A.2){
-            W.AA <- W.A.0.1 * W.A.0.2
-            W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
+        if ((!dominance.eff) | all(isnas)) {
+          if ((m.A.1 * m.A.2) < n.line) {
+            W.AA <- t(sapply(X = 1:n.line,
+                             FUN = function(i) {
+                               kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                             }))
+            W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
             
             Ws.null <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2)
-            Ws.alt <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2, W.AA = W.AA)
+            Ws.alt <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
+                           W.AA = W.AA)
             
             gammas.diag <- TRUE
-          }else{
+          } else {
             K.A.1.part <- tcrossprod(W.A.1)
             K.A.2.part <- tcrossprod(W.A.2)
             
             K.A.0.1.part <- tcrossprod(W.A.0.1)
             K.A.0.2.part <- tcrossprod(W.A.0.2)
             K.AA.part <- K.A.0.1.part * K.A.0.2.part
-            K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
+            K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
             
             Ws.null <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part)
-            Ws.alt <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part, AA.part = Z.normal)
+            Ws.alt <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part, 
+                           AA.part = Z.normal)
             
             Gammas.null <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part)
-            Gammas.alt <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part, AA.part = K.AA.part)
+            Gammas.alt <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part, 
+                               AA.part = K.AA.part)
             
             gammas.diag <- FALSE
           }
+          
           df <- 1
-        }else{
-          if(isna.1){
-            if(all(c(m.A.2, m.D.2) == m.A.1)){
-              W.AA <- W.A.0.1 * W.A.0.2
-              W.AD <- W.A.0.1 * W.D.0.2
-              W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
-              W.AD <- W.AD * sqrt(nrow(W.AD) / sum(W.AD * W.AD))
+        } else {
+          if (isna.1) {
+            if (((m.A.1 * m.A.2) < n.line) &
+                ((m.A.1 * m.D.2) < n.line)) {
+              W.AA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.AD <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.D.0.2[i, ])
+                               }))
+              W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
               
               Ws.null <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
                               W.D.2 = Z.D.2.part %*% W.D.2)
@@ -3991,7 +5798,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                              W.D.2 = Z.D.2.part %*% W.D.2, W.AA = W.AA, W.AD = W.AD)
               
               gammas.diag <- TRUE
-            }else{
+            } else {
               K.A.1.part <- tcrossprod(W.A.1)
               K.A.2.part <- tcrossprod(W.A.2)
               K.D.2.part <- tcrossprod(W.D.2)
@@ -4001,8 +5808,8 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
               K.D.0.2.part <- tcrossprod(W.D.0.2)
               K.AA.part <- K.A.0.1.part * K.A.0.2.part
               K.AD.part <- K.A.0.1.part * K.D.0.2.part
-              K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
-              K.AD.part <- K.AD.part * sqrt(nrow(K.AD.part) / sum(K.AD.part * K.AD.part))
+              K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+              K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
               
               Ws.null <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
                               D.part.2 = Z.D.2.part)
@@ -4016,15 +5823,32 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
               
               gammas.diag <- FALSE
             }
+            
             df <- 2
-          }else{
-            if(isna.2){
-              if(all(c(m.A.1, m.D.1) == m.A.2)){
-                W.AA <- W.A.0.1 * W.A.0.2
-                W.DA <- W.D.0.1 * W.A.0.2
-                W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
-                W.AD <- W.AD * sqrt(nrow(W.AD) / sum(W.AD * W.AD))
-                W.DA <- W.DA * sqrt(nrow(W.DA) / sum(W.DA * W.DA))
+          } else {
+            if (isna.2) {
+              if (((m.A.1 * m.A.2) < n.line) &
+                  ((m.D.1 * m.A.2) < n.line)) {
+                W.AA <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                                 }))
+                W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                W.DA <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.D.0.1[i, ], W.A.0.2[i, ])
+                                 }))
+                W.DA <- W.DA / sqrt(mean(apply(X = W.DA,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
                 
                 Ws.null <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
                                 W.D.1 = Z.D.1.part %*% W.D.1)
@@ -4032,7 +5856,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                                W.D.1 = Z.D.1.part %*% W.D.1, W.AA = W.AA, W.DA = W.DA)
                 
                 gammas.diag <- TRUE
-              }else{
+              } else {
                 K.A.1.part <- tcrossprod(W.A.1)
                 K.A.2.part <- tcrossprod(W.A.2)
                 K.D.1.part <- tcrossprod(W.D.1)
@@ -4042,8 +5866,8 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                 K.D.0.1.part <- tcrossprod(W.D.0.1)
                 K.AA.part <- K.A.0.1.part * K.A.0.2.part
                 K.DA.part <- K.D.0.1.part * K.A.0.2.part
-                K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
-                K.DA.part <- K.DA.part * sqrt(nrow(K.DA.part) / sum(K.DA.part * K.DA.part))
+                K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+                K.DA.part <- K.DA.part * nrow(K.DA.part) / sum(diag(K.DA.part))
                 
                 Ws.null <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
                                 D.part.1 = Z.D.1.part)
@@ -4057,17 +5881,53 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                 
                 gammas.diag <- FALSE
               }
+              
               df <- 2
-            }else{
-              if(all(c(m.D.1, m.A.2, m.D.2) == m.A.1)){
-                W.AA <- W.A.0.1 * W.A.0.2
-                W.AD <- W.A.0.1 * W.D.0.2
-                W.DA <- W.D.0.1 * W.A.0.2
-                W.DD <- W.D.0.1 * W.D.0.2
-                W.AA <- W.AA * sqrt(nrow(W.AA) / sum(W.AA * W.AA))
-                W.AD <- W.AD * sqrt(nrow(W.AD) / sum(W.AD * W.AD))
-                W.DA <- W.DA * sqrt(nrow(W.DA) / sum(W.DA * W.DA))
-                W.DD <- W.DD * sqrt(nrow(W.DD) / sum(W.DD * W.DD))
+            } else {
+              if (((m.A.1 * m.A.2) < n.line) &
+                  ((m.A.1 * m.D.2) < n.line) &
+                  ((m.D.1 * m.A.2) < n.line) &
+                  ((m.D.1 * m.D.2) < n.line)) {
+                W.AA <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                                 }))
+                W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                W.AD <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.A.0.1[i, ], W.D.0.2[i, ])
+                                 }))
+                W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                W.DA <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.D.0.1[i, ], W.A.0.2[i, ])
+                                 }))
+                W.DA <- W.DA / sqrt(mean(apply(X = W.DA,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
+                W.DD <- t(sapply(X = 1:n.line,
+                                 FUN = function(i) {
+                                   kronecker(W.D.0.1[i, ], W.D.0.2[i, ])
+                                 }))
+                W.DD <- W.DD / sqrt(mean(apply(X = W.DD,
+                                               MARGIN = 1,
+                                               FUN = function(x) {
+                                                 sum(x ^ 2)
+                                               })))
+                
                 
                 Ws.null <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
                                 W.D.1 = Z.D.1.part %*% W.D.1, W.D.2 = Z.D.2.part %*% W.D.2)
@@ -4076,7 +5936,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                                W.AA = W.AA, W.AD = W.AD, W.DA = W.DA, W.DD = W.DD)
                 
                 gammas.diag <- TRUE
-              }else{
+              } else {
                 K.A.1.part <- tcrossprod(W.A.1)
                 K.A.2.part <- tcrossprod(W.A.2)
                 K.D.1.part <- tcrossprod(W.D.1)
@@ -4090,10 +5950,10 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                 K.AD.part <- K.A.0.1.part * K.D.0.2.part
                 K.DA.part <- K.D.0.1.part * K.A.0.2.part
                 K.DD.part <- K.D.0.1.part * K.D.0.2.part
-                K.AA.part <- K.AA.part * sqrt(nrow(K.AA.part) / sum(K.AA.part * K.AA.part))
-                K.AD.part <- K.AD.part * sqrt(nrow(K.AD.part) / sum(K.AD.part * K.AD.part))
-                K.DA.part <- K.DA.part * sqrt(nrow(K.DA.part) / sum(K.DA.part * K.DA.part))
-                K.DD.part <- K.DD.part * sqrt(nrow(K.DD.part) / sum(K.DD.part * K.DD.part))
+                K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+                K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+                K.DA.part <- K.DA.part * nrow(K.DA.part) / sum(diag(K.DA.part))
+                K.DD.part <- K.DD.part * nrow(K.DD.part) / sum(diag(K.DD.part))
                 
                 Ws.null <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
                                 D.part.1 = Z.D.1.part, D.part.2 = Z.D.2.part)
@@ -4112,6 +5972,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                 
                 gammas.diag <- FALSE
               }
+              
               df <- 4
             }
           }
@@ -4119,7 +5980,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
       }
       
       
-      if(gammas.diag){
+      if (gammas.diag) {
         Gammas.null <- lapply(Ws.null, function(x) diag(ncol(x)))
         Gammas.alt <- lapply(Ws.alt, function(x) diag(ncol(x)))
       }
@@ -4132,9 +5993,11 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
                                         gammas.diag = gammas.diag, Gu = Gu, Ge = Ge,
                                         P0 = P0, chi0.mixture = chi0.mixture), silent = TRUE)
       
-      if(!("try-error" %in% c(class(score.null), class(score.alt)))){
-        stat.null <- qchisq(p = 10 ^ (-score.null) / (1 - chi0.mixture), df = df, lower.tail = FALSE)
-        stat.alt <- qchisq(p = 10 ^ (-score.alt) / (1 - chi0.mixture), df = df, lower.tail = FALSE)
+      if (!("try-error" %in% c(class(score.null), class(score.alt)))) {
+        stat.null <- qchisq(p = 10 ^ (-score.null) / (1 - chi0.mixture), 
+                            df = length(Ws.null), lower.tail = FALSE)
+        stat.alt <- qchisq(p = 10 ^ (-score.alt) / (1 - chi0.mixture), 
+                           df = length(Ws.alt), lower.tail = FALSE)
         deviance <- stat.alt - stat.null
         score.now <- ifelse(deviance <= 0, 0, -log10((1 - chi0.mixture) *
                                                        pchisq(q = deviance, df = df, lower.tail = FALSE)))
@@ -4146,9 +6009,9 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
   scores <- scores + t(scores)
   diag(scores) <- diag(scores) / 2
   
-  if(is.null(gene.set)){
+  if (is.null(gene.set)) {
     rownames(scores) <- colnames(scores) <- window.centers
-  }else{
+  } else {
     rownames(scores) <- colnames(scores) <- gene.name
   }
   
@@ -4158,3 +6021,1215 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
   return(scores)
 }
 
+
+
+
+
+
+#' Calculate -log10(p) of epistatic effects with score test (multi-cores)
+#'
+#'
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
+#' For example, ZETA = list(A = list(Z = Z, K = K))
+#' Please set names of list "Z" and "K"!
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
+#' @param Gu A \eqn{n \times n} matrix. You should assign \eqn{ZKZ'}, where K is covariance (relationship) matrix and Z is its design matrix.
+#' @param Ge A \eqn{n \times n} matrix. You should assign identity matrix I (diag(n)).
+#' @param P0 A \eqn{n \times n} matrix. The Moore-Penrose generalized inverse of \eqn{SV0S}, where \eqn{S = X(X'X)^{-1}X'} and
+#' \eqn{V0 = \sigma^2_u Gu + \sigma^2_e Ge}. \eqn{\sigma^2_u} and \eqn{\sigma^2_e} are estimators of the null model.
+#' @param map Data frame of map information where the first column is the marker names,
+#' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
+#' @param haplotype If the number of lines of your data is large (maybe > 100), you should set haplotype = TRUE.
+#'             When haplotype = TRUE, haplotype-based kernel will be used for calculating -log10(p).
+#'             (So the dimension of this gram matrix will be smaller.)
+#'             The result won't be changed, but the time for the calculation will be shorter.
+#' @param num.hap When haplotype = TRUE, you can set the number of haplotypes which you expect.
+#'           Then similar arrays are considered as the same haplotype, and then make kernel(K.SNP) whose dimension is num.hap x num.hap.
+#'           When num.hap = NULL (default), num.hap will be set as the maximum number which reflects the difference between lines.
+#' @param window.size.half This argument decides how many SNPs (around the SNP you want to test) are used to calculated K.SNP.
+#' More precisely, the number of SNPs will be 2 * window.size.half + 1.
+#' @param window.slide This argument determines how often you test markers. If window.slide = 1, every marker will be tested.
+#' If you want to perform SNP set by bins, please set window.slide = 2 * window.size.half + 1.
+#' @param chi0.mixture RAINBOWR assumes the test statistic \eqn{l1' F l1} is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
+#' where l1 is the first derivative of the log-likelihood and F is the Fisher information. And r is the degree of freedom.
+#' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
+#' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
+#'            You should assign your gene information to gene.set in the form of a "data.frame" (whose dimension is (the number of gene) x 2).
+#'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
+#'            which correspond to the marker names of "geno" argument.
+#' @param dominance.eff If this argument is TRUE, dominance effect is included in the model,
+#' and additive x dominance and dominance x dominance are also tested as epistatic effects.
+#' When you use inbred lines, please set this argument FALSE.
+#' @param skip.self.int As default, the function also tests the self-interactions among the same SNP-sets.
+#' If you want to avoid this, please set `skip.self.int = TRUE`.
+#' @param min.MAF Specifies the minimum minor allele frequency (MAF).
+#' If a marker has a MAF less than min.MAF, it is assigned a zero score.
+#' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
+#'
+#' @return -log10(p) of epistatic effects for each SNP-set
+#'
+#' @references Listgarten, J. et al. (2013) A powerful and efficient set test
+#'  for genetic markers that handles confounders. Bioinformatics. 29(12): 1526-1533.
+#'
+#' Lippert, C. et al. (2014) Greater power and computational efficiency for kernel-based
+#'  association testing of sets of genetic variants. Bioinformatics. 30(22): 3206-3214.
+#'
+#' Jiang, Y. and Reif, J.C. (2015) Modeling epistasis in genomic selection. Genetics. 201(2): 759-768.
+#'
+#'
+#'
+score.calc.epistasis.score.MC <- function(M.now, y, X.now, ZETA.now, 
+                                          n.core = 2, parallel.method = "mclapply",
+                                          Gu, Ge, P0, map, haplotype = TRUE, 
+                                          num.hap = NULL, window.size.half = 5, window.slide = 1,
+                                          chi0.mixture = 0.5, gene.set = NULL, dominance.eff = TRUE,
+                                          skip.self.int = FALSE, min.MAF = 0.02, count = TRUE) {
+  n.line <- nrow(M.now)
+  chr <- map[, 2]
+  chr.tab <- table(chr)
+  chr.max <- length(chr.tab)
+  chr.cum <- cumsum(chr.tab)
+  n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
+  cum.n.scores <- cumsum(n.scores.each)
+  if (is.null(gene.set)) {
+    n.scores <- sum(n.scores.each)
+  } else {
+    gene.names <- as.character(gene.set[, 1])
+    mark.id <- as.character(gene.set[, 2])
+    gene.name <- as.character(unique(gene.names))
+    n.scores <- length(unique(gene.set[, 1]))
+  }
+  
+  scores <- matrix(0, nrow = n.scores, ncol = n.scores)
+  window.centers <- rep(NA, n.scores)
+  probaa <- apply(M.now == -1, 2, mean)
+  probAa <- apply(M.now == 0, 2, mean)
+  freq <- probaa + probAa / 2
+  MAF <- pmin(freq, 1 - freq)
+  MAF.D <- pmin(probAa, 1 - probAa)
+  
+  
+  n.sample.now <- nrow(M.now)
+  Z.normal <- diag(n.sample.now)
+  W.A.list <- W.A.0.list  <- W.D.list <- W.D.0.list <-
+    Z.A.part.list <- Z.D.part.list <- rep(list(NA), n.scores)
+  n.scores2 <- n.scores - n.scores %% 100
+  
+  for (i in 1:n.scores) {
+    if (is.null(gene.set)) {
+      i.chr <- min(which(i - cum.n.scores <= 0))
+      if (i.chr >= 2) {
+        window.center <- window.slide * (i - cum.n.scores[i.chr - 1] - 1) + chr.cum[i.chr - 1] + 1
+      } else {
+        window.center <- window.slide * (i - 1) + 1
+      }
+      names(window.center) <- i.chr
+      window.centers[i] <- window.center
+      Theories1 <-  window.center < window.size.half + 1
+      for (r in 1:(chr.max - 1)) {
+        Theory1 <- chr.cum[r] < window.center & window.center < window.size.half + 1 + chr.cum[r]
+        Theories1 <- c(Theories1, Theory1)
+      }
+      rule1 <- sum(Theories1) != 0
+      
+      
+      Theories2  <- NULL
+      for (r in 1:chr.max) {
+        Theory2 <- chr.cum[r] - (window.size.half + 1) < window.center & window.center <= chr.cum[r]
+        Theories2 <- c(Theories2, Theory2)
+      }
+      rule2 <- sum(Theories2) != 0
+      
+      
+      if (rule1 & rule2) {
+        Mis.range.0 <- which(chr == i.chr)
+        Mis.range.02 <- which(chr == i.chr) - window.center + 1 + window.size.half
+      } else {
+        if (rule1) {
+          near.min <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
+          Mis.range.0 <- (near.min + 1):(window.center + window.size.half)
+          Mis.range.02 <- (2 * window.size.half + 2 - length(Mis.range.0)):(2 * window.size.half + 1)
+        } else {
+          if (rule2) {
+            near.max <- c(0, chr.cum)[which.min(abs(window.center - c(0, chr.cum)))]
+            Mis.range.0 <- (window.center - window.size.half):near.max
+            Mis.range.02 <- 1:length(Mis.range.0)
+          } else {
+            Mis.range.0 <- (window.center - window.size.half):(window.center + window.size.half)
+            Mis.range.02 <- 1:(2 * window.size.half + 1)
+          }
+        }
+      }
+    } else {
+      mark.name.now <- mark.id[gene.names == gene.name[i]]
+      Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.02 <- 1:length(Mis.range.0)
+      weighting.center <- FALSE
+    }
+    
+    Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+    MAF.cut <- MAF[Mis.range.0] >= min.MAF
+    if (dominance.eff) {
+      Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut.D <- MAF.D[Mis.range.0] > 0
+    } else {
+      MAF.cut.D <- rep(TRUE, length(MAF.cut))
+    }
+    
+    
+    if (any(MAF.cut)) {
+      Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
+      Mis.range <- Mis.range.0[MAF.cut]
+      Mis.range2 <- Mis.range.02[MAF.cut]
+      window.size <- ncol(Mis.0)
+      if (any(MAF.cut.D)) {
+        if (dominance.eff) {
+          Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
+          Mis.range.D <- Mis.range.0[MAF.cut.D]
+          Mis.range2.D <- Mis.range.02[MAF.cut.D]
+          window.size.D <- ncol(Mis.D.0)
+        }
+      }
+      
+      if (haplotype) {
+        if (is.null(num.hap)) {
+          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+          bango <- as.factor(as.numeric(Mis.fac))
+          levels(bango) <- order(unique(bango))
+          bango <- as.numeric(as.character(bango))
+          if (any(MAF.cut.D)) {
+            if (dominance.eff) {
+              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+              
+              bango.D <- as.factor(as.numeric(Mis.D.fac))
+              levels(bango.D) <- order(unique(bango.D))
+              bango.D <- as.numeric(as.character(bango.D))
+            }
+          }
+        } else {
+          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+          Mis <- kmed.res$medoids
+          bango <- kmed.res$clustering
+          if (any(MAF.cut.D)) {
+            if (dominance.eff) {
+              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+              Mis.D <- kmed.res.D$medoids
+              bango.D <- kmed.res.D$clustering
+            }
+          }
+        }
+        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                 dims = c(nrow(M.now), nrow(Mis))))
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                       dims = c(nrow(M.now), nrow(Mis.D))))
+          }
+        }
+      } else {
+        Mis <- Mis.0
+        Mis.D <- Mis.D.0
+        Z.part <- Z.part.D <- diag(nrow(M.now))
+      }
+      
+      
+      W.A <- calcGRM(genoMat = Mis,
+                     methodGRM = "addNOIA",
+                     returnWMat = TRUE,
+                     probaa = probaa[Mis.range],
+                     probAa = probAa[Mis.range])
+      
+      W.A.0 <- calcGRM(genoMat = Mis.0.0,
+                       methodGRM = "addNOIA",
+                       returnWMat = TRUE,
+                       probaa = probaa[Mis.range.0],
+                       probAa = probAa[Mis.range.0])
+      
+      W.A.list[[i]] <- W.A
+      Z.A.part.list[[i]] <- Z.part
+      W.A.0.list[[i]] <- W.A.0
+      
+      if (any(MAF.cut.D)) {
+        if (dominance.eff) {
+          W.D <- calcGRM(genoMat = Mis.D,
+                         methodGRM = "domNOIA",
+                         returnWMat = TRUE,
+                         probaa = probaa[Mis.range.D],
+                         probAa = probAa[Mis.range.D])
+          
+          W.D.0 <- calcGRM(genoMat = Mis.0.0,
+                           methodGRM = "domNOIA",
+                           returnWMat = TRUE,
+                           probaa = probaa[Mis.range.0],
+                           probAa = probAa[Mis.range.0])
+          
+          W.D.list[[i]] <- W.D
+          Z.D.part.list[[i]] <- Z.part.D
+          W.D.0.list[[i]] <- W.D.0
+        }
+      }
+    }
+  }
+  
+  
+  test.cands.mat <- expand.grid(
+    rep(list(1:n.scores), 2)
+  )
+  test.cands.mat <- test.cands.mat[,c(2, 1)]
+  
+  if (skip.self.int) {
+    test.cands.mat <- test.cands.mat[test.cands.mat[, 1] < test.cands.mat[, 2], ]
+    i.end <- n.scores - 1
+  } else {
+    test.cands.mat <- test.cands.mat[test.cands.mat[, 1] <= test.cands.mat[, 2], ]
+    i.end <- n.scores
+    n.calc <- n.scores * (n.scores + 1) / 2
+  }
+  n.calc <- nrow(test.cands.mat)
+  
+  
+  score.calc.epistasis.score.MC.oneInt <- function(k) {
+    i <- test.cands.mat[k, 1]
+    j <- test.cands.mat[k, 2]
+    
+    
+    W.A.1 <- W.A.list[[i]]
+    Z.A.1.part <- Z.A.part.list[[i]]
+    W.A.0.1 <- W.A.0.list[[i]]
+    m.A.1 <- ncol(W.A.0.1)
+    
+    if (dominance.eff) {
+      W.D.1 <- W.D.list[[i]]
+      Z.D.1.part <- Z.D.part.list[[i]]
+      W.D.0.1 <- W.D.0.list[[i]]
+      isna.1 <- any(is.na(W.D.0.1))
+      m.D.1 <- ncol(W.D.0.1)
+    } else {
+      isna.1 <- TRUE
+    }
+    
+    
+    
+    if (i == j) {
+      if ((!dominance.eff) | isna.1) {
+        if ((ncol(W.A.1) ^ 2) < n.line) {
+          W.AA <- t(sapply(X = 1:nrow(W.A.1),
+                           FUN = function(i) {
+                             kronecker(W.A.1[i, ], W.A.1[i, ])
+                           }))
+          W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          Ws.null <- list(W.A = Z.A.1.part %*% W.A.1)
+          Ws.alt <- list(W.A = Z.A.1.part %*% W.A.1, 
+                         W.AA = Z.A.1.part %*% W.AA)
+          
+          gammas.diag <- TRUE
+        } else {
+          K.A.1.part <- tcrossprod(W.A.1)
+          
+          K.AA.part <- K.A.1.part ^ 2
+          K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+          
+          Ws.null <- list(A.part = Z.A.1.part)
+          Ws.alt <- list(A.part = Z.A.1.part,
+                         AA.part = Z.A.1.part)
+          
+          Gammas.null <- list(A.part = K.A.1.part)
+          Gammas.alt <- list(A.part = K.A.1.part,
+                             AA.part = K.AA.part)            
+          gammas.diag <- FALSE
+        }
+        
+        df <- 1
+      } else {
+        if (((ncol(W.A.1) ^ 2) < n.line) &
+            ((ncol(W.D.1) ^ 2) < n.line) &
+            ((m.A.1 * m.D.1) < n.line)) {
+          W.AA <- t(sapply(X = 1:nrow(W.A.1),
+                           FUN = function(i) {
+                             kronecker(W.A.1[i, ], W.A.1[i, ])
+                           }))
+          W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          W.AD <- t(sapply(X = 1:n.line,
+                           FUN = function(i) {
+                             kronecker(W.A.0.1[i, ], W.D.0.1[i, ])
+                           }))
+          W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          W.DD <- t(sapply(X = 1:nrow(W.D.1),
+                           FUN = function(i) {
+                             kronecker(W.D.1[i, ], W.D.1[i, ])
+                           }))
+          W.DD <- W.DD / sqrt(mean(apply(X = W.DD,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          Ws.null <- list(W.A = Z.A.1.part %*% W.A.1, W.D = Z.D.1.part %*% W.D.1)
+          Ws.alt <- list(W.A = Z.A.1.part %*% W.A.1, W.D = Z.D.1.part %*% W.D.1,
+                         W.AA = Z.A.1.part %*% W.AA, W.AD = W.AD, 
+                         W.DD = Z.D.1.part %*% W.DD)
+          
+          gammas.diag <- TRUE
+        } else {
+          K.A.1.part <- tcrossprod(W.A.1)
+          K.D.1.part <- tcrossprod(W.D.1)
+          
+          K.A.0.1.part <- tcrossprod(W.A.0.1)
+          K.D.0.1.part <- tcrossprod(W.D.0.1)
+          K.AA.part <- K.A.1.part ^ 2
+          K.AD.part <- K.A.0.1.part * K.D.0.1.part
+          K.DD.part <- K.D.1.part ^ 2
+          K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+          K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+          K.DD.part <- K.DD.part * nrow(K.DD.part) / sum(diag(K.DD.part))
+          
+          Ws.null <- list(A.part = Z.A.1.part, D.part = Z.D.1.part)
+          Ws.alt <- list(A.part = Z.A.1.part, D.part = Z.D.1.part,
+                         AA.part = Z.A.1.part, AD.part = Z.normal,
+                         DD.part = Z.D.1.part)
+          
+          Gammas.null <- list(A.part = K.A.1.part, D.part = K.D.1.part)
+          Gammas.alt <- list(A.part = K.A.1.part, D.part = K.D.1.part,
+                             AA.part = K.AA.part, AD.part = K.AD.part,
+                             DD.part = K.DD.part)
+          
+          gammas.diag <- FALSE
+        }
+        
+        df <- 3
+      }
+    } else {
+      W.A.2 <- W.A.list[[j]]
+      Z.A.2.part <- Z.A.part.list[[j]]
+      W.A.0.2 <- W.A.0.list[[j]]
+      m.A.2 <- ncol(W.A.0.2)
+      
+      if (dominance.eff) {
+        W.D.2 <- W.D.list[[j]]
+        Z.D.2.part <- Z.D.part.list[[j]]
+        W.D.0.2 <- W.D.0.list[[j]]
+        isna.2 <- any(is.na(W.D.0.2))
+        m.D.2 <- ncol(W.D.0.2)
+      } else {
+        isna.2 <- TRUE
+      }
+      isnas <- c(isna.1, isna.2)
+      
+      if ((!dominance.eff) | all(isnas)) {
+        if ((m.A.1 * m.A.2) < n.line) {
+          W.AA <- t(sapply(X = 1:n.line,
+                           FUN = function(i) {
+                             kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                           }))
+          W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                         MARGIN = 1,
+                                         FUN = function(x) {
+                                           sum(x ^ 2)
+                                         })))
+          
+          Ws.null <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2)
+          Ws.alt <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
+                         W.AA = W.AA)
+          
+          gammas.diag <- TRUE
+        } else {
+          K.A.1.part <- tcrossprod(W.A.1)
+          K.A.2.part <- tcrossprod(W.A.2)
+          
+          K.A.0.1.part <- tcrossprod(W.A.0.1)
+          K.A.0.2.part <- tcrossprod(W.A.0.2)
+          K.AA.part <- K.A.0.1.part * K.A.0.2.part
+          K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+          
+          Ws.null <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part)
+          Ws.alt <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part, 
+                         AA.part = Z.normal)
+          
+          Gammas.null <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part)
+          Gammas.alt <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part, 
+                             AA.part = K.AA.part)
+          
+          gammas.diag <- FALSE
+        }
+        
+        df <- 1
+      } else {
+        if (isna.1) {
+          if (((m.A.1 * m.A.2) < n.line) &
+              ((m.A.1 * m.D.2) < n.line)) {
+            W.AA <- t(sapply(X = 1:n.line,
+                             FUN = function(i) {
+                               kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                             }))
+            W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            W.AD <- t(sapply(X = 1:n.line,
+                             FUN = function(i) {
+                               kronecker(W.A.0.1[i, ], W.D.0.2[i, ])
+                             }))
+            W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                           MARGIN = 1,
+                                           FUN = function(x) {
+                                             sum(x ^ 2)
+                                           })))
+            
+            Ws.null <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
+                            W.D.2 = Z.D.2.part %*% W.D.2)
+            Ws.alt <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
+                           W.D.2 = Z.D.2.part %*% W.D.2, W.AA = W.AA, W.AD = W.AD)
+            
+            gammas.diag <- TRUE
+          } else {
+            K.A.1.part <- tcrossprod(W.A.1)
+            K.A.2.part <- tcrossprod(W.A.2)
+            K.D.2.part <- tcrossprod(W.D.2)
+            
+            K.A.0.1.part <- tcrossprod(W.A.0.1)
+            K.A.0.2.part <- tcrossprod(W.A.0.2)
+            K.D.0.2.part <- tcrossprod(W.D.0.2)
+            K.AA.part <- K.A.0.1.part * K.A.0.2.part
+            K.AD.part <- K.A.0.1.part * K.D.0.2.part
+            K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+            K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+            
+            Ws.null <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
+                            D.part.2 = Z.D.2.part)
+            Ws.alt <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
+                           D.part.2 = Z.D.2.part, AA.part = Z.normal, AD.part = Z.normal)
+            
+            Gammas.null <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part,
+                                D.part.2 = K.D.2.part)
+            Gammas.alt <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part, D.part.2 = K.D.2.part,
+                               AA.part = K.AA.part, AD.part = K.AD.part)
+            
+            gammas.diag <- FALSE
+          }
+          
+          df <- 2
+        } else {
+          if (isna.2) {
+            if (((m.A.1 * m.A.2) < n.line) &
+                ((m.D.1 * m.A.2) < n.line)) {
+              W.AA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.DA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.D.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.DA <- W.DA / sqrt(mean(apply(X = W.DA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              
+              Ws.null <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
+                              W.D.1 = Z.D.1.part %*% W.D.1)
+              Ws.alt <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
+                             W.D.1 = Z.D.1.part %*% W.D.1, W.AA = W.AA, W.DA = W.DA)
+              
+              gammas.diag <- TRUE
+            } else {
+              K.A.1.part <- tcrossprod(W.A.1)
+              K.A.2.part <- tcrossprod(W.A.2)
+              K.D.1.part <- tcrossprod(W.D.1)
+              
+              K.A.0.1.part <- tcrossprod(W.A.0.1)
+              K.A.0.2.part <- tcrossprod(W.A.0.2)
+              K.D.0.1.part <- tcrossprod(W.D.0.1)
+              K.AA.part <- K.A.0.1.part * K.A.0.2.part
+              K.DA.part <- K.D.0.1.part * K.A.0.2.part
+              K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+              K.DA.part <- K.DA.part * nrow(K.DA.part) / sum(diag(K.DA.part))
+              
+              Ws.null <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
+                              D.part.1 = Z.D.1.part)
+              Ws.alt <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
+                             D.part.1 = Z.D.1.part, AA.part = Z.normal, DA.part = Z.normal)
+              
+              Gammas.null <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part,
+                                  D.part.1 = K.D.1.part)
+              Gammas.alt <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part, D.part.1 = K.D.1.part,
+                                 AA.part = K.AA.part, DA.part = K.DA.part)
+              
+              gammas.diag <- FALSE
+            }
+            
+            df <- 2
+          } else {
+            if (((m.A.1 * m.A.2) < n.line) &
+                ((m.A.1 * m.D.2) < n.line) &
+                ((m.D.1 * m.A.2) < n.line) &
+                ((m.D.1 * m.D.2) < n.line)) {
+              W.AA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.AA <- W.AA / sqrt(mean(apply(X = W.AA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.AD <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.A.0.1[i, ], W.D.0.2[i, ])
+                               }))
+              W.AD <- W.AD / sqrt(mean(apply(X = W.AD,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.DA <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.D.0.1[i, ], W.A.0.2[i, ])
+                               }))
+              W.DA <- W.DA / sqrt(mean(apply(X = W.DA,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              W.DD <- t(sapply(X = 1:n.line,
+                               FUN = function(i) {
+                                 kronecker(W.D.0.1[i, ], W.D.0.2[i, ])
+                               }))
+              W.DD <- W.DD / sqrt(mean(apply(X = W.DD,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               sum(x ^ 2)
+                                             })))
+              
+              
+              Ws.null <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
+                              W.D.1 = Z.D.1.part %*% W.D.1, W.D.2 = Z.D.2.part %*% W.D.2)
+              Ws.alt <- list(W.A.1 = Z.A.1.part %*% W.A.1, W.A.2 = Z.A.2.part %*% W.A.2,
+                             W.D.1 = Z.D.1.part %*% W.D.1, W.D.2 = Z.D.2.part %*% W.D.2,
+                             W.AA = W.AA, W.AD = W.AD, W.DA = W.DA, W.DD = W.DD)
+              
+              gammas.diag <- TRUE
+            } else {
+              K.A.1.part <- tcrossprod(W.A.1)
+              K.A.2.part <- tcrossprod(W.A.2)
+              K.D.1.part <- tcrossprod(W.D.1)
+              K.D.2.part <- tcrossprod(W.D.2)
+              
+              K.A.0.1.part <- tcrossprod(W.A.0.1)
+              K.A.0.2.part <- tcrossprod(W.A.0.2)
+              K.D.0.1.part <- tcrossprod(W.D.0.1)
+              K.D.0.2.part <- tcrossprod(W.D.0.2)
+              K.AA.part <- K.A.0.1.part * K.A.0.2.part
+              K.AD.part <- K.A.0.1.part * K.D.0.2.part
+              K.DA.part <- K.D.0.1.part * K.A.0.2.part
+              K.DD.part <- K.D.0.1.part * K.D.0.2.part
+              K.AA.part <- K.AA.part * nrow(K.AA.part) / sum(diag(K.AA.part))
+              K.AD.part <- K.AD.part * nrow(K.AD.part) / sum(diag(K.AD.part))
+              K.DA.part <- K.DA.part * nrow(K.DA.part) / sum(diag(K.DA.part))
+              K.DD.part <- K.DD.part * nrow(K.DD.part) / sum(diag(K.DD.part))
+              
+              Ws.null <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
+                              D.part.1 = Z.D.1.part, D.part.2 = Z.D.2.part)
+              Ws.alt <- list(A.part.1 = Z.A.1.part, A.part.2 = Z.A.2.part,
+                             D.part.1 = Z.D.1.part, D.part.2 = Z.D.2.part,
+                             AA.part = Z.normal, AD.part = Z.normal,
+                             DA.part = Z.normal, DD.part = Z.normal)
+              
+              Gammas.null <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part,
+                                  D.part.1 = K.D.1.part, D.part.2 = K.D.2.part)
+              Gammas.alt <- list(A.part.1 = K.A.1.part, A.part.2 = K.A.2.part,
+                                 D.part.1 = K.D.1.part, D.part.2 = K.D.2.part,
+                                 AA.part = K.AA.part, AD.part = K.AD.part,
+                                 DA.part = K.DA.part, DD.part = K.DD.part)
+              
+              
+              gammas.diag <- FALSE
+            }
+            
+            df <- 4
+          }
+        }
+      }
+    }
+    
+    
+    if (gammas.diag) {
+      Gammas.null <- lapply(Ws.null, function(x) diag(ncol(x)))
+      Gammas.alt <- lapply(Ws.alt, function(x) diag(ncol(x)))
+    }
+    score.null <- try(score.linker.cpp(y, Ws = Ws.null, Gammas = Gammas.null,
+                                       gammas.diag = gammas.diag, Gu = Gu, Ge = Ge,
+                                       P0 = P0, chi0.mixture = chi0.mixture), silent = TRUE)
+    
+    
+    score.alt <- try(score.linker.cpp(y, Ws = Ws.alt, Gammas = Gammas.alt,
+                                      gammas.diag = gammas.diag, Gu = Gu, Ge = Ge,
+                                      P0 = P0, chi0.mixture = chi0.mixture), silent = TRUE)
+    
+    if (!("try-error" %in% c(class(score.null), class(score.alt)))) {
+      stat.null <- qchisq(p = 10 ^ (-score.null) / (1 - chi0.mixture), 
+                          df = length(Ws.null), lower.tail = FALSE)
+      stat.alt <- qchisq(p = 10 ^ (-score.alt) / (1 - chi0.mixture), 
+                         df = length(Ws.alt), lower.tail = FALSE)
+      deviance <- stat.alt - stat.null
+      score.now <- ifelse(deviance <= 0, 0, -log10((1 - chi0.mixture) *
+                                                     pchisq(q = deviance, df = df, lower.tail = FALSE)))
+    } else {
+      score.now <- 0
+    }
+    
+    return(score.now)
+  } 
+  
+  
+  
+  scores.list <- parallel.compute(vec = 1:n.calc, 
+                                  func = score.calc.epistasis.score.MC.oneInt, 
+                                  n.core = n.core,
+                                  parallel.method = parallel.method,
+                                  count = count)
+  scores.vec <- unlist(scores.list)
+  
+  k <- 0
+  for (i in 1:i.end) {
+    j.start <- ifelse(test = skip.self.int,
+                      yes = i + 1, no = i)
+    for (j in j.start:n.scores) {
+      k <- k + 1
+      scores[i, j] <- scores.vec[k]
+    }
+  }
+  
+  
+  
+  scores <- scores + t(scores)
+  diag(scores) <- diag(scores) / 2
+  
+  if (is.null(gene.set)) {
+    rownames(scores) <- colnames(scores) <- window.centers
+  } else {
+    rownames(scores) <- colnames(scores) <- gene.name
+  }
+  
+  if (count) {
+    cat("\n")
+  }
+  return(scores)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+#' Calculate -log10(p) for single-SNP GWAS with interaction
+#'
+#' @description Calculate -log10(p) of each SNP by the Wald test for the model inluding interaction term.
+#'
+#'
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
+#' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
+#' For example, ZETA = list(A = list(Z = Z, K = K))
+#' Please set names of list "Z" and "K"!
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
+#' @param interaction.with.SNPs.now A \eqn{m \times q} matrix. Interaction between each SNP and this matrix will also be tested.
+#' For example, principal components of genomic relationship matrix can be used as this matrix to test the interaction between SNPs and the genetic background.
+#' @param test.method.interaction Method for how to test SNPs and the interactions between SNPs and the genetic background.
+#' We offer three methods as follows:
+#' 
+#' "simultaneous": All effects (including SNP efects) are tested simultanously.
+#' 
+#' "snpSeparate": SNP effects are tested as one effect, and the other interaction effects are simulateneously.
+#' 
+#' "oneByOne": All efects are tested separately, one by one.
+#' 
+#' @param include.SNP.effect Whether or not including SNP effects into the tested effects.
+#' @param Hinv The inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.
+#' @param P3D When P3D = TRUE, variance components are estimated by REML only once, without any markers in the model.
+#' When P3D = FALSE, variance components are estimated by REML for each marker separately.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
+#' @param eigen.G A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
+#' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
+#' If this argument is NULL, the eigen decomposition will be performed in this function.
+#' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param optimizer The function used in the optimization process. 
+#' We offer "optim", "optimx", and "nlminb" functions. 
+#' This argument is only valid when `package.MM = 'RAINBOWR'`.
+#' @param min.MAF Specifies the minimum minor allele frequency (MAF).
+#' If a marker has a MAF less than min.MAF, it is assigned a zero score.
+#' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
+#'
+#' @return -log10(p) for each marker
+#'
+#' @references Kennedy, B.W., Quinton, M. and van Arendonk, J.A. (1992)
+#' Estimation of effects of single genes on quantitative traits. J Anim Sci. 70(7): 2000-2012.
+#'
+#' Kang, H.M. et al. (2008) Efficient Control of Population Structure
+#'  in Model Organism Association Mapping. Genetics. 178(3): 1709-1723.
+#'
+#' Kang, H.M. et al. (2010) Variance component model to account for sample
+#'   structure in genome-wide association studies. Nat Genet. 42(4): 348-354.
+#'
+#' Zhang, Z. et al. (2010) Mixed linear model approach adapted for genome-wide
+#'  association studies. Nat Genet. 42(4): 355-360.
+#'
+#'
+#'
+score.calc.int <- function(M.now, ZETA.now, y, X.now, 
+                           package.MM = "gaston",
+                           interaction.with.SNPs.now, 
+                           test.method.interaction = "simultaneous",
+                           include.SNP.effect = TRUE,
+                           Hinv, P3D = TRUE, eigen.G = NULL, optimizer = "nlminb",
+                           n.core = 1, min.MAF = 0.02, count = TRUE) {
+  computePVals <- function(p) {
+    v1 <- length(p)
+    v2 <- ni - ncol(Xi)
+    
+    if (!P3D) {
+      Xi2 <- make.full(Xi)
+      EMM.res <- EM3.general(y = yi, X0 = Xi2, ZETA = ZETA.now, 
+                             eigen.G = eigen.G, package = package.MM,
+                             n.core = n.core, optimizer = optimizer,
+                             tol = NULL, REML = TRUE, pred = FALSE,
+                             return.u.always = FALSE, 
+                             return.u.each = FALSE,
+                             return.Hinv = TRUE)
+      H2inv <- EMM.res$Hinv
+    } else {
+      H2inv <- Hinv[not.NA.geno, not.NA.geno]
+    }
+    
+    beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
+                                 v1 = v1, v2 = v2, p = as.matrix(p)), silent = TRUE)
+    
+    if (!("try-error" %in% class(beta.stat))) {
+      scoreNow <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
+    } else {
+      scoreNow <- NA
+    }
+    
+    return(scoreNow)
+  }
+  
+  
+  n.mark <- ncol(M.now)
+  
+  if (test.method.interaction == "simultaneous") {
+    test.names <- "All"
+  } else if (test.method.interaction == "snpSeparate") {
+    if (include.SNP.effect) {
+      test.names <- c("SNP", "Interaction")
+    } else {
+      test.method.interaction <- "simultaneous"
+      test.names <- "All"
+      
+      message("`test.method.interaction` is replaced by 'simultaneous' since you use 'GROUP' method!")
+    }
+  } else if (test.method.interaction == "oneByOne") {
+    if (include.SNP.effect) {
+      test.names <- c("SNP", colnames(interaction.with.SNPs.now))
+    } else {
+      test.names <- colnames(interaction.with.SNPs.now)
+    }
+  }
+  
+  n.test <- length(test.names)
+  
+  scores <- array(data = NA, 
+                  dim = c(n.mark, n.test),
+                  dimnames = list(Marker = colnames(M.now),
+                                  Test = test.names))
+  
+  lz <- length(ZETA.now)
+  ZKZt <- matrix(0, nrow = length(y), ncol = length(y))
+  for (list.no in lz) {
+    ZKZt.now <- tcrossprod(ZETA.now[[list.no]]$Z %*% ZETA.now[[list.no]]$K, ZETA.now[[list.no]]$Z)
+    ZKZt <- ZKZt + ZKZt.now
+  }
+  rank.ZKZt <- Matrix::rankMatrix(ZKZt)[1]
+  
+  pb <- txtProgressBar(min = 1, max = n.mark, style = 3)
+  n.mark2 <- n.mark - n.mark %% 100
+  start.scorecalc <- Sys.time()
+  for (i in 1:n.mark) {
+    if (count) {
+      setTxtProgressBar(pb, i)
+      if (n.mark > 100) {
+        if (i == (n.mark2 / 100 + 1) | i == (n.mark2 / 10 + 1) | i == (n.mark2 / 2 + 1)) {
+          cat("\n")
+          end.scorecalc <- Sys.time()
+          jikan.scorecalc <- (end.scorecalc - start.scorecalc) * (n.mark - i + 1) / (i - 1)
+          print(paste0((i - 1) * 100 / n.mark2, "%...Done. ",
+                       round(jikan.scorecalc, 2), " ", attr(jikan.scorecalc, "units"),
+                       " to end.  Scheduled end time : ", end.scorecalc + jikan.scorecalc))
+        }
+      }
+    }
+    
+    Mi <- M.now[, i]
+    freq <- mean(Mi + 1, na.rm = TRUE) / 2
+    MAF <- min(freq, 1 - freq)
+    if (MAF >= min.MAF) {
+      not.NA.geno <- which(!is.na(Mi))
+      
+      ni <- as.integer(min(length(not.NA.geno), rank.ZKZt))
+      yi <- as.matrix(y[not.NA.geno])
+      Xi <- X.now[not.NA.geno, , drop = FALSE]
+      
+      if (include.SNP.effect) {
+        Xi <- cbind(Xi, Mi[not.NA.geno])
+      }
+      
+      Mi.interaction <- interaction.with.SNPs.now[not.NA.geno, ] * 
+        matrix(data = rep(Mi[not.NA.geno], ncol(interaction.with.SNPs.now)), 
+               ncol = ncol(interaction.with.SNPs.now))
+      
+      whichHighCor <- unique(which(abs(cor(interaction.with.SNPs.now, 
+                                           Mi.interaction)) >= 0.95, 
+                                   arr.ind = TRUE)[, 2]) + ncol(Xi)
+      
+      
+      Xi <- cbind(Xi, Mi.interaction)
+      p <- (ncol(X.now) + 1):ncol(Xi)
+      
+      
+      
+      if (test.method.interaction != "oneByOne") {
+        if (length(whichHighCor) >= 1) {
+          Xi <- Xi[, -whichHighCor]
+          p <- (ncol(X.now) + 1):max(ncol(Xi), (ncol(X.now) + 1))
+        }
+        if (test.method.interaction == "simultaneous") {
+          scores[i, ] <- computePVals(p)
+        } else if (test.method.interaction == "snpSeparate") {
+          scores[i, ] <- c(computePVals(p[1]), computePVals(p[-1]))
+        } 
+      } else {
+        if (length(whichHighCor) >= 1) {
+          scores.now <- rep(NA, length(p))
+          whichNonZero <- !(p %in% whichHighCor)
+          Xi <- Xi[, -whichHighCor]
+          p <- (ncol(X.now) + 1):max(ncol(Xi), (ncol(X.now) + 1))
+          
+          scores.now[whichNonZero] <- sapply(X = p, FUN = computePVals)
+        } else {
+          scores.now <- sapply(X = p, FUN = computePVals)
+        }
+        scores[i, ] <- scores.now
+      }
+    }
+  }
+  
+  if (count) {
+    cat("\n")
+  }
+  
+  return(scores)
+}
+
+
+
+
+
+
+
+#' Calculate -log10(p) for single-SNP GWAS with interaction (multi-cores)
+#'
+#' @description Calculate -log10(p) of each SNP by the Wald test for the model inluding interaction term.
+#'
+#'
+#' @param M.now A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
+#' @param ZETA.now A list of variance (relationship) matrix (K; \eqn{m \times m}) and its design matrix (Z; \eqn{n \times m}) of random effects. You can use only one kernel matrix.
+#' For example, ZETA = list(A = list(Z = Z, K = K))
+#' Please set names of list "Z" and "K"!
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X.now A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
+#' @param interaction.with.SNPs.now A \eqn{m \times q} matrix. Interaction between each SNP and this matrix will also be tested.
+#' For example, principal components of genomic relationship matrix can be used as this matrix to test the interaction between SNPs and the genetic background.
+#' @param test.method.interaction Method for how to test SNPs and the interactions between SNPs and the genetic background.
+#' We offer three methods as follows:
+#' 
+#' "simultaneous": All effects (including SNP efects) are tested simultanously.
+#' 
+#' "snpSeparate": SNP effects are tested as one effect, and the other interaction effects are simulateneously.
+#' 
+#' "oneByOne": All efects are tested separately, one by one.
+#' 
+#' @param include.SNP.effect Whether or not including SNP effects into the tested effects.
+#' @param Hinv The inverse of \eqn{H = ZKZ' + \lambda I} where \eqn{\lambda = \sigma^2_e / \sigma^2_u}.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' This argument is not valid when `parallel.method = "furrr"`.
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+#' 
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+#' 
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+#' 
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+#' 
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+#' this parallelization method is not supported. So, if you are Windows user, 
+#' we recommend that you use the option `parallel.method = "foreach"`.
+#' @param P3D When P3D = TRUE, variance components are estimated by REML only once, without any markers in the model.
+#' When P3D = FALSE, variance components are estimated by REML for each marker separately.
+#' @param eigen.G A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
+#' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
+#' If this argument is NULL, the eigen decomposition will be performed in this function.
+#' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param optimizer The function used in the optimization process. 
+#' We offer "optim", "optimx", and "nlminb" functions. 
+#' This argument is only valid when `package.MM = 'RAINBOWR'`.
+#' @param min.MAF Specifies the minimum minor allele frequency (MAF).
+#' If a marker has a MAF less than min.MAF, it is assigned a zero score.
+#' @param count When count is TRUE, you can know how far RGWAS has ended with percent display.
+#'
+#' @return -log10(p) for each marker
+#'
+#' @references Kennedy, B.W., Quinton, M. and van Arendonk, J.A. (1992)
+#' Estimation of effects of single genes on quantitative traits. J Anim Sci. 70(7): 2000-2012.
+#'
+#' Kang, H.M. et al. (2008) Efficient Control of Population Structure
+#'  in Model Organism Association Mapping. Genetics. 178(3): 1709-1723.
+#'
+#' Kang, H.M. et al. (2010) Variance component model to account for sample
+#'   structure in genome-wide association studies. Nat Genet. 42(4): 348-354.
+#'
+#' Zhang, Z. et al. (2010) Mixed linear model approach adapted for genome-wide
+#'  association studies. Nat Genet. 42(4): 355-360.
+#'
+#'
+#'
+score.calc.int.MC <- function(M.now, ZETA.now, y, X.now,
+                              package.MM = "gaston", interaction.with.SNPs.now,
+                              test.method.interaction = "simultaneous",
+                              include.SNP.effect = TRUE, Hinv, 
+                              n.core = 2, parallel.method = "mclapply",
+                              P3D = TRUE, eigen.G = NULL, optimizer = "nlminb",
+                              min.MAF = 0.02, count = TRUE) {
+  n.mark <- ncol(M.now)
+  
+  if (test.method.interaction == "simultaneous") {
+    test.names <- "All"
+  } else if (test.method.interaction == "snpSeparate") {
+    if (include.SNP.effect) {
+      test.names <- c("SNP", "Interaction")
+    } else {
+      test.method.interaction <- "simultaneous"
+      test.names <- "All"
+      
+      message("`test.method.interaction` is replaced by 'simultaneous' since you use 'GROUP' method!")
+    }
+  } else if (test.method.interaction == "oneByOne") {
+    if (include.SNP.effect) {
+      test.names <- c("SNP", colnames(interaction.with.SNPs.now))
+    } else {
+      test.names <- colnames(interaction.with.SNPs.now)
+    }
+  }
+  
+  n.test <- length(test.names)
+  
+  
+  lz <- length(ZETA.now)
+  ZKZt <- matrix(0, nrow = length(y), ncol = length(y))
+  for (list.no in lz) {
+    ZKZt.now <- tcrossprod(ZETA.now[[list.no]]$Z %*% ZETA.now[[list.no]]$K, ZETA.now[[list.no]]$Z)
+    ZKZt <- ZKZt + ZKZt.now
+  }
+  rank.ZKZt <- Matrix::rankMatrix(ZKZt)[1]
+  
+  
+  score.calc.int.MC.oneSNP <- function(markNo) {
+    computePVals <- function(p) {
+      v1 <- length(p)
+      v2 <- ni - ncol(Xi)
+      
+      if (!P3D) {
+        Xi2 <- make.full(Xi)
+        EMM.res <- EM3.general(y = yi, X0 = Xi2, ZETA = ZETA.now, 
+                               eigen.G = eigen.G, package = package.MM,
+                               n.core = 1, optimizer = optimizer,
+                               tol = NULL, REML = TRUE, pred = FALSE,
+                               return.u.always = FALSE, 
+                               return.u.each = FALSE,
+                               return.Hinv = TRUE)
+        H2inv <- EMM.res$Hinv
+      } else {
+        H2inv <- Hinv[not.NA.geno, not.NA.geno]
+      }
+      
+      beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
+                                   v1 = v1, v2 = v2, p = as.matrix(p)), silent = TRUE)
+      
+      if (!("try-error" %in% class(beta.stat))) {
+        scoreNow <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
+      } else {
+        scoreNow <- NA
+      }
+      
+      return(scoreNow)
+    }
+    
+    Mi <- M.now[, markNo]
+    if (markNo %% 1000 == 0) {
+      gc(reset = TRUE); gc(reset = TRUE)
+    }
+    freq <- mean(Mi + 1, na.rm = TRUE) / 2
+    MAF <- min(freq, 1 - freq)
+    if (MAF >= min.MAF) {
+      not.NA.geno <- which(!is.na(Mi))
+      
+      ni <- as.integer(min(length(not.NA.geno), rank.ZKZt))
+      yi <- as.matrix(y[not.NA.geno])
+      Xi <- X.now[not.NA.geno, , drop = FALSE]
+      
+      if (include.SNP.effect) {
+        Xi <- cbind(Xi, Mi[not.NA.geno])
+      }
+      
+      Mi.interaction <- interaction.with.SNPs.now[not.NA.geno, ] * 
+        matrix(data = rep(Mi[not.NA.geno], ncol(interaction.with.SNPs.now)), 
+               ncol = ncol(interaction.with.SNPs.now))
+      
+      whichHighCor <- unique(which(abs(cor(interaction.with.SNPs.now, 
+                                           Mi.interaction)) >= 0.95, 
+                                   arr.ind = TRUE)[, 2]) + ncol(Xi)
+      
+      
+      Xi <- cbind(Xi, Mi.interaction)
+      p <- (ncol(X.now) + 1):ncol(Xi)
+      
+      
+      if (test.method.interaction != "oneByOne") {
+        if (length(whichHighCor) >= 1) {
+          Xi <- Xi[, -whichHighCor]
+          p <- (ncol(X.now) + 1):max(ncol(Xi), (ncol(X.now) + 1))
+        }
+        if (test.method.interaction == "simultaneous") {
+          scores.now <- computePVals(p)
+        } else if (test.method.interaction == "snpSeparate") {
+          scores.now <- c(computePVals(p[1]), computePVals(p[-1]))
+        } 
+      } else {
+        if (length(whichHighCor) >= 1) {
+          scores.now <- rep(NA, length(p))
+          whichNonZero <- !(p %in% whichHighCor)
+          Xi <- Xi[, -whichHighCor]
+          p <- (ncol(X.now) + 1):max(ncol(Xi), (ncol(X.now) + 1))
+          
+          scores.now[whichNonZero] <- sapply(X = p, FUN = computePVals)
+        } else {
+          scores.now <- sapply(X = p, FUN = computePVals)
+        }
+      }
+    } else {
+      scores.now <- NA
+    }
+    return(scores.now)
+  }
+  if (count) {
+    cat("\n")
+  }
+  
+  
+  scores.list <- parallel.compute(vec = 1:n.mark, 
+                                  func = score.calc.int.MC.oneSNP, 
+                                  n.core = n.core,
+                                  parallel.method = parallel.method,
+                                  count = count)
+  
+  scores <- do.call(what = rbind,
+                    args = scores.list)
+  dimnames(scores) <- list(Marker = colnames(M.now),
+                           Test = test.names)
+  if (count) {
+    cat("\n")
+  }
+  
+  
+  return(scores)
+}

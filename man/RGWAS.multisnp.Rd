@@ -8,6 +8,7 @@ RGWAS.multisnp(
   pheno,
   geno,
   ZETA = NULL,
+  package.MM = "gaston",
   covariate = NULL,
   covariate.factor = NULL,
   structure.matrix = NULL,
@@ -15,6 +16,7 @@ RGWAS.multisnp(
   min.MAF = 0.02,
   test.method = "LR",
   n.core = 1,
+  parallel.method = "mclapply",
   kernel.method = "linear",
   kernel.h = "tuned",
   haplotype = TRUE,
@@ -42,6 +44,7 @@ RGWAS.multisnp(
   return.EMM.res = FALSE,
   optimizer = "nlminb",
   thres = TRUE,
+  skip.check = FALSE,
   verbose = TRUE,
   verbose2 = FALSE,
   count = TRUE,
@@ -65,6 +68,10 @@ ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D))
 }
 For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.}
 
+\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+"RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+See more details at \code{\link{EM3.general}}.}
+
 \item{covariate}{A \eqn{n \times 1} vector or a \eqn{n \times p _ 1} matrix. You can insert continuous values, such as other traits or genotype score for special markers.
 This argument is regarded as one of the fixed effects.}
 
@@ -85,7 +92,29 @@ If a marker has a MAF less than min.MAF, it is assigned a zero score.}
 \item{"score"}{Score test, much faster than LR, but sometimes overestimate -log10(p).}
 }}
 
-\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores (use only at UNIX command line).}
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+This argument is not valid when `parallel.method = "furrr"`.}
+
+\item{parallel.method}{Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+
+When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
+with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+
+When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
+With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
+so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
+For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
+
+When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
+with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
+and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
+With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+\code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
+
+We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
+this parallelization method is not supported. So, if you are Windows user, 
+we recommend that you use the option `parallel.method = "foreach"`.}
 
 \item{kernel.method}{It determines how to calculate kernel. There are three methods.
 \describe{
@@ -170,6 +199,10 @@ However, you should also write "dev.off()" after adding something.}
 
 \item{thres}{If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 When return.EMM.res or thres is TRUE, the results will be "list" class.}
+
+\item{skip.check}{As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
+However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+by setting `skip.check = TRUE`.}
 
 \item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
 

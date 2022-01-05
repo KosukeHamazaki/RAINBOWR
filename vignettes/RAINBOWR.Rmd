@@ -3,7 +3,7 @@ title: "RAINBOWR: Reliable Association INference By Optimizing Weights with R"
 author: 
 - Kosuke Hamazaki (hamazaki@ut-biomet.org)
 - Hiroyoshi Iwata
-date: "2019-09-26"
+date: "2022-01-05"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{RAINBOWR}
@@ -24,6 +24,8 @@ knitr::opts_chunk$set(
 - Hamazaki, K. and Iwata, H. (2020) RAINBOW: Haplotype-based genome-wide association study using a novel SNP-set method. PLOS Computational Biology, 16(2): e1007663.
 
 ##### The stable version for `RAINBOWR` package is now available at the [CRAN (Comprehensive R Archive Network)](https://cran.r-project.org/package=RAINBOWR).
+
+##### Please check the change in RAINBOWR with the version update from [NEWS.md](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/NEWS.md).
 
 
 ----------
@@ -77,9 +79,9 @@ If you get some errors via installation, please check if the following packages 
 (We removed a dependency on `rgl` package!)
 
 
+
 - Rcpp      # install `Rtools` for Windows user
-- RcppEigen
-- plotly
+- plotly    # Suggests
 - Matrix
 - cluster
 - MASS
@@ -89,16 +91,24 @@ If you get some errors via installation, please check if the following packages 
 - ape
 - stringr
 - pegas
-- ggplot2
-- ggtree      # install from Bioconducter with `BiocManager::install("ggtree")`
-- scatterpie
-- phylobase
-- haplotypes
+- ggplot2     # Suggests
+- ggtree      # Suggests, install from Bioconducter with `BiocManager::install("ggtree")`
+- scatterpie   # Suggests
+- phylobase    # Suggests
+- haplotypes   # Suggests
 - rrBLUP
 - expm
-- here
+- here         # Suggests
 - htmlwidgets
 - Rfast
+- adegenet     # Suggests
+- gaston
+- MM4LMM
+- furrr        # Suggests
+- future       # Suggests
+- progressr    # Suggests
+- foreach      # Suggests
+- doParallel   # Suggests
 
 
 In `RAINBOWR`,  since part of the code is written in `Rcpp` (`C++` in `R`),  please check if you can use `C++` in `R`.

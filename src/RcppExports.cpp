@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // aHinvb_out
 Rcpp::List aHinvb_out(Rcpp::NumericMatrix a, Rcpp::NumericMatrix b, Rcpp::NumericMatrix u, Rcpp::NumericMatrix ev);
 RcppExport SEXP _RAINBOWR_aHinvb_out(SEXP aSEXP, SEXP bSEXP, SEXP uSEXP, SEXP evSEXP) {
@@ -352,7 +357,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // GWAS_F_test
-double GWAS_F_test(Rcpp::NumericMatrix y, Rcpp::NumericMatrix x, Rcpp::NumericMatrix hinv, int v1, int v2, int p);
+double GWAS_F_test(Rcpp::NumericMatrix y, Rcpp::NumericMatrix x, Rcpp::NumericMatrix hinv, int v1, int v2, Rcpp::NumericMatrix p);
 RcppExport SEXP _RAINBOWR_GWAS_F_test(SEXP ySEXP, SEXP xSEXP, SEXP hinvSEXP, SEXP v1SEXP, SEXP v2SEXP, SEXP pSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -362,7 +367,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type hinv(hinvSEXP);
     Rcpp::traits::input_parameter< int >::type v1(v1SEXP);
     Rcpp::traits::input_parameter< int >::type v2(v2SEXP);
-    Rcpp::traits::input_parameter< int >::type p(pSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type p(pSEXP);
     rcpp_result_gen = Rcpp::wrap(GWAS_F_test(y, x, hinv, v1, v2, p));
     return rcpp_result_gen;
 END_RCPP

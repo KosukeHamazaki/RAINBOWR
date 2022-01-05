@@ -9,7 +9,7 @@
 #' The variances of \eqn{u} and \eqn{e} are automatically determined by the heritability.
 #'
 #'
-#' @param x A n.sample x n.mark genotype matrix where n.sample is sample size and n.mark is the number of markers.
+#' @param x A \eqn{n \times m} genotype matrix where \eqn{n} is sample size and \eqn{m} is the number of markers.
 #' @param sample.sets A n.sample x n.mark genotype matrix. Markers with fixed effects (QTNs) are chosen from sample.sets.
 #' If sample.sets = NULL, sample.sets = x.
 #' @param candidate If you want to fix QTN postitions, please set the number where SNPs to be fixed are located in your data (so not position).

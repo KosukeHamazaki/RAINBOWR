@@ -1,7 +1,7 @@
 # RAINBOWR
 ###   Reliable Association INference By Optimizing Weights with R
 #### Author : Kosuke Hamazaki (hamazaki@ut-biomet.org)
-#### Date : 2019/03/25 (Last update: 2020/10/26)
+#### Date : 2019/03/25 (Last update: 2022/01/05)
 
 ## NOTE!!!!
 ### The paper for `RAINBOWR` has been published in PLOS Computational Biology (https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1007663). If you use this `RAINBOWR` in your paper, please cite `RAINBOWR` as follows:
@@ -9,6 +9,8 @@
 
 
 ### The stable version for `RAINBOWR` package is now available at the [CRAN (Comprehensive R Archive Network)](https://cran.r-project.org/package=RAINBOWR).
+
+### Please check the change in RAINBOWR with the version update from [NEWS.md](https://github.com/KosukeHamazaki/RAINBOWR/blob/master/NEWS.md).
 
 ### The older version of `RAINBOWR` is `RAINBOW`, which is available at https://github.com/KosukeHamazaki/RAINBOW.
 ##### We changed the package name from `RAINBOW` to `RAINBOWR` because the original package name `RAINBOW` conflicted with the package `rainbow` (https://cran.r-project.org/package=rainbow) when we submitted our package to `CRAN` (https://cran.r-project.org/).
@@ -65,8 +67,8 @@ If you get some errors via installation, please check if the following packages 
 
 
 ``` r
-Rcpp,      # install `Rtools` for Windows user
-plotly,
+Rcpp,      # also install `Rtools` for Windows user
+plotly,    # Suggests
 Matrix,
 cluster,
 MASS,
@@ -76,16 +78,24 @@ methods,
 ape,
 stringr,
 pegas,
-ggplot2,
-ggtree,      # install from Bioconducter with `BiocManager::install("ggtree")`
-scatterpie,
-phylobase,
-haplotypes,
+ggplot2,     # Suggests
+ggtree,      # Suggests, install from Bioconducter with `BiocManager::install("ggtree")`
+scatterpie,  # Suggests
+phylobase,   # Suggests
+haplotypes,  # Suggests
 rrBLUP,
 expm,
-here,
+here,        # Suggests
 htmlwidgets,
-Rfast
+Rfast,
+adegenet,    # Suggests
+gaston,
+MM4LMM,
+furrr,       # Suggests
+future,      # Suggests
+progressr,   # Suggests
+foreach,     # Suggests
+doParallel   # Suggests
 ```
 
 In `RAINBOWR`,  since part of the code is written in `Rcpp` (`C++` in `R`),  please check if you can use `C++` in `R`.
