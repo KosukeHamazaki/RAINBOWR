@@ -131,7 +131,12 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 
 
 # Jan 05, 2022, RAINBOWR version 0.1.28
-### NOTE: There is a very large chande compared to the older version.We strongly recommend you install the latest version and check the following changes!!
+### NOTE: There is a very large change compared to the older version.We strongly recommend you install the latest version and check the following changes!!
+
+
+## Major changes for correcting errors pointed by CRAN maintainers
+- We removed `ggtree` package from Imports list, and moved it to Suggests list in the DESCRIPTION file. By doing this, errors caused by the installation of `ggtree` package are now eliminated.
+
 
 ## Major changes
 - We implemented new functions for testing the interaction between each SNP and the genetic background. The functions to compute p-values for those effects are `score.calc.int` and `score.calc.int.MC`, and the function to perform SNP-based GWAS including such interaction effects is `RGWAS.normal.interaction`. We also added the to `NAMESPACE` file.

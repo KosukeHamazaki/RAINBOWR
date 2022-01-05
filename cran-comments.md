@@ -529,7 +529,11 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 
 # Jan 05, 2022, RAINBOWR version 0.1.28
-## Major changes
+## Major changes for correcting errors pointed by CRAN maintainers
+- We removed `ggtree` package from Imports list, and moved it to Suggests list in the DESCRIPTION file. By doing this, errors caused by the installation of `ggtree` package are now eliminated.
+
+
+## Major changes (new functions, etc...)
 - We implemented new functions for testing the interaction between each SNP and the genetic background. The functions to compute p-values for those effects are `score.calc.int` and `score.calc.int.MC`, and the function to perform SNP-based GWAS including such interaction effects is `RGWAS.normal.interaction`. We also added the to `NAMESPACE` file.
 
 - We implemented a new function `is.diag`, which judges a matrix is diagonal or not.
