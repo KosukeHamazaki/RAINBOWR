@@ -170,3 +170,10 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 
 
 - We added `adegenet`, `furrr`, `future`, `progressr`, `foreach`, and `doParallel` packages to Suggests list in the DESCRIPTION file according to the implementation of new functions and arguments.We also removed `ggplot2`, `ggtree`, `scatterpie`, and `phylobase` packages from Imports list, and moved it to Suggests list in the DESCRIPTION file.
+
+
+
+
+# Jan 06, 2022, RAINBOWR version 0.1.29
+## Major changes
+- We modified the example files corresponding to `RGWAS.normal`, `RGWAS.normal.interaction`, `RGWAS.multisnp`, `RGWAS.epstasis`, `RGWAS.twostep`, and `RGWAS.twostep.epi` functions because there were some modifications with the function arguments.

@@ -584,3 +584,34 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 #### There were no WARNINGs.
 
 #### There were no NOTEs.
+
+
+
+
+
+# Jan 06, 2022, RAINBOWR version 0.1.29
+## Major changes for correcting errors pointed by CRAN maintainers
+- We tried to fix the errors reported in the [RAINBOWR check results](https://cran.r-project.org/web/checks/check_results_RAINBOWR.html), and with our PC, now no error is found also in the test whose settings are same as those in the "gcc-ASAN" test.
+
+
+## Major changes
+- We modified the example files corresponding to `RGWAS.normal`, `RGWAS.normal.interaction`, `RGWAS.multisnp`, `RGWAS.epstasis`, `RGWAS.twostep`, and `RGWAS.twostep.epi` functions because there were some modifications with the function arguments.
+
+
+
+
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.1.2
+* win-builder release, R version 4.1.2
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 4.0.5
+
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.
