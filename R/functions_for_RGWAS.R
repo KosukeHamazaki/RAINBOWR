@@ -564,14 +564,14 @@ adjustGRM <- function(y,
                          unlist(x = sapply(X = 2:(nSubpop - 1),
                                            FUN = function(subpopNos) {
                                              subpopCombNow <- combinat::combn(x = subpopNames, m = subpopNos)
-                                             subpopCombNow <- subpopCombNow[, -1]
+                                             subpopCombNow <- subpopCombNow[, -ncol(subpopCombNow)]
                                              subpopCombNowList <- lapply(X = 1:ncol(subpopCombNow),
                                                                          FUN = function(i) {
                                                                            subpopCombNow[, i]
                                                                          })
 
                                              return(subpopCombNowList)
-                                           }), recursive = FALSE)
+                                           }, simplify = FALSE), recursive = FALSE)
     )
   }
 
