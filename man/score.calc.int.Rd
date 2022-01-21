@@ -33,7 +33,7 @@ Please set names of list "Z" and "K"!}
 
 \item{X.now}{A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.}
 
-\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages:
 "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
 See more details at \code{\link{EM3.general}}.}
 
@@ -65,8 +65,8 @@ The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.c
 If this argument is NULL, the eigen decomposition will be performed in this function.
 We recommend you assign the result of the eigen decomposition beforehand for time saving.}
 
-\item{optimizer}{The function used in the optimization process. 
-We offer "optim", "optimx", and "nlminb" functions. 
+\item{optimizer}{The function used in the optimization process.
+We offer "optim", "optimx", and "nlminb" functions.
 This argument is only valid when `package.MM = 'RAINBOWR'`.}
 
 \item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}

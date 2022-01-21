@@ -38,7 +38,7 @@ score.calc.epistasis.LR(
 For example, ZETA = list(A = list(Z = Z, K = K))
 Please set names of list "Z" and "K"!}
 
-\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages:
 "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
 See more details at \code{\link{EM3.general}}.}
 

@@ -16,8 +16,8 @@ manhattan3(
 )
 }
 \arguments{
-\item{input}{List of results of RGWAS.epistasis / RGWAS.twostep.epi. If the output of `RGWAS.epistasis` is `res`, 
-`input` corresponds to `res$scores`. If the output of `RGWAS.twostep.epi.` is `res`, 
+\item{input}{List of results of RGWAS.epistasis / RGWAS.twostep.epi. If the output of `RGWAS.epistasis` is `res`,
+`input` corresponds to `res$scores`. If the output of `RGWAS.twostep.epi.` is `res`,
 `input` corresponds to `res$epistasis$scores`. See: Value of \link[RAINBOWR]{RGWAS.epistasis}}
 
 \item{map}{Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.

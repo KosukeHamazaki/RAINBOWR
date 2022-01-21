@@ -15,31 +15,31 @@ parallel.compute(
 \arguments{
 \item{vec}{Numeric vector including the values that are computed in parallel.}
 
-\item{func}{The function to be applied to each element of `vec` argument. 
+\item{func}{The function to be applied to each element of `vec` argument.
 This function must only have one argument.}
 
-\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 This argument is not valid when `parallel.method = "furrr"`.}
 
-\item{parallel.method}{Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+\item{parallel.method}{Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach".
 
-When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
-with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package
+with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`.
 
-When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
-With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
-so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
-For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
+With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
+so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 
-When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
-with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
-and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
-With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package
+with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package,
+and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package.
+With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and
 \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
 
-We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
-this parallelization method is not supported. So, if you are Windows user, 
+We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users,
+this parallelization method is not supported. So, if you are Windows user,
 we recommend that you use the option `parallel.method = "foreach"`.}
 
 \item{count}{When count is TRUE, you can know how far RGWAS has ended with percent display.}
