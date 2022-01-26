@@ -29,6 +29,7 @@ RGWAS.multisnp.interaction(
   window.slide = 1,
   chi0.mixture = 0.5,
   gene.set = NULL,
+  map.gene.set = NULL,
   weighting.center = TRUE,
   weighting.other = NULL,
   sig.level = 0.05,
@@ -163,6 +164,13 @@ The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.}
 You should assign your gene information to gene.set in the form of a "data.frame" (whose dimension is (the number of gene) x 2).
 In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
 which correspond to the marker names of "geno" argument.}
+
+\item{map.gene.set}{Genotype map for `gene.set` (list of haplotype blocks).
+This is a data.frame with the haplotype block (SNP-set, or gene-set) names in the first column.
+The second and third columns contain the chromosome and map position for each block.
+The forth column contains the cumulative map position for each block, which can be computed by \code{\link{cumsumPos}} function.
+If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
+It will take some time, so you can reduce the computational time by assigning this argument beforehand.}
 
 \item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
 If weighting.center = FALSE, weights are not taken into account.}

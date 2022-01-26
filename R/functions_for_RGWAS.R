@@ -607,9 +607,14 @@ adjustGRM <- function(y,
   }
 
 
-  covaraitesSubpop <- model.matrix(object = ~ subpopInfo - 1)
-  XNow <- cbind(X, Z %*% covaraitesSubpop)
-  XNow <- make.full(XNow)
+  if (nSubpop >= 2) {
+    covaraitesSubpop <- model.matrix(object = ~ subpopInfo - 1)
+    XNow <- cbind(X, Z %*% covaraitesSubpop)
+    XNow <- make.full(XNow)
+  } else {
+    covaraitesSubpop <- NULL
+    XNow <- NULL
+  }
 
   nullModel <- try(EM3.general(y = y,
                                X0 = XNow,

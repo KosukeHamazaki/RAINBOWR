@@ -108,6 +108,12 @@
 #'            You should assign your gene information to gene.set in the form of a "data.frame" (whose dimension is (the number of gene) x 2).
 #'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
 #'            which correspond to the marker names of "geno" argument.
+#' @param map.gene.set Genotype map for `gene.set` (list of haplotype blocks).
+#' This is a data.frame with the haplotype block (SNP-set, or gene-set) names in the first column.
+#' The second and third columns contain the chromosome and map position for each block.
+#' The forth column contains the cumulative map position for each block, which can be computed by \code{\link{cumsumPos}} function.
+#' If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
+#' It will take some time, so you can reduce the computational time by assigning this argument beforehand.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
 #'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
@@ -204,7 +210,8 @@ RGWAS.multisnp.interaction <- function(pheno, geno, ZETA = NULL,
                                        kernel.method = "linear", kernel.h = "tuned",
                                        haplotype = TRUE, num.hap = NULL, test.effect = "additive",
                                        window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
-                                       gene.set = NULL, weighting.center = TRUE, weighting.other = NULL,
+                                       gene.set = NULL, map.gene.set = NULL,
+                                       weighting.center = TRUE, weighting.other = NULL,
                                        sig.level = 0.05, method.thres = "BH", plot.qq = TRUE,
                                        plot.Manhattan = TRUE, plot.method = 1,
                                        plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
@@ -590,7 +597,21 @@ RGWAS.multisnp.interaction <- function(pheno, geno, ZETA = NULL,
       if (verbose) {
         print("Now generating map for gene set. Please wait.")
       }
-      map20 <- genesetmap(map = map, gene.set = gene.set, cumulative = TRUE)
+
+      if (is.null(map.gene.set)) {
+        map20 <- genesetmap(map = map, gene.set = gene.set, cumulative = TRUE)
+      } else {
+        if (ncol(map.gene.set) == 3) {
+          cum.pos.set.mean <- cumsumPos(map = map.gene.set)
+          map20 <- cbind(map.gene.set, cum.pos = cum.pos.set.mean)
+        } else if (ncol(map.gene.set) == 4) {
+          map20 <- map.gene.set
+        } else {
+          stop("`map.gene.set` should contain 3 or 4 columns; marker, chr, pos (& cum.pos).")
+        }
+
+        stopifnot(nrow(map.gene.set) == length(unique(gene.set[, 1])))
+      }
       map2 <- map20[, 1:3]
       cum.pos.set.mean <- c(map20[, 4])
     }

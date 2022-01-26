@@ -36,7 +36,7 @@
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
-#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages:
 #' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
 #' See more details at \code{\link{EM3.general}}.
 #' @param covariate A \eqn{n \times 1} vector or a \eqn{n \times p _ 1} matrix. You can insert continuous values, such as other traits or genotype score for special markers.
@@ -53,27 +53,27 @@
 #' \item{"LR"}{Likelihood-ratio test, relatively slow, but accurate (default).}
 #' \item{"score"}{Score test, much faster than LR, but sometimes overestimate -log10(p).}
 #' }
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
-#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
-#' 
-#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
-#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
-#' 
-#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
-#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
-#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach".
+#'
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`.
+#'
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
-#' 
-#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
-#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
-#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
-#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#'
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package,
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package.
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and
 #' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
-#' 
-#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
-#' this parallelization method is not supported. So, if you are Windows user, 
+#'
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users,
+#' this parallelization method is not supported. So, if you are Windows user,
 #' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param kernel.method It determines how to calculate kernel. There are three methods.
 #' \describe{
@@ -104,6 +104,12 @@
 #'            You should assign your gene information to gene.set in the form of a "data.frame" (whose dimension is (the number of gene) x 2).
 #'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
 #'            which correspond to the marker names of "geno" argument.
+#' @param map.gene.set Genotype map for `gene.set` (list of haplotype blocks).
+#' This is a data.frame with the haplotype block (SNP-set, or gene-set) names in the first column.
+#' The second and third columns contain the chromosome and map position for each block.
+#' The forth column contains the cumulative map position for each block, which can be computed by \code{\link{cumsumPos}} function.
+#' If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
+#' It will take some time, so you can reduce the computational time by assigning this argument beforehand.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
 #'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
@@ -132,8 +138,8 @@
 #' @param return.EMM.res When return.EMM.res = TRUE, the results of equation of mixed models are included in the result of RGWAS.
 #' @param thres If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 #' When return.EMM.res or thres is TRUE, the results will be "list" class.
-#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
-#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format.
+#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure
 #' by setting `skip.check = TRUE`.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #' @param verbose2 If this argument is TRUE, welcome message will be shown.
@@ -193,46 +199,47 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                            covariate = NULL, covariate.factor = NULL,
                            structure.matrix = NULL, n.PC = 0, min.MAF = 0.02,
                            test.method = "LR", n.core = 1, parallel.method = "mclapply",
-                           kernel.method = "linear", kernel.h = "tuned", 
-                           haplotype = TRUE, num.hap = NULL, test.effect = "additive", 
+                           kernel.method = "linear", kernel.h = "tuned",
+                           haplotype = TRUE, num.hap = NULL, test.effect = "additive",
                            window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
-                           gene.set = NULL, weighting.center = TRUE, weighting.other = NULL,
-                           sig.level = 0.05, method.thres = "BH", plot.qq = TRUE, 
+                           gene.set = NULL, map.gene.set = NULL,
+                           weighting.center = TRUE, weighting.other = NULL,
+                           sig.level = 0.05, method.thres = "BH", plot.qq = TRUE,
                            plot.Manhattan = TRUE, plot.method = 1,
                            plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
-                           plot.type = "p", plot.pch = 16, saveName = NULL, 
+                           plot.type = "p", plot.pch = 16, saveName = NULL,
                            main.qq = NULL, main.man = NULL, plot.add.last = FALSE,
                            return.EMM.res = FALSE, optimizer = "nlminb",
-                           thres = TRUE, skip.check = FALSE, verbose = TRUE, 
+                           thres = TRUE, skip.check = FALSE, verbose = TRUE,
                            verbose2 = FALSE, count = TRUE, time = TRUE) {
-  
+
   #### The start of the RGWAS function ####
   start <- Sys.time()
-  
-  
+
+
   #### Some settings to perform RGWAS ####
   if (verbose2) {
     welcome_to_RGWAS()
   }
-  
+
   ### For phenotype ###
   n.sample.pheno <- nrow(pheno)
   n.pheno <- ncol(pheno) - 1
   pheno.ix <- 2:ncol(pheno)
   pheno.names <- colnames(pheno)[2:ncol(pheno)]
   lines.name.pheno <- as.character(pheno[, 1])
-  
+
   ### For covariate ###
   X0 <- matrix(1, n.sample.pheno, 1)
   colnames(X0) <- "Intercept"
   rownames(X0) <- lines.name.pheno
-  
+
   if (!is.null(covariate)) {
     covariate <- as.matrix(covariate)
     p1 <- ncol(covariate)
     X0 <- cbind(X0, scale(covariate))
   }
-  
+
   if (!is.null(covariate.factor)) {
     covariate.factor <- data.frame(covariate.factor)
     p2 <- ncol(covariate.factor)
@@ -245,16 +252,16 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       }
     }
   }
-  
+
   if (!is.null(structure.matrix)) {
     structure.matrix <- as.matrix(structure.matrix)
     colnames(structure.matrix) <- paste0("subpop", 1:ncol(structure.matrix))
     X0 <- cbind(X0, structure.matrix)
-    
+
     n.PC <- 0
   }
-  
-  
+
+
   ### For genotype ###
   geno <- geno[order(geno[, 2], geno[, 3]), ]
   lines.name.geno <- colnames(geno)[-c(1:3)]
@@ -277,12 +284,12 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
   }
   n.mark <- ncol(M0)
   rownames(M0) <- lines.name.geno
-  
-  
+
+
   ### Match phenotype and genotype ###
   pheno.mat <- as.matrix(pheno[, -1, drop = FALSE])
   rownames(pheno.mat) <- lines.name.pheno
-  
+
   if (skip.check) {
     pheno.mat.modi <- pheno.mat
     match.modi <- 1:nrow(pheno.mat.modi)
@@ -293,19 +300,19 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                     pheno.labels = NULL, geno.names = NULL,
                                     map = NULL, return.ZETA = is.null(ZETA),
                                     return.GWAS.format = FALSE)
-    
+
     pheno.mat.modi <- modification.res$pheno.modi
     match.modi <- match(rownames(pheno.mat.modi), pheno[, 1])
     pheno.match <- pheno[match.modi, ]
-    
+
     M <- modification.res$geno.modi
   }
-  
-  
+
+
   n.line <- nrow(M)
   X <- as.matrix(X0[match.modi, ])
-  
-  
+
+
   if (is.null(ZETA)) {
     if (skip.check) {
       K.A <- calcGRM(M)
@@ -320,41 +327,41 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     ZETA.check <- any(unlist(lapply(ZETA, function(x) {
       (is.null(rownames(x$Z))) | (is.null(colnames(x$Z)))
     })))
-    
+
     if (ZETA.check) {
       stop("No row names or column names for design matrix Z!!
            Please fill them with row : line (variety) names for phenotypes.
            and column : line (variety) names for genotypes.")
     }
-    
+
     ZETA <- lapply(ZETA, function(x) {
       Z.match.pheno.no <- match(rownames(pheno.mat.modi), rownames(x$Z))
       Z.match.geno.no <- match(rownames(M), rownames(x$Z))
-      
+
       Z.modi <- x$Z[Z.match.pheno.no, Z.match.geno.no]
       K.modi <- x$K[Z.match.geno.no, Z.match.geno.no]
-      
+
       return(list(Z = Z.modi, K = K.modi))
     })
   }
   K.A <- ZETA[[1]]$K
   Z.A <- ZETA[[1]]$Z
-  
-  
-  
+
+
+
   ### For covariates (again) ###
   if (n.PC > 0) {
     eigen.K.A <- eigen(K.A)
     eig.K.vec <- eigen.K.A$vectors
-    
+
     PC.part <- Z.A %*% eig.K.vec[, 1:n.PC]
     colnames(PC.part) <- paste0("n.PC_", 1:n.PC)
-    
+
     X <- cbind(X, PC.part)
   }
   X <- make.full(X)
-  
-  
+
+
   ### Some settings ###
   trait.names <- colnames(pheno)[pheno.ix]
   if (is.null(gene.set)) {
@@ -366,7 +373,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
   if ((kernel.method == "linear") & (length(test.effect) >= 2)) {
     all.scores <- rep(list(matrix(0, nrow = n.scores, ncol = n.pheno)), length(test.effect))
     names(all.scores) <- test.effect
-    
+
     for (test.effect.no in 1:length(test.effect)) {
       colnames(all.scores[[test.effect.no]]) <- trait.names
     }
@@ -380,13 +387,13 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     rownames(thresholds) <- kernel.method
     colnames(thresholds) <- trait.names
   }
-  
+
   if (n.pheno == 0) {
     stop("No phenotypes.")
   }
-  
-  
-  
+
+
+
   ##### START RGWAS for each phenotype #####
   for (pheno.no in 1:n.pheno) {
     trait.name <- trait.names[pheno.no]
@@ -396,12 +403,12 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     y0 <- pheno.match[, pheno.ix[pheno.no]]
     not.NA <- which(!is.na(y0))
     y <- y0[not.NA]
-    
+
     n <- length(y)
-    
+
     X.now <- X[not.NA, , drop = FALSE]
     ZETA.now <- lapply(ZETA, function(x) list(Z = x$Z[not.NA, ], K = x$K))
-    
+
     if (is.diag(x = Z.A)) {
       M.now <- M[not.NA, , drop = FALSE]
     } else {
@@ -412,25 +419,25 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
         M.now <- M[which.one.Z.A, ]
       } else {
         M.now <- as.matrix(Z.A.nonNA.sp %*% M)
-      } 
+      }
     }
-    
+
     p <- ncol(X.now)
     m <- ncol(Z.A)
-    
+
     #### Calculate LL for the null hypothesis at first ####
     spI <- diag(n)
     S <- spI - tcrossprod(X.now %*% solve(crossprod(X.now)), X.now)
-    
-    EMM.res0 <- EM3.general(y = y, X0 = X.now, ZETA = ZETA.now, 
+
+    EMM.res0 <- EM3.general(y = y, X0 = X.now, ZETA = ZETA.now,
                             package = package.MM,
                             n.core = n.core,
                             REML = TRUE, pred = FALSE,
-                            return.u.always = FALSE, 
+                            return.u.always = FALSE,
                             return.u.each = FALSE,
                             return.Hinv = FALSE)
     weights <- EMM.res0$weights
-    
+
     ZKZt.list <- NULL
     ZKZt <- matrix(0, nrow = n, ncol = n)
     for (ZKZt.no in 1:length(ZETA)) {
@@ -438,14 +445,14 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       K.now <- ZETA.now[[ZKZt.no]]$K
       ZKZt.now <- tcrossprod(Z.now %*% K.now, Z.now)
       ZKZt.weighted <- ZKZt.now * weights[ZKZt.no]
-      
+
       ZKZt.list <- c(ZKZt.list, list(ZKZt.weighted))
       ZKZt <- ZKZt + ZKZt.weighted
     }
-    
+
     if (test.method == "LR") {
       LL0 <- EMM.res0$LL
-      
+
       spectral.res <- spectralG.cpp(ZETA = ZETA.now, X = X.now, weights = weights,
                                     return.G = TRUE, return.SGS = TRUE, spectral.method = "eigen")
       eigen.G <- spectral.res[[1]]
@@ -455,39 +462,39 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
         LL0 <- EMM.res0$LL
         Vu <- EMM.res0$Vu
         Ve <- EMM.res0$Ve
-        
+
         Gu <- tcrossprod(ZKZt)
         Ge <- diag(n)
         V0 <- Vu * Gu + Ve * Ge
-        
-        
+
+
         P0 <- MASS::ginv(S %*% V0 %*% S)
       } else {
         stop("We only support 'LR' (likelihood-ratio test) and 'score' (score test)!")
       }
     }
-    
-    
-    
-    
-    
+
+
+
+
+
     #### Calculating the value of -log10(p) for each SNPs ####
     if ((n.core > 1) & requireNamespace("parallel", quietly = TRUE)) {
       if (test.method == "LR") {
-        scores <- score.calc.LR.MC(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
-                                   package.MM = package.MM, LL0 = LL0, eigen.SGS = eigen.SGS, 
-                                   eigen.G = eigen.G, n.core = n.core, 
+        scores <- score.calc.LR.MC(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now,
+                                   package.MM = package.MM, LL0 = LL0, eigen.SGS = eigen.SGS,
+                                   eigen.G = eigen.G, n.core = n.core,
                                    parallel.method = parallel.method, map = map,
-                                   kernel.method = kernel.method, kernel.h = kernel.h, 
-                                   haplotype = haplotype, num.hap = num.hap, 
+                                   kernel.method = kernel.method, kernel.h = kernel.h,
+                                   haplotype = haplotype, num.hap = num.hap,
                                    test.effect = test.effect, window.size.half = window.size.half,
-                                   window.slide = window.slide, chi0.mixture = chi0.mixture, 
-                                   optimizer = optimizer, weighting.center = weighting.center, 
+                                   window.slide = window.slide, chi0.mixture = chi0.mixture,
+                                   optimizer = optimizer, weighting.center = weighting.center,
                                    weighting.other = weighting.other, gene.set = gene.set,
                                    min.MAF = min.MAF, count = count)
       } else {
-        scores <- score.calc.score.MC(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
-                                      LL0 = LL0, Gu = Gu, Ge = Ge, P0 = P0, n.core = n.core, 
+        scores <- score.calc.score.MC(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now,
+                                      LL0 = LL0, Gu = Gu, Ge = Ge, P0 = P0, n.core = n.core,
                                       parallel.method = parallel.method, map = map,
                                       kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
                                       num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
@@ -497,8 +504,8 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       }
     } else {
       if (test.method == "LR") {
-        scores <- score.calc.LR(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
-                                package.MM = package.MM, LL0 = LL0, eigen.SGS = eigen.SGS, 
+        scores <- score.calc.LR(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now,
+                                package.MM = package.MM, LL0 = LL0, eigen.SGS = eigen.SGS,
                                 eigen.G = eigen.G, n.core = n.core, map = map, optimizer = optimizer,
                                 kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
                                 num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
@@ -506,7 +513,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                 weighting.center = weighting.center, weighting.other = weighting.other,
                                 gene.set = gene.set, min.MAF = min.MAF, count = count)
       } else {
-        scores <- score.calc.score(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now, 
+        scores <- score.calc.score(M.now = M.now, y = y, X.now = X.now, ZETA.now = ZETA.now,
                                    LL0 = LL0, Gu = Gu, Ge = Ge, P0 = P0, map = map,
                                    kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
                                    num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
@@ -515,7 +522,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                    gene.set = gene.set, min.MAF = min.MAF, count = count)
       }
     }
-    
+
     if (is.null(gene.set)) {
       window.centers <- as.numeric(rownames(scores))
       map2 <- map[window.centers, ]
@@ -523,11 +530,25 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       if (verbose) {
         print("Now generating map for gene set. Please wait.")
       }
-      map20 <- genesetmap(map = map, gene.set = gene.set, cumulative = TRUE)
+
+      if (is.null(map.gene.set)) {
+        map20 <- genesetmap(map = map, gene.set = gene.set, cumulative = TRUE)
+      } else {
+        if (ncol(map.gene.set) == 3) {
+          cum.pos.set.mean <- cumsumPos(map = map.gene.set)
+          map20 <- cbind(map.gene.set, cum.pos = cum.pos.set.mean)
+        } else if (ncol(map.gene.set) == 4) {
+          map20 <- map.gene.set
+        } else {
+          stop("`map.gene.set` should contain 3 or 4 columns; marker, chr, pos (& cum.pos).")
+        }
+
+        stopifnot(nrow(map.gene.set) == length(unique(gene.set[, 1])))
+      }
       map2 <- map20[, 1:3]
       cum.pos.set.mean <- c(map20[, 4])
     }
-    
+
     if ((kernel.method == "linear") & (length(test.effect) >= 2)) {
       for (test.effect.no in 1:length(test.effect)) {
         if (plot.qq) {
@@ -559,8 +580,8 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
             dev.off()
           }
         }
-        
-        
+
+
         if (plot.Manhattan) {
           if (verbose) {
             print("Now Plotting (Manhattan plot). Please Wait.")
@@ -611,7 +632,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
           threshold <- NA
         }
         thresholds[test.effect.no, pheno.no] <- threshold
-        
+
       }
     } else {
       if (plot.qq) {
@@ -644,8 +665,8 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
           dev.off()
         }
       }
-      
-      
+
+
       if (plot.Manhattan) {
         if (verbose) {
           print("Now Plotting (Manhattan plot). Please Wait.")
@@ -698,7 +719,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       thresholds[, pheno.no] <- threshold
     }
   }
-  
+
   if ((kernel.method == "linear") & (length(test.effect) >= 2)) {
     res.Data <- lapply(all.scores, function(x) {
       cbind(map2, x)
@@ -706,17 +727,17 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
   } else {
     res.Data <- cbind(map2, all.scores)
   }
-  
-  
-  
-  
+
+
+
+
   if (thres) {
     end <- Sys.time()
-    
+
     if (time) {
       print(end - start)
     }
-    
+
     if (return.EMM.res) {
       return(list(D = res.Data, thres = thresholds,
                   EMM.res = EMM.res0))
@@ -725,11 +746,11 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     }
   } else {
     end <- Sys.time()
-    
+
     if (time) {
       print(end - start)
     }
-    
+
     if (return.EMM.res) {
       return(list(D = res.Data, EMM.res = EMM.res0))
     } else {
