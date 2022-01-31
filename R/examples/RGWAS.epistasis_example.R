@@ -103,8 +103,9 @@
 
   ### Check epistatic effects (by using the list of haplotype blocks estimated by PLINK)
   ### It will take almost 2 minutes...
-  epistasis_haplo_block.res <- RGWAS.epistasis(pheno = pheno.GWAS, geno = geno.GWAS, ZETA = ZETA,
-                                               n.PC = 4, test.method = "LR", gene.set = Rice_haplo_block,
+  epistasis_haplo_block.res <- RGWAS.epistasis(pheno = pheno.GWAS, geno = geno.GWAS,
+                                               ZETA = ZETA, n.PC = 4,
+                                               test.method = "LR", gene.set = Rice_haplo_block,
                                                package.MM = "gaston", parallel.method = "mclapply",
                                                skip.check = TRUE, n.core = 2)
 

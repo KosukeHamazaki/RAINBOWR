@@ -70,7 +70,8 @@ importFrom("stats", "cor", "deviance", "dist", "dnorm", "median",
            "pchisq", "ppoints", "predict", "qchisq", "quantile",
            "rnorm", "sd", "smooth.spline", "var")
 importFrom("utils", "menu", "packageVersion", "setTxtProgressBar",
-           "str", "txtProgressBar", "head", "flush.console")
+           "str", "txtProgressBar", "head", "flush.console",
+           "read.csv", "combn")
 importFrom("grDevices", "jpeg", "pdf", "tiff")
 importFrom("stats", "as.dist", "chisq.test", "cutree",
            "hclust", "kmeans", "cmdscale")

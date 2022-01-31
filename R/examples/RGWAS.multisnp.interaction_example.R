@@ -109,7 +109,8 @@
   str(ZETA)
 
 
-  ### Perform SNP-set GWAS with interaction (by regarding 21 SNPs as one SNP-set)
+  ### Perform SNP-set GWAS with interaction
+  ### by regarding 21 SNPs as one SNP-set
   SNP_set.res.int <- RGWAS.multisnp.interaction(
     pheno = pheno.GWAS,
     geno = geno.GWAS,
@@ -131,7 +132,8 @@
   )
   See(SNP_set.res.int$D)  ### Column 4 contains -log10(p) values for markers
 
-  ### Perform SNP-set GWAS with interaction 2 (by regarding 11 SNPs as one SNP-set with sliding window)
+  ### Perform SNP-set GWAS with interaction 2
+  ### by regarding 11 SNPs as one SNP-set with sliding window
   ### It will take almost 2 minutes...
   SNP_set.res.int2 <- RGWAS.multisnp.interaction(
     pheno = pheno.GWAS,
@@ -155,7 +157,8 @@
   See(SNP_set.res.int2$D)  ### Column 4 contains -log10(p) values for markers
 
 
-  ### Perform haplotype-block GWAS with interaction (by using the list of haplotype blocks estimated by PLINK)
+  ### Perform haplotype-block GWAS with interaction
+  ### by using the list of haplotype blocks estimated by PLINK
   haplo_block.res.int <- RGWAS.multisnp.interaction(
     pheno = pheno.GWAS,
     geno = geno.GWAS,

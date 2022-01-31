@@ -563,7 +563,7 @@ adjustGRM <- function(y,
     subpopNamesComb <- c(subpopNamesComb,
                          unlist(x = sapply(X = 2:(nSubpop - 1),
                                            FUN = function(subpopNos) {
-                                             subpopCombNow <- combinat::combn(x = subpopNames, m = subpopNos)
+                                             subpopCombNow <- combn(x = subpopNames, m = subpopNos)
                                              subpopCombNow <- subpopCombNow[, -ncol(subpopCombNow)]
                                              subpopCombNowList <- lapply(X = 1:ncol(subpopCombNow),
                                                                          FUN = function(i) {

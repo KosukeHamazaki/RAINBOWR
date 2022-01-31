@@ -278,7 +278,7 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' \item{$marker}{Marker names in each block for SNP-set methods in RAINBOWR}
 #'}
 #'
-#' Purcell, S. and Chang, C. (2018). PLINK 1.9, \url{www.cog-genomics.org/plink/1.9/}.
+#' Purcell, S. and Chang, C. (2018). PLINK 1.9, www.cog-genomics.org/plink/1.9/.
 #' Chang CC, Chow CC, Tellier LCAM, Vattikuti S, Purcell SM, Lee JJ (2015) Second-generation PLINK: rising to the challenge of larger and richer datasets. GigaScience, 4.
 #' Gaunt T, Rodríguez S, Day I (2007) Cubic exact solutions for the estimation of pairwise haplotype frequencies: implications for linkage disequilibrium analyses and a web tool 'CubeX'. BMC Bioinformatics, 8.
 #' Taliun D, Gamper J, Pattaro C (2014) Efficient haplotype block recognition of very long and dense genetic sequences. BMC Bioinformatics, 15.

@@ -99,7 +99,8 @@
                                        kernel.percent = 0.2, n.PC = 4, test.method.2 = "LR",
                                        kernel.method = "linear", gene.set = NULL,
                                        test.effect.2 = "additive", window.size.half = 3,
-                                       window.slide = 2, package.MM = "gaston", parallel.method = "mclapply",
+                                       window.slide = 2, package.MM = "gaston",
+                                       parallel.method = "mclapply",
                                        skip.check = TRUE, n.core = 2)
 
   See(twostep.SNP_set.res$D)
