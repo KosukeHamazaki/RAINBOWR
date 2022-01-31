@@ -45,7 +45,7 @@ When saveName = NULL, the plot is not saved.}
 \item{saveStyle}{This argument specifies how to save the plot of phylogenetic tree.
 The function offers `png`, `pdf`, `jpg`, and `tiff`.}
 
-\item{plotWhichMDS}{We will show the MDS (multi-dimensional scaling) plot, 
+\item{plotWhichMDS}{We will show the MDS (multi-dimensional scaling) plot,
 and this argument is a vector of two integers specifying that will define which MDS dimension will be plotted.
 The first and second integers correspond to the horizontal and vertical axes, respectively.}
 
@@ -66,7 +66,7 @@ The length of the vector should equal to the number of subpopulations.}
 
 \item{cexMin}{A numeric specifying the minimum point size of the plot.}
 
-\item{ggPlotNetwork}{If TRUE, the function will return the ggplot version of haplotype network. 
+\item{ggPlotNetwork}{If TRUE, the function will return the ggplot version of haplotype network.
 It offers the precise information on subgroups for each haplotype.}
 
 \item{cexMaxForGG}{A numeric specifying the maximum point size of the plot for the ggplot version of haplotype network,

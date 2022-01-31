@@ -71,7 +71,7 @@ Please assign the position in the chromosome to this argument.}
 
 \item{blockName}{You can specify the haplotype block (or gene set, SNP-set) of interest by the name of haplotype block in `geno`.}
 
-\item{pheno}{Data frame where the first column is the line name (gid). 
+\item{pheno}{Data frame where the first column is the line name (gid).
 The remaining columns should be a phenotype to test.}
 
 \item{geno}{Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
@@ -94,7 +94,7 @@ For example, K.A is additive relationship matrix for the covariance between line
 
 \item{plotTree}{If TRUE, the function will return the plot of phylogenetic tree.}
 
-\item{distMat}{You can assign the distance matrix of the block of interest. 
+\item{distMat}{You can assign the distance matrix of the block of interest.
 If NULL, the distance matrix will be computed in this function.}
 
 \item{distMethod}{You can choose the method to calculate distance between accessions.
@@ -115,8 +115,8 @@ If this argument is 0, the subpopulation information will not be estimated.}
 This argument specifies the number of classification performed by the function.}
 
 \item{kernelTypes}{In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
-This argument specifies the method to compute similarity matrix: 
-If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
+This argument specifies the method to compute similarity matrix:
+If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`),
 then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
 and if this argument is `phylo`, the gaussian kernel based on phylogenetic distance will be computed from phylogenetic tree.
 You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "phylo").}
@@ -135,7 +135,7 @@ If hOpt2 is numeric, that value will be directly used in the function.}
 
 \item{maxIter}{Max number of iterations for optimization algorithm.}
 
-\item{rangeHStart}{The median of off-diagonal of distance matrix multiplied by rangeHStart will be used 
+\item{rangeHStart}{The median of off-diagonal of distance matrix multiplied by rangeHStart will be used
 as the initial values for optimization of hyper parameters.}
 
 \item{saveName}{When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
@@ -159,7 +159,7 @@ The length of the vector should equal to the number of subpopulations.}
 
 \item{tipLabel}{If TRUE, lavels for tips will be shown.}
 
-\item{ggPlotTree}{If TRUE, the function will return the ggplot version of phylogenetic tree. 
+\item{ggPlotTree}{If TRUE, the function will return the ggplot version of phylogenetic tree.
 It offers the precise information on subgroups for each haplotype.}
 
 \item{cexMaxForGG}{A numeric specifying the maximum point size of the plot for ggtree,
@@ -174,14 +174,14 @@ alpha for node will be same as the alpha for tip with negative effects.}
 \item{verbose}{If this argument is TRUE, messages for the current step_s will be shown.}
 }
 \value{
-\describe{A list / lists of 
-\item{$haplotypeInfo}{\describe{A list of haplotype information with 
+\describe{A list / lists of
+\item{$haplotypeInfo}{\describe{A list of haplotype information with
 \item{$haploCluster}{A vector indicating each individual belongs to which haplotypes.}
 \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
 }
 }
 \item{$subpopInfo}{The information of subpopulations.}
-\item{$distMats}{\describe{A list of distance matrix: 
+\item{$distMats}{\describe{A list of distance matrix:
 \item{$distMat}{Distance matrix between haplotypes.}
 \item{$distMatEvol}{Evolutionary distance matrix between haplotypes.}
 \item{$distMatNJ}{Phylogenetic distance matrix between haplotypes including nodes.}
@@ -195,7 +195,7 @@ If `chi2Test = FALSE`, `NA` will be returned.}
 \item{$minuslog10p}{\eqn{-log_{10}(p)} for haplotype block of interest.
  p is the p-value for the siginifacance of the haplotype block effect.}
 \item{$hOpts}{Optimized hyper parameters, hOpt1 & hOpt2.}
-\item{$EMMResults}{\describe{A list of estimated results of kernel regression: 
+\item{$EMMResults}{\describe{A list of estimated results of kernel regression:
 \item{$EM3Res}{Estimated results of kernel regression for the estimation of haplotype effects. (1st step)}
 \item{$EMMRes}{Estimated results of kernel regression for the estimation of haplotype effects of nodes. (2nd step)}
 \item{$EMM0Res}{Estimated results of kernel regression for the null model.}

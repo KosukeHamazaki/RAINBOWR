@@ -54,11 +54,13 @@
   Rice_geno_score <- Rice_Zhao_etal$genoScore
   Rice_geno_map <- Rice_Zhao_etal$genoMap
   Rice_pheno <- Rice_Zhao_etal$pheno
+  Rice_haplo_block <- Rice_Zhao_etal$haploBlock
 
   ### View each dataset
   See(Rice_geno_score)
   See(Rice_geno_map)
   See(Rice_pheno)
+  See(Rice_haplo_block)
 
   ### Select one trait for example
   trait.name <- "Flowering.time.at.Arkansas"
@@ -97,4 +99,14 @@
                                    skip.check = TRUE, n.core = 2)
 
   See(epistasis.res$scores$scores)
+
+
+  ### Check epistatic effects (by using the list of haplotype blocks estimated by PLINK)
+  ### It will take almost 2 minutes...
+  epistasis_haplo_block.res <- RGWAS.epistasis(pheno = pheno.GWAS, geno = geno.GWAS, ZETA = ZETA,
+                                               n.PC = 4, test.method = "LR", gene.set = Rice_haplo_block,
+                                               package.MM = "gaston", parallel.method = "mclapply",
+                                               skip.check = TRUE, n.core = 2)
+
+  See(epistasis_haplo_block.res$scores$scores)
 }

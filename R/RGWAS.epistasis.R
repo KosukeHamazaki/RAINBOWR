@@ -13,7 +13,7 @@
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
-#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages:
 #' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
 #' See more details at \code{\link{EM3.general}}.
 #' @param covariate A \eqn{n \times 1} vector or a \eqn{n \times p _ 1} matrix. You can insert continuous values, such as other traits or genotype score for special markers.
@@ -25,27 +25,27 @@
 #' @param n.PC Number of principal components to include as fixed effects. Default is 0 (equals K model).
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is assigned a zero score.
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
-#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
-#' 
-#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
-#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
-#' 
-#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
-#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
-#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach".
+#'
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`.
+#'
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
-#' 
-#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
-#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
-#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
-#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#'
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package,
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package.
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and
 #' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
-#' 
-#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
-#' this parallelization method is not supported. So, if you are Windows user, 
+#'
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users,
+#' this parallelization method is not supported. So, if you are Windows user,
 #' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param test.method RGWAS supports two methods to test effects of each SNP-set.
 #' \describe{
@@ -76,14 +76,20 @@
 #'            You should assign your gene information to gene.set in the form of a "data.frame" (whose dimension is (the number of gene) x 2).
 #'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
 #'            which correspond to the marker names of "geno" argument.
+#' @param map.gene.set Genotype map for `gene.set` (list of haplotype blocks).
+#' This is a data.frame with the haplotype block (SNP-set, or gene-set) names in the first column.
+#' The second and third columns contain the chromosome and map position for each block.
+#' The forth column contains the cumulative map position for each block, which can be computed by \code{\link{cumsumPos}} function.
+#' If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
+#' It will take some time, so you can reduce the computational time by assigning this argument beforehand.
 #' @param plot.epi.3d If TRUE, draw 3d plot
 #' @param plot.epi.2d If TRUE, draw 2d plot
 #' @param main.epi.3d The title of 3d plot. If this argument is NULL, trait name is set as the title.
 #' @param main.epi.2d The title of 2d plot. If this argument is NULL, trait name is set as the title.
 #' @param saveName When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
 #' When saveName = NULL, the plot is not saved.
-#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
-#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format.
+#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure
 #' by setting `skip.check = TRUE`.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #' @param verbose2 If this argument is TRUE, welcome message will be shown.
@@ -133,44 +139,45 @@
 #'
 RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                             covariate = NULL, covariate.factor = NULL,
-                            structure.matrix = NULL, n.PC = 0, min.MAF = 0.02, 
+                            structure.matrix = NULL, n.PC = 0, min.MAF = 0.02,
                             n.core = 1, parallel.method = "mclapply",
-                            test.method = "LR", dominance.eff = TRUE, 
+                            test.method = "LR", dominance.eff = TRUE,
                             skip.self.int = FALSE, haplotype = TRUE, num.hap = NULL,
-                            window.size.half = 5, window.slide = 1, 
+                            window.size.half = 5, window.slide = 1,
                             chi0.mixture = 0.5, optimizer = "nlminb",
-                            gene.set = NULL, plot.epi.3d = TRUE, plot.epi.2d = TRUE,
-                            main.epi.3d = NULL, main.epi.2d = NULL, saveName = NULL, 
+                            gene.set = NULL, map.gene.set = NULL,
+                            plot.epi.3d = TRUE, plot.epi.2d = TRUE,
+                            main.epi.3d = NULL, main.epi.2d = NULL, saveName = NULL,
                             skip.check = FALSE, verbose = TRUE,
                             verbose2 = FALSE, count = TRUE, time = TRUE) {
-  
+
   #### The start of the RGWAS function ####
   start <- Sys.time()
-  
-  
+
+
   #### Some settings to perform RGWAS ####
   if (verbose2) {
     welcome_to_RGWAS()
   }
-  
+
   ### For phenotype ###
   n.sample.pheno <- nrow(pheno)
   n.pheno <- ncol(pheno) - 1
   pheno.ix <- 2:ncol(pheno)
   pheno.names <- colnames(pheno)[2:ncol(pheno)]
   lines.name.pheno <- as.character(pheno[, 1])
-  
+
   ### For covariate ###
   X0 <- matrix(1, n.sample.pheno, 1)
   colnames(X0) <- "Intercept"
   rownames(X0) <- lines.name.pheno
-  
+
   if (!is.null(covariate)) {
     covariate <- as.matrix(covariate)
     p1 <- ncol(covariate)
     X0 <- cbind(X0, scale(covariate))
   }
-  
+
   if (!is.null(covariate.factor)) {
     covariate.factor <- data.frame(covariate.factor)
     p2 <- ncol(covariate.factor)
@@ -183,16 +190,16 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       }
     }
   }
-  
+
   if (!is.null(structure.matrix)) {
     structure.matrix <- as.matrix(structure.matrix)
     colnames(structure.matrix) <- paste0("subpop", 1:ncol(structure.matrix))
     X0 <- cbind(X0, structure.matrix)
-    
+
     n.PC <- 0
   }
-  
-  
+
+
   ### For genotype ###
   geno <- geno[order(geno[, 2], geno[, 3]), ]
   lines.name.geno <- colnames(geno)[-c(1:3)]
@@ -215,12 +222,12 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
   }
   n.mark <- ncol(M0)
   rownames(M0) <- lines.name.geno
-  
-  
+
+
   ### Match phenotype and genotype ###
   pheno.mat <- as.matrix(pheno[, -1, drop = FALSE])
   rownames(pheno.mat) <- lines.name.pheno
-  
+
   if (skip.check) {
     pheno.mat.modi <- pheno.mat
     match.modi <- 1:nrow(pheno.mat.modi)
@@ -231,18 +238,18 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                     pheno.labels = NULL, geno.names = NULL,
                                     map = NULL, return.ZETA = is.null(ZETA),
                                     return.GWAS.format = FALSE)
-    
+
     pheno.mat.modi <- modification.res$pheno.modi
     match.modi <- match(rownames(pheno.mat.modi), pheno[, 1])
     pheno.match <- pheno[match.modi, ]
-    
+
     M <- modification.res$geno.modi
   }
-  
+
   n.line <- nrow(M)
   X <- as.matrix(X0[match.modi, ])
-  
-  
+
+
   if (is.null(ZETA)) {
     if (skip.check) {
       K.A <- calcGRM(M)
@@ -257,40 +264,40 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     ZETA.check <- any(unlist(lapply(ZETA, function(x) {
       (is.null(rownames(x$Z))) | (is.null(colnames(x$Z)))
     })))
-    
+
     if (ZETA.check) {
       stop("No row names or column names for design matrix Z!!
            Please fill them with row : line (variety) names for phenotypes.
            and column : line (variety) names for genotypes.")
     }
-    
+
     ZETA <- lapply(ZETA, function(x) {
       Z.match.pheno.no <- match(rownames(pheno.mat.modi), rownames(x$Z))
       Z.match.geno.no <- match(rownames(M), rownames(x$Z))
-      
+
       Z.modi <- x$Z[Z.match.pheno.no, Z.match.geno.no]
       K.modi <- x$K[Z.match.geno.no, Z.match.geno.no]
-      
+
       return(list(Z = Z.modi, K = K.modi))
     })
   }
   K.A <- ZETA[[1]]$K
   Z.A <- ZETA[[1]]$Z
-  
-  
+
+
   ### For covariates (again) ###
   if (n.PC > 0) {
     eigen.K.A <- eigen(K.A)
     eig.K.vec <- eigen.K.A$vectors
-    
+
     PC.part <- Z.A %*% eig.K.vec[, 1:n.PC]
     colnames(PC.part) <- paste0("n.PC_", 1:n.PC)
-    
+
     X <- cbind(X, PC.part)
   }
   X <- make.full(X)
-  
-  
+
+
   ### Some settings ###
   trait.names <- colnames(pheno)[pheno.ix]
   if (is.null(gene.set)) {
@@ -299,19 +306,19 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
   } else {
     n.scores <- length(unique(gene.set[, 1]))
   }
-  
+
   if (n.pheno != 1) {
     all.scores.epi <- rep(list(NA), n.pheno)
   } else {
     all.scores.epi <- NULL
   }
-  
+
   if (n.pheno == 0) {
     stop("No phenotypes.")
   }
-  
-  
-  
+
+
+
   ##### START RGWAS for each phenotype #####
   for (pheno.no in 1:n.pheno) {
     trait.name <- trait.names[pheno.no]
@@ -321,12 +328,12 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     y0 <- pheno.match[, pheno.ix[pheno.no]]
     not.NA <- which(!is.na(y0))
     y <- y0[not.NA]
-    
+
     n <- length(y)
-    
+
     X.now <- as.matrix(X[not.NA, ])
     ZETA.now <- lapply(ZETA, function(x) list(Z = x$Z[not.NA, ], K = x$K))
-    
+
     if (is.diag(x = Z.A)) {
       M.now <- M[not.NA, , drop = FALSE]
     } else {
@@ -337,23 +344,23 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
         M.now <- M[which.one.Z.A, ]
       } else {
         M.now <- as.matrix(Z.A.nonNA.sp %*% M)
-      } 
+      }
     }
-    
-    
+
+
     #### Calculate LL for the null hypothesis at first ####
     spI <- diag(n)
     S <- spI - tcrossprod(X.now %*% solve(crossprod(X.now)), X.now)
-    
-    EMM.res0 <- EM3.general(y = y, X0 = X.now, ZETA = ZETA.now, 
+
+    EMM.res0 <- EM3.general(y = y, X0 = X.now, ZETA = ZETA.now,
                             package = package.MM,
                             n.core = n.core,
                             REML = TRUE, pred = FALSE,
-                            return.u.always = FALSE, 
+                            return.u.always = FALSE,
                             return.u.each = FALSE,
                             return.Hinv = FALSE)
     weights <- EMM.res0$weights
-    
+
     ZKZt.list <- NULL
     ZKZt <- matrix(0, nrow = n, ncol = n)
     for (ZKZt.no in 1:length(ZETA)) {
@@ -361,14 +368,14 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       K.now <- ZETA.now[[ZKZt.no]]$K
       ZKZt.now <- tcrossprod(Z.now %*% K.now, Z.now)
       ZKZt.weighted <- ZKZt.now * weights[ZKZt.no]
-      
+
       ZKZt.list <- c(ZKZt.list, list(ZKZt.weighted))
       ZKZt <- ZKZt + ZKZt.weighted
     }
-    
+
     if (test.method == "LR") {
       LL0 <- EMM.res0$LL
-      
+
       spectral.res <- spectralG.cpp(ZETA = ZETA.now, X = X.now, weights = weights,
                                     return.G = TRUE, return.SGS = TRUE, spectral.method = "eigen")
       eigen.G <- spectral.res[[1]]
@@ -378,39 +385,39 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
         LL0 <- EMM.res0$LL
         Vu <- EMM.res0$Vu
         Ve <- EMM.res0$Ve
-        
+
         Gu <- tcrossprod(ZKZt)
         Ge <- diag(n)
         V0 <- Vu * Gu + Ve * Ge
-        
-        
+
+
         P0 <- MASS::ginv(S %*% V0 %*% S)
       } else {
         stop("We only support 'LR' (likelihood-ratio test) and 'score' (score test)!")
       }
     }
-    
-    
-    
-    
-    
+
+
+
+
+
     #### Calculating the value of -log10(p) for each SNPs ####
     if ((n.core > 1) & requireNamespace("parallel", quietly = TRUE)) {
       # warning("Sorry. n.core > 1 options have not been implemented yet. We will use n.core = 1 instead.")
       if (test.method == "LR") {
-        scores.epi <- score.calc.epistasis.LR.MC(M.now = M.now, y = y, X.now = X.now, 
+        scores.epi <- score.calc.epistasis.LR.MC(M.now = M.now, y = y, X.now = X.now,
                                                  ZETA.now = ZETA.now, package.MM = package.MM,
                                                  eigen.SGS = eigen.SGS, eigen.G = eigen.G,
                                                  map = map, n.core = n.core,
                                                  parallel.method = parallel.method,
-                                                 haplotype = haplotype, num.hap = num.hap, 
+                                                 haplotype = haplotype, num.hap = num.hap,
                                                  window.size.half = window.size.half,
                                                  window.slide = window.slide, chi0.mixture = chi0.mixture,
-                                                 gene.set = gene.set, dominance.eff = dominance.eff, 
+                                                 gene.set = gene.set, dominance.eff = dominance.eff,
                                                  skip.self.int = skip.self.int, optimizer = optimizer,
                                                  min.MAF = min.MAF, count = count)
       } else {
-        scores.epi <- score.calc.epistasis.score.MC(M.now = M.now, y = y, X.now = X.now, 
+        scores.epi <- score.calc.epistasis.score.MC(M.now = M.now, y = y, X.now = X.now,
                                                     ZETA.now = ZETA.now, Gu = Gu, Ge = Ge,
                                                     P0 = P0, map = map,
                                                     haplotype = haplotype, n.core = n.core,
@@ -423,21 +430,21 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       }
     } else {
       if (test.method == "LR") {
-        scores.epi <- score.calc.epistasis.LR(M.now = M.now, y = y, X.now = X.now, 
+        scores.epi <- score.calc.epistasis.LR(M.now = M.now, y = y, X.now = X.now,
                                               ZETA.now = ZETA.now, package.MM = package.MM,
-                                              eigen.SGS = eigen.SGS, eigen.G = eigen.G, 
+                                              eigen.SGS = eigen.SGS, eigen.G = eigen.G,
                                               map = map, n.core = n.core,
-                                              haplotype = haplotype, num.hap = num.hap, 
+                                              haplotype = haplotype, num.hap = num.hap,
                                               window.size.half = window.size.half,
                                               window.slide = window.slide, chi0.mixture = chi0.mixture,
                                               gene.set = gene.set, dominance.eff = dominance.eff,
                                               skip.self.int = skip.self.int, optimizer = optimizer,
                                               min.MAF = min.MAF, count = count)
       } else {
-        scores.epi <- score.calc.epistasis.score(M.now = M.now, y = y, X.now = X.now, 
-                                                 ZETA.now = ZETA.now, Gu = Gu, Ge = Ge, 
-                                                 P0 = P0, map = map, 
-                                                 haplotype = haplotype, num.hap = num.hap, 
+        scores.epi <- score.calc.epistasis.score(M.now = M.now, y = y, X.now = X.now,
+                                                 ZETA.now = ZETA.now, Gu = Gu, Ge = Ge,
+                                                 P0 = P0, map = map,
+                                                 haplotype = haplotype, num.hap = num.hap,
                                                  window.size.half = window.size.half,
                                                  window.slide = window.slide, chi0.mixture = chi0.mixture,
                                                  gene.set = gene.set, dominance.eff = dominance.eff,
@@ -445,54 +452,70 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                                  min.MAF = min.MAF, count = count)
       }
     }
-    
+
     if (is.null(gene.set)) {
       window.centers <- as.numeric(rownames(scores.epi))
       map2 <- map[window.centers, ]
       cum.pos2 <- cum.pos[window.centers]
     } else {
-      map20 <- genesetmap(map = map, gene.set = gene.set, cumulative = TRUE)
+      if (verbose) {
+        print("Now generating map for gene set. Please wait.")
+      }
+
+      if (is.null(map.gene.set)) {
+        map20 <- genesetmap(map = map, gene.set = gene.set, cumulative = TRUE)
+      } else {
+        if (ncol(map.gene.set) == 3) {
+          cum.pos.set.mean <- cumsumPos(map = map.gene.set)
+          map20 <- cbind(map.gene.set, cum.pos = cum.pos.set.mean)
+        } else if (ncol(map.gene.set) == 4) {
+          map20 <- map.gene.set
+        } else {
+          stop("`map.gene.set` should contain 3 or 4 columns; marker, chr, pos (& cum.pos).")
+        }
+
+        stopifnot(nrow(map.gene.set) == length(unique(gene.set[, 1])))
+      }
       map2 <- map20[, 1:3]
-      cum.pos.set.mean <- c(map20[, 4])
-      cum.pos2 <- cum.pos.set.mean
+      cum.pos2 <- cum.pos.set.mean <- c(map20[, 4])
     }
-    
-    
+
+
     x.3d <- rep(cum.pos2, n.scores)
     y.3d <- rep(cum.pos2, each = n.scores)
     z.3d <- c(scores.epi)
-    
+
     epi.res <- list(scores = scores.epi, x = x.3d, y = y.3d, z = z.3d)
-    
+
     if (n.pheno >= 2) {
       all.scores.epi[[pheno.no]] <- epi.res
     } else {
       all.scores.epi <- epi.res
     }
-    
+
     if (is.null(main.epi.3d)) {
       main.epi.3d <- trait.name
     }
     if (is.null(main.epi.2d)) {
       main.epi.2d <- trait.name
     }
-    
+
     if (verbose) {
       print("Now Plotting (3d plot for epistasis). Please Wait.")
     }
     manhattan3(input = epi.res, map = map2, cum.pos = cum.pos, plot.epi.3d = plot.epi.3d,
                plot.epi.2d = plot.epi.2d,  main.epi.3d = main.epi.3d,
                main.epi.2d = main.epi.2d, saveName = saveName)
-    
+
   }
-  
-  
-  
+
+
+
   end <- Sys.time()
-  
+
   if (time) {
     print(end - start)
   }
-  
+
   return(list(map = map2, scores = all.scores.epi))
 }

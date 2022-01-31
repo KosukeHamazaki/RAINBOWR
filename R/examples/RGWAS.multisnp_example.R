@@ -57,11 +57,13 @@
   Rice_geno_score <- Rice_Zhao_etal$genoScore
   Rice_geno_map <- Rice_Zhao_etal$genoMap
   Rice_pheno <- Rice_Zhao_etal$pheno
+  Rice_haplo_block <- Rice_Zhao_etal$haploBlock
 
   ### View each dataset
   See(Rice_geno_score)
   See(Rice_geno_map)
   See(Rice_pheno)
+  See(Rice_haplo_block)
 
   ### Select one trait for example
   trait.name <- "Flowering.time.at.Arkansas"
@@ -112,4 +114,14 @@
                                  parallel.method = "mclapply",
                                  skip.check = TRUE, n.core = 2)
   See(SNP_set.res2$D)  ### Column 4 contains -log10(p) values for markers
+
+
+  ### Perform haplotype-block GWAS (by using the list of haplotype blocks estimated by PLINK)
+  haplo_block.res <- RGWAS.multisnp(pheno = pheno.GWAS, geno = geno.GWAS,
+                                    ZETA = ZETA, n.PC = 4, test.method = "LR",
+                                    kernel.method = "linear", gene.set = Rice_haplo_block,
+                                    test.effect = "additive", package.MM = "gaston",
+                                    parallel.method = "mclapply",
+                                    skip.check = TRUE, n.core = 2)
+  See(haplo_block.res$D)  ### Column 4 contains -log10(p) values for markers
 }

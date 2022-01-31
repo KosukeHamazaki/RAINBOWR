@@ -58,7 +58,7 @@ The length of the vector should equal to the number of subpopulations.}
 
 \item{tipLabel}{If TRUE, lavels for tips will be shown.}
 
-\item{ggPlotTree}{If TRUE, the function will return the ggplot version of phylogenetic tree. 
+\item{ggPlotTree}{If TRUE, the function will return the ggplot version of phylogenetic tree.
 It offers the precise information on subgroups for each haplotype.}
 
 \item{cexMaxForGG}{A numeric specifying the maximum point size of the plot for ggtree,

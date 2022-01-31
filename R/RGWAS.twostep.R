@@ -13,7 +13,7 @@
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
-#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages:
 #' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
 #' See more details at \code{\link{EM3.general}}.
 #' @param covariate A \eqn{n \times 1} vector or a \eqn{n \times p _ 1} matrix. You can insert continuous values, such as other traits or genotype score for special markers.
@@ -25,27 +25,27 @@
 #' @param n.PC Number of principal components to include as fixed effects. Default is 0 (equals K model).
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is assigned a zero score.
-#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
-#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
-#' 
-#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
-#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
-#' 
-#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
-#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
-#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach".
+#'
+#' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package
+#' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`.
+#'
+#' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
+#' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
+#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
-#' 
-#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
-#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
-#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
-#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+#'
+#' When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package
+#' with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package,
+#' and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package.
+#' With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and
 #' \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
-#' 
-#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
-#' this parallelization method is not supported. So, if you are Windows user, 
+#'
+#' We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users,
+#' this parallelization method is not supported. So, if you are Windows user,
 #' we recommend that you use the option `parallel.method = "foreach"`.
 #' @param check.size This argument determines how many SNPs (around the SNP detected by normal GWAS) you will recalculate -log10(p).
 #' @param check.gene.size This argument determines how many genes (around the genes detected by normal GWAS) you will recalculate -log10(p).
@@ -96,6 +96,12 @@
 #'            You should assign your gene information to gene.set in the form of a "data.frame" (whose dimension is (the number of gene) x 2).
 #'            In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
 #'            which correspond to the marker names of "geno" argument.
+#' @param map.gene.set Genotype map for `gene.set` (list of haplotype blocks).
+#' This is a data.frame with the haplotype block (SNP-set, or gene-set) names in the first column.
+#' The second and third columns contain the chromosome and map position for each block.
+#' The forth column contains the cumulative map position for each block, which can be computed by \code{\link{cumsumPos}} function.
+#' If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
+#' It will take some time, so you can reduce the computational time by assigning this argument beforehand.
 #' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
 #'           If weighting.center = FALSE, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
@@ -131,8 +137,8 @@
 #' @param return.EMM.res When return.EMM.res = TRUE, the results of equation of mixed models are included in the result of RGWAS.
 #' @param thres If thres = TRUE, the threshold of the manhattan plot is included in the result of RGWAS.
 #' When return.EMM.res or thres is TRUE, the results will be "list" class.
-#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
-#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+#' @param skip.check As default, RAINBOWR checks the type of input data and modifies it into the correct format.
+#' However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure
 #' by setting `skip.check = TRUE`.
 #' @param verbose If this argument is TRUE, messages for the current steps will be shown.
 #' @param verbose2 If this argument is TRUE, welcome message will be shown.
@@ -180,26 +186,27 @@
 #'
 #'
 #'
-RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston", 
+RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                           covariate = NULL, covariate.factor = NULL,
-                          structure.matrix = NULL, n.PC = 0, min.MAF = 0.02, 
+                          structure.matrix = NULL, n.PC = 0, min.MAF = 0.02,
                           n.core = 1, parallel.method = "mclapply",
                           check.size = 40, check.gene.size = 4, kernel.percent = 0.1, GWAS.res.first = NULL,
                           P3D = TRUE, test.method.1 = "normal", test.method.2 = "LR",
                           kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE,
                           num.hap = NULL, test.effect.1 = "additive", test.effect.2 = "additive",
                           window.size.half = 5, window.slide = 1, chi0.mixture = 0.5, optimizer = "nlminb",
-                          gene.set = NULL, weighting.center = TRUE, weighting.other = NULL,
+                          gene.set = NULL, map.gene.set = NULL,
+                          weighting.center = TRUE, weighting.other = NULL,
                           sig.level = 0.05, method.thres = "BH", plot.qq.1 = TRUE, plot.Manhattan.1 = TRUE,
                           plot.qq.2 = TRUE, plot.Manhattan.2 = TRUE, plot.method = 1,
                           plot.col1 = c("dark blue", "cornflowerblue"), plot.col2 = 1,
                           plot.col3 = c("red3", "orange3"), plot.type = "p",
                           plot.pch = 16, saveName = NULL, main.qq.1 = NULL,
                           main.man.1 = NULL, main.qq.2 = NULL, main.man.2 = NULL,
-                          plot.add.last = FALSE, return.EMM.res = FALSE, 
-                          thres = TRUE, skip.check = FALSE, verbose = TRUE, 
+                          plot.add.last = FALSE, return.EMM.res = FALSE,
+                          thres = TRUE, skip.check = FALSE, verbose = TRUE,
                           verbose2 = FALSE, count = TRUE, time = TRUE) {
-  
+
   start <- Sys.time()
   if (is.null(GWAS.res.first)) {
     if (verbose) {
@@ -209,37 +216,38 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       stop("Sorry, you can assign only one test effect for the 1st GWAS!!")
     }
     if (test.method.1 == "normal") {
-      GWAS.res.first <- RGWAS.normal(pheno = pheno, geno = geno, ZETA = ZETA, 
+      GWAS.res.first <- RGWAS.normal(pheno = pheno, geno = geno, ZETA = ZETA,
                                      package.MM = package.MM, covariate = covariate,
-                                     covariate.factor = covariate.factor, 
-                                     structure.matrix = structure.matrix, n.PC = n.PC, 
+                                     covariate.factor = covariate.factor,
+                                     structure.matrix = structure.matrix, n.PC = n.PC,
                                      min.MAF = min.MAF, P3D = P3D, n.core = n.core,
                                      parallel.method = parallel.method, sig.level = sig.level,
-                                     method.thres = method.thres, plot.qq = plot.qq.1, 
-                                     plot.Manhattan = plot.Manhattan.1, plot.method = plot.method, 
+                                     method.thres = method.thres, plot.qq = plot.qq.1,
+                                     plot.Manhattan = plot.Manhattan.1, plot.method = plot.method,
                                      plot.col1 = plot.col1, plot.col2 = plot.col2,
-                                     plot.type = plot.type, plot.pch = plot.pch, saveName = saveName, 
-                                     optimizer = optimizer, main.qq = main.qq.1, main.man = main.man.1, 
-                                     plot.add.last = FALSE, return.EMM.res = FALSE, thres = FALSE, 
-                                     skip.check = skip.check, verbose = verbose, 
+                                     plot.type = plot.type, plot.pch = plot.pch, saveName = saveName,
+                                     optimizer = optimizer, main.qq = main.qq.1, main.man = main.man.1,
+                                     plot.add.last = FALSE, return.EMM.res = FALSE, thres = FALSE,
+                                     skip.check = skip.check, verbose = verbose,
                                      verbose2 = verbose2, count = count, time = time)
     } else {
-      GWAS.res.first <- RGWAS.multisnp(pheno = pheno, geno = geno, ZETA = ZETA, 
+      GWAS.res.first <- RGWAS.multisnp(pheno = pheno, geno = geno, ZETA = ZETA,
                                        package.MM = package.MM, covariate = covariate,
-                                       covariate.factor = covariate.factor, 
+                                       covariate.factor = covariate.factor,
                                        structure.matrix = structure.matrix,
-                                       n.PC = n.PC, min.MAF = min.MAF, 
-                                       test.method = test.method.1, 
-                                       n.core = n.core, parallel.method = parallel.method, 
-                                       kernel.method = kernel.method, kernel.h = kernel.h, 
-                                       haplotype = haplotype, num.hap = num.hap, 
+                                       n.PC = n.PC, min.MAF = min.MAF,
+                                       test.method = test.method.1,
+                                       n.core = n.core, parallel.method = parallel.method,
+                                       kernel.method = kernel.method, kernel.h = kernel.h,
+                                       haplotype = haplotype, num.hap = num.hap,
                                        test.effect = test.effect.1, window.size.half = window.size.half,
-                                       window.slide = window.slide, chi0.mixture = chi0.mixture, 
-                                       gene.set = gene.set, weighting.center = weighting.center, 
-                                       weighting.other = weighting.other, sig.level = sig.level, 
-                                       method.thres = method.thres, plot.qq = FALSE, 
-                                       plot.Manhattan = FALSE, plot.method = plot.method, 
-                                       plot.col1 = plot.col1, plot.col2 = plot.col2, 
+                                       window.slide = window.slide, chi0.mixture = chi0.mixture,
+                                       gene.set = gene.set, map.gene.set = map.gene.set,
+                                       weighting.center = weighting.center,
+                                       weighting.other = weighting.other, sig.level = sig.level,
+                                       method.thres = method.thres, plot.qq = FALSE,
+                                       plot.Manhattan = FALSE, plot.method = plot.method,
+                                       plot.col1 = plot.col1, plot.col2 = plot.col2,
                                        plot.type = plot.type, plot.pch = plot.pch, saveName = saveName,
                                        main.qq = main.qq.2, main.man = main.man.2, plot.add.last = FALSE,
                                        return.EMM.res = FALSE, optimizer = optimizer,
@@ -251,11 +259,11 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       print("The 1st step has already finished because you input 'GWAS.res.first'.")
     }
   }
-  
+
   n.pheno <- ncol(GWAS.res.first) - 3
   trait.names <- colnames(GWAS.res.first)[4:(4 + n.pheno - 1)]
   map <- geno[, 1:3]
-  
+
   if ((kernel.method == "linear") & (length(test.effect.2) >= 2)) {
     thresholds <- matrix(NA, nrow = length(test.effect.2), ncol = n.pheno)
     thresholds.correction <- matrix(NA, nrow = length(test.effect.2), ncol = n.pheno)
@@ -268,15 +276,15 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     rownames(thresholds.correction) <- kernel.method
     colnames(thresholds) <- colnames(thresholds.correction) <- trait.names
   }
-  
+
   if ((kernel.method == "linear") & (length(test.effect.2) >= 2)) {
     res.all <- rep(list(GWAS.res.first), length(test.effect.2))
   } else {
     res.all <- GWAS.res.first
   }
-  
-  
-  
+
+
+
   for (pheno.no in 1:n.pheno) {
     trait.name <- trait.names[pheno.no]
     pheno.now <- pheno[, c(1, pheno.no + 1)]
@@ -285,7 +293,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     ord.pval.first <- order(pval.first, decreasing = TRUE)
     ord.pval.ker.percent.0 <- ord.pval.first[1:round(length(pval.first) * (kernel.percent / 100), 0)]
     ord.pval.ker.percent <- as.numeric(rownames(GWAS.res.first)[ord.pval.ker.percent.0])
-    
+
     if (is.null(gene.set)) {
       check.obj <- "SNPs"
       check.size.half <- check.size / 2
@@ -302,7 +310,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       pseudo.chr[1] <- 1
       for (k in 2:n.checks) {
         pseudo.chr.now <- pseudo.chr[k - 1]
-        
+
         check.diff <- checks[k] - checks[k - 1]
         if (check.diff == 1) {
           pseudo.chr[k] <- pseudo.chr.now
@@ -317,7 +325,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       rownames(pseudo.map) <- checks
       M.check <- geno[checks, -c(1:3)]
       geno.check <- cbind(pseudo.map, M.check)
-      
+
       gene.set.now <- NULL
     } else {
       check.obj <- "genes"
@@ -329,11 +337,11 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
           checks.now <- (check - check.size.half):(check + check.size.half)
           checks.mat[, check.no] <- checks.now
         }
-        
+
         checks <- unique(c(checks.mat))
         checks <- checks[(checks >= 1) & (checks <= max(as.numeric(rownames(GWAS.res.first))))]
         n.checks <- length(checks)
-        
+
         gene.names <- as.character(unique(gene.set[, 1]))
         gene.names.now <- gene.names[checks]
       } else {
@@ -346,44 +354,45 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
         }
         checks <- unique(c(checks.mat))
         checks <- checks[(checks >= 1) & (checks <= max(as.numeric(rownames(GWAS.res.first))))]
-        
+
         match.gene.list <- match(as.character(gene.set[, 2]), as.character(map[checks, 1]))
         gene.names.now <- unique(as.character(gene.set[!is.na(match.gene.list), 1]))
         n.checks <- length(gene.names.now)
       }
       gene.set.now <- gene.set[as.character(gene.set[, 1]) %in% gene.names.now, ]
-      
+
       geno.check <- geno
     }
-    
-    
+
+
     if (verbose) {
       print(paste("The 2nd step: Recalculating -log10(p) of", trait.name, "for", n.checks, check.obj, "by kernel-based (mutisnp) GWAS."))
     }
-    RGWAS.multisnp.res.0 <- RGWAS.multisnp(pheno = pheno.now, geno = geno.check, 
-                                           ZETA = ZETA, package.MM = package.MM, 
+    RGWAS.multisnp.res.0 <- RGWAS.multisnp(pheno = pheno.now, geno = geno.check,
+                                           ZETA = ZETA, package.MM = package.MM,
                                            covariate = covariate, covariate.factor = covariate.factor,
                                            structure.matrix = structure.matrix, n.PC = n.PC,
-                                           min.MAF = min.MAF, test.method = test.method.2, 
-                                           n.core = n.core, parallel.method = parallel.method, 
-                                           kernel.method = kernel.method, kernel.h = kernel.h, 
-                                           haplotype = haplotype, num.hap = num.hap, 
+                                           min.MAF = min.MAF, test.method = test.method.2,
+                                           n.core = n.core, parallel.method = parallel.method,
+                                           kernel.method = kernel.method, kernel.h = kernel.h,
+                                           haplotype = haplotype, num.hap = num.hap,
                                            test.effect = test.effect.2, window.size.half = window.size.half,
-                                           window.slide = window.slide, chi0.mixture = chi0.mixture, 
-                                           gene.set = gene.set.now, weighting.center = weighting.center, 
-                                           weighting.other = weighting.other, sig.level = sig.level, 
+                                           window.slide = window.slide, chi0.mixture = chi0.mixture,
+                                           gene.set = gene.set.now, map.gene.set = NULL,
+                                           weighting.center = weighting.center,
+                                           weighting.other = weighting.other, sig.level = sig.level,
                                            method.thres = method.thres, plot.qq = FALSE, plot.Manhattan = FALSE,
-                                           plot.method = plot.method, plot.col1 = plot.col1, 
-                                           plot.col2 = plot.col2, plot.type = plot.type, 
+                                           plot.method = plot.method, plot.col1 = plot.col1,
+                                           plot.col2 = plot.col2, plot.type = plot.type,
                                            plot.pch = plot.pch, saveName = saveName,
-                                           main.qq = main.qq.2, main.man = main.man.2, 
-                                           plot.add.last = FALSE, return.EMM.res = TRUE, 
+                                           main.qq = main.qq.2, main.man = main.man.2,
+                                           plot.add.last = FALSE, return.EMM.res = TRUE,
                                            optimizer = optimizer, thres = FALSE, skip.check = TRUE,
-                                           verbose = verbose, count = count, time = time)
-    
+                                           verbose = verbose, verbose2 = FALSE, count = count, time = time)
+
     RGWAS.multisnp.res <- RGWAS.multisnp.res.0$D
     EMM.res0 <- RGWAS.multisnp.res.0$EMM.res
-    
+
     if ((kernel.method == "linear") & (length(test.effect.2) >= 2)) {
       GWAS.res.merge.list <- lapply(RGWAS.multisnp.res, function(x) {
         colnames(x) <- colnames(GWAS.res.first.now)
@@ -397,15 +406,15 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
         check.here <- match(1:nrow(x), ord.GWAS.res.merge)
         return(list(res = res.correction, check = check.here))
       })
-      
-      
+
+
       res.corrections <- rep(list(NA), length(test.effect.2))
       for (test.effect.no in 1:length(test.effect.2)) {
         res.correction <- (GWAS.res.merge.list[[test.effect.no]])[[1]]
         res.corrections[[test.effect.no]] <- res.correction
         check.here <- (GWAS.res.merge.list[[test.effect.no]])[[2]]
         pval.correction <- res.correction[, 4]
-        
+
         if (plot.qq.2) {
           if (verbose) {
             print("Now Plotting (Q-Q plot). Please Wait.")
@@ -436,8 +445,8 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
             dev.off()
           }
         }
-        
-        
+
+
         if (plot.Manhattan.2) {
           if (verbose) {
             print("Now Plotting (Manhattan plot). Please Wait.")
@@ -492,7 +501,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
             }
           }
         }
-        
+
         threshold <- try(CalcThreshold(GWAS.res.first.now, sig.level = sig.level, method = method.thres), silent = TRUE)
         threshold.correction <- try(CalcThreshold(res.correction, sig.level = sig.level, method = method.thres), silent = TRUE)
         if ("try-error" %in% class(threshold)) {
@@ -504,7 +513,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
         thresholds[test.effect.no, pheno.no] <- threshold
         thresholds.correction[test.effect.no, pheno.no] <- threshold.correction
       }
-      
+
       for (test.effect.no in 1:length(test.effect.2)) {
         colnames(res.corrections[[test.effect.no]])[1:3] <-
           colnames(res.all[[test.effect.no]])[1:3] <- c("marker", "chrom", "pos")
@@ -515,7 +524,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                            all.x = T, all.y = T)
         colnames(res.all[[test.effect.no]])[ncol(res.all[[test.effect.no]])] <-
           paste0(trait.name, "_correction")
-        
+
         res.all[[test.effect.no]] <- (res.all[[test.effect.no]])[order(res.all[[test.effect.no]][, 2],
                                                                        res.all[[test.effect.no]][, 3]), ]
       }
@@ -530,9 +539,9 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       res.correction <- GWAS.res.merge[ord.GWAS.res.merge, ]
       check.here <- match(1:nrow(RGWAS.multisnp.res), ord.GWAS.res.merge)
       pval.correction <- res.correction[, 4]
-      
-      
-      
+
+
+
       if (plot.qq.2) {
         if (verbose) {
           print("Now Plotting (Q-Q plot). Please Wait.")
@@ -562,8 +571,8 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
           dev.off()
         }
       }
-      
-      
+
+
       if (plot.Manhattan.2) {
         if (verbose) {
           print("Now Plotting (Manhattan plot). Please Wait.")
@@ -617,7 +626,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
           }
         }
       }
-      
+
       threshold <- try(CalcThreshold(GWAS.res.first[, c(1:3, pheno.no + 3)], sig.level = sig.level, method = method.thres), silent = TRUE)
       threshold.correction <- try(CalcThreshold(res.correction, sig.level = sig.level, method= method.thres), silent = TRUE)
       if ("try-error" %in% class(threshold)) {
@@ -635,17 +644,17 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
       res.all <- res.all[order(res.all[, 2], res.all[, 3]), ]
     }
   }
-  
-  
+
+
   thresholds.list <- list(first = thresholds, second = thresholds.correction)
-  
+
   if (thres) {
     end <- Sys.time()
-    
+
     if (time) {
       print(end - start)
     }
-    
+
     if (return.EMM.res) {
       return(list(D = res.all, thres = thresholds.list,
                   EMM.res = EMM.res0))
@@ -654,11 +663,11 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     }
   } else {
     end <- Sys.time()
-    
+
     if (time) {
       print(end - start)
     }
-    
+
     if (return.EMM.res) {
       return(list(D = res.all, EMM.res = EMM.res0))
     } else {

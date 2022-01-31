@@ -79,7 +79,7 @@ Please assign the position in the chromosome to this argument.}
 
 \item{blockName}{You can specify the haplotype block (or gene set, SNP-set) of interest by the name of haplotype block in `geno`.}
 
-\item{pheno}{Data frame where the first column is the line name (gid). 
+\item{pheno}{Data frame where the first column is the line name (gid).
 The remaining columns should be a phenotype to test.}
 
 \item{geno}{Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
@@ -102,7 +102,7 @@ For example, K.A is additive relationship matrix for the covariance between line
 
 \item{plotNetwork}{If TRUE, the function will return the plot of haplotype network.}
 
-\item{distMat}{You can assign the distance matrix of the block of interest. 
+\item{distMat}{You can assign the distance matrix of the block of interest.
 If NULL, the distance matrix will be computed in this function.}
 
 \item{distMethod}{You can choose the method to calculate distance between accessions.
@@ -135,21 +135,21 @@ This argument specifies the number of classification performed by the function.}
 'rmst' is recommended.}
 
 \item{autogamous}{This argument will be valid only when you use `complementHaplo = "all"` or `complementHaplo = "TCS"`.
-This argument specifies whether the plant is autogamous or not. If autogamous = TRUE, 
-complemented haplotype will consist of only homozygous sites ({-1, 1}). 
+This argument specifies whether the plant is autogamous or not. If autogamous = TRUE,
+complemented haplotype will consist of only homozygous sites ({-1, 1}).
 If FALSE, complemented haplotype will consist of both homozygous & heterozygous sites ({-1, 0, 1}).}
 
-\item{probParsimony}{Equal to the argument `prob` in `haplotypes::parsimnet` function: 
+\item{probParsimony}{Equal to the argument `prob` in `haplotypes::parsimnet` function:
 
-A numeric vector of length one in the range [0.01, 0.99] giving the probability of parsimony as defined in Templeton et al. (1992). 
+A numeric vector of length one in the range [0.01, 0.99] giving the probability of parsimony as defined in Templeton et al. (1992).
 In order to set maximum connection steps to Inf (to connect all the haplotypes in a single network), set the probability to NULL.}
 
-\item{nMaxHaplo}{The maximum number of haplotypes. If the number of total (complemented + original) haplotypes are larger than `nMaxHaplo`, 
+\item{nMaxHaplo}{The maximum number of haplotypes. If the number of total (complemented + original) haplotypes are larger than `nMaxHaplo`,
 we will only show the results only for the original haplotypes to reduce the computational time.}
 
 \item{kernelTypes}{In the function, similarlity matrix between accessions will be computed from marker genotype to estimate genotypic values.
-This argument specifies the method to compute similarity matrix: 
-If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`), 
+This argument specifies the method to compute similarity matrix:
+If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGRM`),
 then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
 and if this argument is `diffusion`, the diffusion kernel based on Laplacian matrix will be computed from network.
 You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "diffusion").}
@@ -166,7 +166,7 @@ If hOpt2 is numeric, that value will be directly used in the function.}
 
 \item{maxIter}{Max number of iterations for optimization algorithm.}
 
-\item{rangeHStart}{The median of off-diagonal of distance matrix multiplied by rangeHStart will be used 
+\item{rangeHStart}{The median of off-diagonal of distance matrix multiplied by rangeHStart will be used
 as the initial values for optimization of hyper parameters.}
 
 \item{saveName}{When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
@@ -175,7 +175,7 @@ When saveName = NULL, the plot is not saved.}
 \item{saveStyle}{This argument specifies how to save the plot of phylogenetic tree.
 The function offers `png`, `pdf`, `jpg`, and `tiff`.}
 
-\item{plotWhichMDS}{We will show the MDS (multi-dimensional scaling) plot, 
+\item{plotWhichMDS}{We will show the MDS (multi-dimensional scaling) plot,
 and this argument is a vector of two integers specifying that will define which MDS dimension will be plotted.
 The first and second integers correspond to the horizontal and vertical axes, respectively.}
 
@@ -196,7 +196,7 @@ The length of the vector should equal to the number of subpopulations.}
 
 \item{cexMin}{A numeric specifying the minimum point size of the plot.}
 
-\item{ggPlotNetwork}{If TRUE, the function will return the ggplot version of haplotype network. 
+\item{ggPlotNetwork}{If TRUE, the function will return the ggplot version of haplotype network.
 It offers the precise information on subgroups for each haplotype.}
 
 \item{cexMaxForGG}{A numeric specifying the maximum point size of the plot for the ggplot version of haplotype network,
@@ -211,8 +211,8 @@ alpha for complemented haplotype will be same as the alpha for original haplotyp
 \item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
 }
 \value{
-\describe{A list / lists of 
-\item{$haplotypeInfo}{\describe{A list of haplotype information with 
+\describe{A list / lists of
+\item{$haplotypeInfo}{\describe{A list of haplotype information with
 \item{$haploCluster}{A vector indicating each individual belongs to which haplotypes.}
 \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
 }
@@ -220,12 +220,12 @@ alpha for complemented haplotype will be same as the alpha for original haplotyp
 \item{$subpopInfo}{The information of subpopulations.}
 \item{$pValChi2Test}{A p-value of the chi-square test for the dependency between haplotypes & subpopulations.
 If `chi2Test = FALSE`, `NA` will be returned.}
-\item{$mstResults}{\describe{A list of estimated results of MST / MSN / RMST: 
+\item{$mstResults}{\describe{A list of estimated results of MST / MSN / RMST:
 \item{$mstRes}{Estimated results of MST / MSN / RMST for the data including original haplotypes.}
 \item{$mstResComp}{Estimated results of MST / MSN / RMST for the data including both original and complemented haplotype.}
 }
 }
-\item{$distMats}{\describe{A list of distance matrix: 
+\item{$distMats}{\describe{A list of distance matrix:
 \item{$distMat}{Distance matrix between haplotypes.}
 \item{$distMatComp}{Distance matrix between haplotypes (including unobserved ones).}
 \item{$laplacianMat}{Laplacian matrix between haplotypes (including unobserved ones).}
@@ -236,7 +236,7 @@ If `chi2Test = FALSE`, `NA` will be returned.}
 \item{$minuslog10p}{\eqn{-log_{10}(p)} for haplotype block of interest.
  p is the p-value for the siginifacance of the haplotype block effect.}
 \item{$hOpts}{Optimized hyper parameters, hOpt1 & hOpt2.}
-\item{$EMMResults}{\describe{A list of estimated results of kernel regression: 
+\item{$EMMResults}{\describe{A list of estimated results of kernel regression:
 \item{$EM3Res}{Estimated results of kernel regression for the estimation of haplotype effects. (1st step)}
 \item{$EMMRes}{Estimated results of kernel regression for the estimation of haplotype effects of nodes. (2nd step)}
 \item{$EMM0Res}{Estimated results of kernel regression for the null model.}

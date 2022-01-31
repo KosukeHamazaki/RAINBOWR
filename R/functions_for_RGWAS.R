@@ -1731,523 +1731,526 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-      Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-          Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+        Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
-            }
-          }
-        } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
-        }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
         if (any(MAF.cut.D)) {
           if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
+            Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
           }
         }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
-      if (window.size != 1) {
-        if (weighting.center) {
-          weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
-          }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
-        } else {
-          weight.Mis <- rep(1, window.size)
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
-          }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
-        }
-      } else {
-        weight.Mis <- 1
-      }
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
 
-      if (any(MAF.cut.D)) {
-        if (window.size != 1) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            if (weighting.center) {
-              weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
               }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            } else {
-              weight.Mis.D <- rep(1, window.size.D)
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
               }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+            }
+          }
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
             }
           }
         } else {
-          weight.Mis.D <- 1
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-      }
 
-      if (kernel.method != "linear") {
-        if (ncol(Mis) != 1) {
-          Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
+        if (window.size != 1) {
+          if (weighting.center) {
+            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+            }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          } else {
+            weight.Mis <- rep(1, window.size)
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+            }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          }
         } else {
-          Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          weight.Mis <- 1
         }
 
-        K.SNP <- calcGRM(genoMat = Mis.weighted,
-                         methodGRM = kernel.method,
-                         kernel.h = kernel.h,
-                         returnWMat = FALSE)
+        if (any(MAF.cut.D)) {
+          if (window.size != 1) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              if (weighting.center) {
+                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              } else {
+                weight.Mis.D <- rep(1, window.size.D)
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              }
+            }
+          } else {
+            weight.Mis.D <- 1
+          }
+        }
 
-        # if (length(ZETA.now) == 1) {
-        #   Gammas0 <- list(K = K.SNP)
-        #   Ws0 <- list(W = Z.part)
-        #   Zs0 <- list(Z = diag(nrow(Mis.0)))
-        #   EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, optimizer = optimizer,
-        #                                  Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = n.core,
-        #                                  gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
-        #                                  eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-        #                                  REML = TRUE, pred = FALSE), silent = TRUE)
-        #   if ("try-error" %in% class(EMM.res2)) {
-        #     ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-        #     EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL,
-        #                             n.core = n.core, optimizer = optimizer,
-        #                             REML = TRUE, pred = FALSE), silent = TRUE)
-        #   }
-        # } else {
-        #   ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-        #   EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL,
-        #                           n.core = n.core, optimizer = optimizer,
-        #                           REML = TRUE, pred = FALSE), silent = TRUE)
-        # }
+        if (kernel.method != "linear") {
+          if (ncol(Mis) != 1) {
+            Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
+          } else {
+            Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          }
 
-        perform.general <- FALSE
-        if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
-          Gammas0 <- list(K = K.SNP)
-          Ws0 <- list(W = Z.part)
-          Zs0 <- list(Z = diag(nrow(Mis.0)))
-          EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, optimizer = optimizer,
-                                         Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = n.core,
-                                         gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
-                                         eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                         REML = TRUE, pred = FALSE, return.u.always = FALSE,
-                                         return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
-          if ("try-error" %in% class(EMM.res2)) {
+          K.SNP <- calcGRM(genoMat = Mis.weighted,
+                           methodGRM = kernel.method,
+                           kernel.h = kernel.h,
+                           returnWMat = FALSE)
+
+          # if (length(ZETA.now) == 1) {
+          #   Gammas0 <- list(K = K.SNP)
+          #   Ws0 <- list(W = Z.part)
+          #   Zs0 <- list(Z = diag(nrow(Mis.0)))
+          #   EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, optimizer = optimizer,
+          #                                  Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = n.core,
+          #                                  gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
+          #                                  eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+          #                                  REML = TRUE, pred = FALSE), silent = TRUE)
+          #   if ("try-error" %in% class(EMM.res2)) {
+          #     ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+          #     EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL,
+          #                             n.core = n.core, optimizer = optimizer,
+          #                             REML = TRUE, pred = FALSE), silent = TRUE)
+          #   }
+          # } else {
+          #   ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+          #   EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL,
+          #                           n.core = n.core, optimizer = optimizer,
+          #                           REML = TRUE, pred = FALSE), silent = TRUE)
+          # }
+
+          perform.general <- FALSE
+          if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+            Gammas0 <- list(K = K.SNP)
+            Ws0 <- list(W = Z.part)
+            Zs0 <- list(Z = diag(nrow(Mis.0)))
+            EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, optimizer = optimizer,
+                                           Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = n.core,
+                                           gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
+                                           eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+                                           REML = TRUE, pred = FALSE, return.u.always = FALSE,
+                                           return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
+            if ("try-error" %in% class(EMM.res2)) {
+              perform.general <- TRUE
+            }
+          } else {
             perform.general <- TRUE
           }
+
+          if (perform.general) {
+            ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+            EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
+                                        package = package.MM, tol = NULL,
+                                        n.core = n.core, optimizer = optimizer,
+                                        REML = TRUE, pred = FALSE,
+                                        return.u.always = FALSE,
+                                        return.u.each = FALSE,
+                                        return.Hinv = FALSE), silent = TRUE)
+          }
+
+
+          if (!("try-error" %in% class(EMM.res2))) {
+            LL2s <- EMM.res2$LL
+          } else {
+            LL2s <- LL0
+          }
+
+          df <- 1
         } else {
-          perform.general <- TRUE
-        }
+          test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
+          if (length(test.no) == 0) {
+            stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
+          }
 
-        if (perform.general) {
-          ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-          EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
-                                      package = package.MM, tol = NULL,
-                                      n.core = n.core, optimizer = optimizer,
-                                      REML = TRUE, pred = FALSE,
-                                      return.u.always = FALSE,
-                                      return.u.each = FALSE,
-                                      return.Hinv = FALSE), silent = TRUE)
-        }
-
-
-        if (!("try-error" %in% class(EMM.res2))) {
-          LL2s <- EMM.res2$LL
-        } else {
-          LL2s <- LL0
-        }
-
-        df <- 1
-      } else {
-        test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if (length(test.no) == 0) {
-          stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
-        }
-
-        if (any(test.effect %in% c("additive", "additive+dominance"))) {
-          W.A <- calcGRM(genoMat = Mis,
-                         methodGRM = "addNOIA",
-                         returnWMat = TRUE,
-                         probaa = probaa[Mis.range],
-                         probAa = probAa[Mis.range])
-        }
-
-        if (any(MAF.cut.D)) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            W.D <- calcGRM(genoMat = Mis.D,
-                           methodGRM = "domNOIA",
+          if (any(test.effect %in% c("additive", "additive+dominance"))) {
+            W.A <- calcGRM(genoMat = Mis,
+                           methodGRM = "addNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.D],
-                           probAa = probAa[Mis.range.D])
-          }
-        }
-
-        # if (length(ZETA.now) == 1) {
-        #   if (1 %in% test.no) {
-        #     Ws0.A <- list(W.A = W.A)
-        #     Zs0.A <- list(W.A = Z.part)
-        #     Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
-        #   }
-        #
-        #   if (any(MAF.cut.D)) {
-        #     if (2 %in% test.no) {
-        #       Ws0.D <- list(W.D = W.D)
-        #       Zs0.D <- list(W.D = Z.part.D)
-        #       Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
-        #     }
-        #
-        #     if (3 %in% test.no) {
-        #       Ws0.AD <- list(W.A = W.A, W.D = W.D)
-        #       Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
-        #       Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
-        #     }
-        #   }
-        # } else {
-        #   if (1 %in% test.no) {
-        #     K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-        #     ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-        #   }
-        #
-        #   if (any(MAF.cut.D)) {
-        #     if (2 %in% test.no) {
-        #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-        #       ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-        #     }
-        #
-        #     if (3 %in% test.no) {
-        #       K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-        #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-        #       ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-        #                         list(part.D = list(Z = Z.part.D, K = K.D.part)))
-        #     }
-        #   }
-        # }
-        #
-        # LL2s <- df <- rep(NA, length(test.no))
-        # test.names.now <- c("A", "D", "AD")
-        # for (j in 1:length(test.no)) {
-        #   test.no.now <- test.no[j]
-        #   if (length(ZETA.now) == 1) {
-        #     if (test.no.now == 1) {
-        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
-        #                                      n.core = n.core, optimizer = optimizer,
-        #                                      Zs0 = Zs0.A, Ws0 = Ws0.A, Gammas0 = Gammas0.A,
-        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if (test.no.now == 2) {
-        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
-        #                                      n.core = n.core, optimizer = optimizer,
-        #                                      Zs0 = Zs0.D, Ws0 = Ws0.D, Gammas0 = Gammas0.D,
-        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if (test.no.now == 3) {
-        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
-        #                                      n.core = n.core, optimizer = optimizer,
-        #                                      Zs0 = Zs0.AD, Ws0 = Ws0.AD, Gammas0 = Gammas0.AD,
-        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if ("try-error" %in% class(EMM.res2)) {
-        #       if (1 %in% test.no) {
-        #         K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-        #         ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-        #       }
-        #
-        #       if (any(MAF.cut.D)) {
-        #         if (2 %in% test.no) {
-        #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-        #           ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-        #         }
-        #
-        #         if (3 %in% test.no) {
-        #           K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-        #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-        #           ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-        #                             list(part.D = list(Z = Z.part.D, K = K.D.part)))
-        #         }
-        #       }
-        #
-        #       if (test.no.now == 1) {
-        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL,
-        #                                 n.core = n.core, optimizer = optimizer,
-        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
-        #       }
-        #
-        #       if (test.no.now == 2) {
-        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
-        #                                 n.core = n.core, optimizer = optimizer,
-        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
-        #       }
-        #
-        #       if (test.no.now == 3) {
-        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
-        #                                 n.core = n.core, optimizer = optimizer,
-        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
-        #       }
-        #     }
-        #   } else {
-        #     if (test.no.now == 1) {
-        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL,
-        #                               n.core = n.core, optimizer = optimizer,
-        #                               REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if (test.no.now == 2) {
-        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
-        #                               n.core = n.core, optimizer = optimizer,
-        #                               REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if (test.no.now == 3) {
-        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
-        #                               n.core = n.core, optimizer = optimizer,
-        #                               REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #   }
-        #
-        #   if (!("try-error" %in% class(EMM.res2))) {
-        #     LL2 <- EMM.res2$LL
-        #   } else {
-        #     LL2 <- LL0
-        #   }
-        #   LL2s[j] <- LL2
-        # }
-        # df[test.no == 1] <- 1
-        # df[test.no == 2] <- 1
-        # df[test.no == 3] <- 2
-
-
-        test.names <- c("A", "D", "AD")[test.no]
-
-        if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
-          Zs0.A <- Zs0.D <- Zs0.AD <-
-            Ws0.A <- Ws0.D <- Ws0.AD <-
-            Gammas0.A <- Gammas0.D <- Gammas0.AD <- NULL
-          if ("A" %in% test.names) {
-            Ws0.A <- list(W.A = W.A)
-            Zs0.A <- list(W.A = Z.part)
-            Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
+                           probaa = probaa[Mis.range],
+                           probAa = probAa[Mis.range])
           }
 
           if (any(MAF.cut.D)) {
-            if ("D" %in% test.names) {
-              Ws0.D <- list(W.D = W.D)
-              Zs0.D <- list(W.D = Z.part.D)
-              Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
-            }
-
-            if ("AD" %in% test.names) {
-              Ws0.AD <- list(W.A = W.A, W.D = W.D)
-              Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
-              Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              W.D <- calcGRM(genoMat = Mis.D,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.D],
+                             probAa = probAa[Mis.range.D])
             }
           }
 
-          Zs0.list <- list(
-            A = Zs0.A,
-            D = Zs0.D,
-            AD = Zs0.AD
-          )
+          # if (length(ZETA.now) == 1) {
+          #   if (1 %in% test.no) {
+          #     Ws0.A <- list(W.A = W.A)
+          #     Zs0.A <- list(W.A = Z.part)
+          #     Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
+          #   }
+          #
+          #   if (any(MAF.cut.D)) {
+          #     if (2 %in% test.no) {
+          #       Ws0.D <- list(W.D = W.D)
+          #       Zs0.D <- list(W.D = Z.part.D)
+          #       Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
+          #     }
+          #
+          #     if (3 %in% test.no) {
+          #       Ws0.AD <- list(W.A = W.A, W.D = W.D)
+          #       Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
+          #       Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
+          #     }
+          #   }
+          # } else {
+          #   if (1 %in% test.no) {
+          #     K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+          #     ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+          #   }
+          #
+          #   if (any(MAF.cut.D)) {
+          #     if (2 %in% test.no) {
+          #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+          #       ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          #     }
+          #
+          #     if (3 %in% test.no) {
+          #       K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+          #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+          #       ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+          #                         list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          #     }
+          #   }
+          # }
+          #
+          # LL2s <- df <- rep(NA, length(test.no))
+          # test.names.now <- c("A", "D", "AD")
+          # for (j in 1:length(test.no)) {
+          #   test.no.now <- test.no[j]
+          #   if (length(ZETA.now) == 1) {
+          #     if (test.no.now == 1) {
+          #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
+          #                                      n.core = n.core, optimizer = optimizer,
+          #                                      Zs0 = Zs0.A, Ws0 = Ws0.A, Gammas0 = Gammas0.A,
+          #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+          #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+          #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if (test.no.now == 2) {
+          #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
+          #                                      n.core = n.core, optimizer = optimizer,
+          #                                      Zs0 = Zs0.D, Ws0 = Ws0.D, Gammas0 = Gammas0.D,
+          #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+          #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+          #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if (test.no.now == 3) {
+          #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
+          #                                      n.core = n.core, optimizer = optimizer,
+          #                                      Zs0 = Zs0.AD, Ws0 = Ws0.AD, Gammas0 = Gammas0.AD,
+          #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+          #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+          #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if ("try-error" %in% class(EMM.res2)) {
+          #       if (1 %in% test.no) {
+          #         K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+          #         ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+          #       }
+          #
+          #       if (any(MAF.cut.D)) {
+          #         if (2 %in% test.no) {
+          #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+          #           ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          #         }
+          #
+          #         if (3 %in% test.no) {
+          #           K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+          #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+          #           ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+          #                             list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          #         }
+          #       }
+          #
+          #       if (test.no.now == 1) {
+          #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL,
+          #                                 n.core = n.core, optimizer = optimizer,
+          #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+          #       }
+          #
+          #       if (test.no.now == 2) {
+          #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
+          #                                 n.core = n.core, optimizer = optimizer,
+          #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+          #       }
+          #
+          #       if (test.no.now == 3) {
+          #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
+          #                                 n.core = n.core, optimizer = optimizer,
+          #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+          #       }
+          #     }
+          #   } else {
+          #     if (test.no.now == 1) {
+          #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL,
+          #                               n.core = n.core, optimizer = optimizer,
+          #                               REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if (test.no.now == 2) {
+          #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
+          #                               n.core = n.core, optimizer = optimizer,
+          #                               REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if (test.no.now == 3) {
+          #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
+          #                               n.core = n.core, optimizer = optimizer,
+          #                               REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #   }
+          #
+          #   if (!("try-error" %in% class(EMM.res2))) {
+          #     LL2 <- EMM.res2$LL
+          #   } else {
+          #     LL2 <- LL0
+          #   }
+          #   LL2s[j] <- LL2
+          # }
+          # df[test.no == 1] <- 1
+          # df[test.no == 2] <- 1
+          # df[test.no == 3] <- 2
 
-          Ws0.list <- list(
-            A = Ws0.A,
-            D = Ws0.D,
-            AD = Ws0.AD
-          )
 
-          Gammas0.list <- list(
-            A = Gammas0.A,
-            D = Gammas0.D,
-            AD = Gammas0.AD
-          )
-        } else {
-          ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
-          if ("A" %in% test.names) {
-            K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-            ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-          }
+          test.names <- c("A", "D", "AD")[test.no]
 
-          if (any(MAF.cut.D)) {
-            if ("D" %in% test.names) {
-              K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-              ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+            Zs0.A <- Zs0.D <- Zs0.AD <-
+              Ws0.A <- Ws0.D <- Ws0.AD <-
+              Gammas0.A <- Gammas0.D <- Gammas0.AD <- NULL
+            if ("A" %in% test.names) {
+              Ws0.A <- list(W.A = W.A)
+              Zs0.A <- list(W.A = Z.part)
+              Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
             }
 
-            if ("AD" %in% test.names) {
+            if (any(MAF.cut.D)) {
+              if ("D" %in% test.names) {
+                Ws0.D <- list(W.D = W.D)
+                Zs0.D <- list(W.D = Z.part.D)
+                Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
+              }
+
+              if ("AD" %in% test.names) {
+                Ws0.AD <- list(W.A = W.A, W.D = W.D)
+                Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
+                Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
+              }
+            }
+
+            Zs0.list <- list(
+              A = Zs0.A,
+              D = Zs0.D,
+              AD = Zs0.AD
+            )
+
+            Ws0.list <- list(
+              A = Ws0.A,
+              D = Ws0.D,
+              AD = Ws0.AD
+            )
+
+            Gammas0.list <- list(
+              A = Gammas0.A,
+              D = Gammas0.D,
+              AD = Gammas0.AD
+            )
+          } else {
+            ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+            if ("A" %in% test.names) {
               K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-              K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-              ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-                                list(part.D = list(Z = Z.part.D, K = K.D.part)))
+              ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
             }
+
+            if (any(MAF.cut.D)) {
+              if ("D" %in% test.names) {
+                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+              }
+
+              if ("AD" %in% test.names) {
+                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+                                  list(part.D = list(Z = Z.part.D, K = K.D.part)))
+              }
+            }
+
+
+            ZETA.now2.list <- list(
+              A = ZETA.now2.A,
+              D = ZETA.now2.D,
+              AD = ZETA.now2.AD
+            )
           }
 
 
-          ZETA.now2.list <- list(
-            A = ZETA.now2.A,
-            D = ZETA.now2.D,
-            AD = ZETA.now2.AD
-          )
+          df <- c(1, 1, 2)[test.no]
+          LL2s <- sapply(X = test.names,
+                         FUN = function(test.name.now) {
+
+                           compute.LL <- TRUE
+                           if (!any(MAF.cut.D)) {
+                             if (test.name.now == "D") {
+                               LL2 <- LL0
+                               compute.LL <- FALSE
+                             } else if (test.name.now == "AD") {
+                               test.name.now <- "A"
+                             }
+                           }
+
+                           if (compute.LL) {
+                             perform.general <- FALSE
+                             if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+                               EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now,
+                                                              ZETA = ZETA.now, optimizer = optimizer,
+                                                              Zs0 = Zs0.list[[test.name.now]],
+                                                              Ws0 = Ws0.list[[test.name.now]],
+                                                              Gammas0 = Gammas0.list[[test.name.now]],
+                                                              n.core = n.core, gammas.diag = FALSE,
+                                                              X.fix = TRUE, tol = NULL,
+                                                              eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+                                                              REML = TRUE, pred = FALSE, return.u.always = FALSE,
+                                                              return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
+
+                               if ("try-error" %in% class(EMM.res2)) {
+                                 perform.general <- TRUE
+
+
+                                 ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+                                 if ("A" %in% test.name.now) {
+                                   K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                   ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+                                 }
+
+                                 if ("D" %in% test.name.now) {
+                                   K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                   ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+                                 }
+
+                                 if ("AD" %in% test.name.now) {
+                                   K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                   K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                   ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+                                                     list(part.D = list(Z = Z.part.D, K = K.D.part)))
+                                 }
+
+
+                                 ZETA.now2.list <- list(
+                                   A = ZETA.now2.A,
+                                   D = ZETA.now2.D,
+                                   AD = ZETA.now2.AD
+                                 )
+                               }
+                             } else {
+                               perform.general <- TRUE
+                             }
+
+                             if (perform.general) {
+                               EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.list[[test.name.now]],
+                                                           package = package.MM, tol = NULL,
+                                                           n.core = n.core, optimizer = optimizer,
+                                                           REML = TRUE, pred = FALSE,
+                                                           return.u.always = FALSE,
+                                                           return.u.each = FALSE,
+                                                           return.Hinv = FALSE), silent = TRUE)
+                             }
+
+
+                             if (!("try-error" %in% class(EMM.res2))) {
+                               LL2 <- EMM.res2$LL
+                             } else {
+                               LL2 <- LL0
+                             }
+                           }
+
+                           return(LL2)
+                         }, simplify = TRUE)
         }
 
 
-        df <- c(1, 1, 2)[test.no]
-        LL2s <- sapply(X = test.names,
-                       FUN = function(test.name.now) {
-
-                         compute.LL <- TRUE
-                         if (!any(MAF.cut.D)) {
-                           if (test.name.now == "D") {
-                             LL2 <- LL0
-                             compute.LL <- FALSE
-                           } else if (test.name.now == "AD") {
-                             test.name.now <- "A"
-                           }
-                         }
-
-                         if (compute.LL) {
-                           perform.general <- FALSE
-                           if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
-                             EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now,
-                                                            ZETA = ZETA.now, optimizer = optimizer,
-                                                            Zs0 = Zs0.list[[test.name.now]],
-                                                            Ws0 = Ws0.list[[test.name.now]],
-                                                            Gammas0 = Gammas0.list[[test.name.now]],
-                                                            n.core = n.core, gammas.diag = FALSE,
-                                                            X.fix = TRUE, tol = NULL,
-                                                            eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                                            REML = TRUE, pred = FALSE, return.u.always = FALSE,
-                                                            return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
-
-                             if ("try-error" %in% class(EMM.res2)) {
-                               perform.general <- TRUE
-
-
-                               ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
-                               if ("A" %in% test.name.now) {
-                                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                                 ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-                               }
-
-                               if ("D" %in% test.name.now) {
-                                 K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-                                 ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-                               }
-
-                               if ("AD" %in% test.name.now) {
-                                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                                 K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-                                 ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-                                                   list(part.D = list(Z = Z.part.D, K = K.D.part)))
-                               }
-
-
-                               ZETA.now2.list <- list(
-                                 A = ZETA.now2.A,
-                                 D = ZETA.now2.D,
-                                 AD = ZETA.now2.AD
-                               )
-                             }
-                           } else {
-                             perform.general <- TRUE
-                           }
-
-                           if (perform.general) {
-                             EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.list[[test.name.now]],
-                                                         package = package.MM, tol = NULL,
-                                                         n.core = n.core, optimizer = optimizer,
-                                                         REML = TRUE, pred = FALSE,
-                                                         return.u.always = FALSE,
-                                                         return.u.each = FALSE,
-                                                         return.Hinv = FALSE), silent = TRUE)
-                           }
-
-
-                           if (!("try-error" %in% class(EMM.res2))) {
-                             LL2 <- EMM.res2$LL
-                           } else {
-                             LL2 <- LL0
-                           }
-                         }
-
-                         return(LL2)
-                       }, simplify = TRUE)
+        deviances <- 2 * (LL2s - LL0)
+        scores.now <- ifelse(
+          test = deviances <= 0, yes = 0,
+          no = -log10((1 - chi0.mixture) *
+                        pchisq(q = deviances, df = df,
+                               lower.tail = FALSE))
+        )
+        scores[i, ] <- scores.now
       }
-
-
-      deviances <- 2 * (LL2s - LL0)
-      scores.now <- ifelse(
-        test = deviances <= 0, yes = 0,
-        no = -log10((1 - chi0.mixture) *
-                      pchisq(q = deviances, df = df,
-                             lower.tail = FALSE))
-      )
-      scores[i, ] <- scores.now
     }
   }
 
@@ -2473,521 +2476,526 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[markNo]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-      Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-          Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+        Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
-            }
-          }
-        } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
-        }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
         if (any(MAF.cut.D)) {
           if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
+            Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
           }
         }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
-      if (window.size != 1) {
-        if (weighting.center) {
-          weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
-          }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
-        } else {
-          weight.Mis <- rep(1, window.size)
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
-          }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
-        }
-      } else {
-        weight.Mis <- 1
-      }
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
 
-      if (any(MAF.cut.D)) {
-        if (window.size != 1) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            if (weighting.center) {
-              weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
               }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            } else {
-              weight.Mis.D <- rep(1, window.size.D)
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
               }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+            }
+          }
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
             }
           }
         } else {
-          weight.Mis.D <- 1
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-      }
 
-      if (kernel.method != "linear") {
-        if (ncol(Mis) != 1) {
-          Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
+        if (window.size != 1) {
+          if (weighting.center) {
+            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+            }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          } else {
+            weight.Mis <- rep(1, window.size)
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+            }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          }
         } else {
-          Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          weight.Mis <- 1
         }
 
-        K.SNP <- calcGRM(genoMat = Mis.weighted,
-                         methodGRM = kernel.method,
-                         kernel.h = kernel.h,
-                         returnWMat = FALSE)
+        if (any(MAF.cut.D)) {
+          if (window.size != 1) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              if (weighting.center) {
+                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              } else {
+                weight.Mis.D <- rep(1, window.size.D)
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              }
+            }
+          } else {
+            weight.Mis.D <- 1
+          }
+        }
+
+        if (kernel.method != "linear") {
+          if (ncol(Mis) != 1) {
+            Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
+          } else {
+            Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          }
+
+          K.SNP <- calcGRM(genoMat = Mis.weighted,
+                           methodGRM = kernel.method,
+                           kernel.h = kernel.h,
+                           returnWMat = FALSE)
 
 
-        # if (length(ZETA.now) == 1) {
-        #   Gammas0 <- list(K = K.SNP)
-        #   Ws0 <- list(W = Z.part)
-        #   Zs0 <- list(Z = diag(nrow(Mis.0)))
-        #   EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
-        #                                  n.core = 1, optimizer = optimizer,
-        #                                  Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0,
-        #                                  gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
-        #                                  eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-        #                                  REML = TRUE, pred = FALSE), silent = TRUE)
-        #   if ("try-error" %in% class(EMM.res2)) {
-        #     ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-        #     EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL,
-        #                             n.core = 1, optimizer = optimizer,
-        #                             REML = TRUE, pred = FALSE), silent = TRUE)
-        #   }
-        # } else {
-        #   ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-        #   EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL,
-        #                           n.core = 1, optimizer = optimizer,
-        #                           REML = TRUE, pred = FALSE), silent = TRUE)
-        # }
+          # if (length(ZETA.now) == 1) {
+          #   Gammas0 <- list(K = K.SNP)
+          #   Ws0 <- list(W = Z.part)
+          #   Zs0 <- list(Z = diag(nrow(Mis.0)))
+          #   EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
+          #                                  n.core = 1, optimizer = optimizer,
+          #                                  Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0,
+          #                                  gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
+          #                                  eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+          #                                  REML = TRUE, pred = FALSE), silent = TRUE)
+          #   if ("try-error" %in% class(EMM.res2)) {
+          #     ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+          #     EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL,
+          #                             n.core = 1, optimizer = optimizer,
+          #                             REML = TRUE, pred = FALSE), silent = TRUE)
+          #   }
+          # } else {
+          #   ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+          #   EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2, tol = NULL,
+          #                           n.core = 1, optimizer = optimizer,
+          #                           REML = TRUE, pred = FALSE), silent = TRUE)
+          # }
 
-        perform.general <- FALSE
-        if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
-          Gammas0 <- list(K = K.SNP)
-          Ws0 <- list(W = Z.part)
-          Zs0 <- list(Z = diag(nrow(Mis.0)))
-          EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, optimizer = optimizer,
-                                         Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = 1,
-                                         gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
-                                         eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                         REML = TRUE, pred = FALSE, return.u.always = FALSE,
-                                         return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
-          if ("try-error" %in% class(EMM.res2)) {
+          perform.general <- FALSE
+          if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+            Gammas0 <- list(K = K.SNP)
+            Ws0 <- list(W = Z.part)
+            Zs0 <- list(Z = diag(nrow(Mis.0)))
+            EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now, optimizer = optimizer,
+                                           Zs0 = Zs0, Ws0 = Ws0, Gammas0 = Gammas0, n.core = 1,
+                                           gammas.diag = FALSE, X.fix = TRUE, tol = NULL,
+                                           eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+                                           REML = TRUE, pred = FALSE, return.u.always = FALSE,
+                                           return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
+            if ("try-error" %in% class(EMM.res2)) {
+              perform.general <- TRUE
+            }
+          } else {
             perform.general <- TRUE
           }
+
+          if (perform.general) {
+            ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
+            EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
+                                        package = package.MM, tol = NULL,
+                                        n.core = 1, optimizer = optimizer,
+                                        REML = TRUE, pred = FALSE,
+                                        return.u.always = FALSE,
+                                        return.u.each = FALSE,
+                                        return.Hinv = FALSE), silent = TRUE)
+          }
+
+          if (!("try-error" %in% class(EMM.res2))) {
+            LL2s <- EMM.res2$LL
+          } else {
+            LL2s <- LL0
+          }
+          df <- 1
         } else {
-          perform.general <- TRUE
-        }
+          test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
+          if (length(test.no) == 0) {
+            stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
+          }
 
-        if (perform.general) {
-          ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP)))
-          EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
-                                      package = package.MM, tol = NULL,
-                                      n.core = 1, optimizer = optimizer,
-                                      REML = TRUE, pred = FALSE,
-                                      return.u.always = FALSE,
-                                      return.u.each = FALSE,
-                                      return.Hinv = FALSE), silent = TRUE)
-        }
-
-        if (!("try-error" %in% class(EMM.res2))) {
-          LL2s <- EMM.res2$LL
-        } else {
-          LL2s <- LL0
-        }
-        df <- 1
-      } else {
-        test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if (length(test.no) == 0) {
-          stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
-        }
-
-        if (any(test.effect %in% c("additive", "additive+dominance"))) {
-          W.A <- calcGRM(genoMat = Mis,
-                         methodGRM = "addNOIA",
-                         returnWMat = TRUE,
-                         probaa = probaa[Mis.range],
-                         probAa = probAa[Mis.range])
-        }
-
-        if (any(MAF.cut.D)) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            W.D <- calcGRM(genoMat = Mis.D,
-                           methodGRM = "domNOIA",
+          if (any(test.effect %in% c("additive", "additive+dominance"))) {
+            W.A <- calcGRM(genoMat = Mis,
+                           methodGRM = "addNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.D],
-                           probAa = probAa[Mis.range.D])
-          }
-        }
-
-        # if (length(ZETA.now) == 1) {
-        #   if (1 %in% test.no) {
-        #     Ws0.A <- list(W.A = W.A)
-        #     Zs0.A <- list(W.A = Z.part)
-        #     Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
-        #   }
-        #
-        #   if (any(MAF.cut.D)) {
-        #     if (2 %in% test.no) {
-        #       Ws0.D <- list(W.D = W.D)
-        #       Zs0.D <- list(W.D = Z.part.D)
-        #       Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
-        #     }
-        #
-        #     if (3 %in% test.no) {
-        #       Ws0.AD <- list(W.A = W.A, W.D = W.D)
-        #       Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
-        #       Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
-        #     }
-        #   }
-        # } else {
-        #   if (1 %in% test.no) {
-        #     K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-        #     ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-        #   }
-        #
-        #   if (any(MAF.cut.D)) {
-        #     if (2 %in% test.no) {
-        #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-        #       ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-        #     }
-        #
-        #     if (3 %in% test.no) {
-        #       K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-        #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-        #       ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-        #                         list(part.D = list(Z = Z.part.D, K = K.D.part)))
-        #     }
-        #   }
-        # }
-        #
-        # LL2s <- df <- rep(NA, length(test.no))
-        # for (j in 1:length(test.no)) {
-        #   test.no.now <- test.no[j]
-        #   if (length(ZETA.now) == 1) {
-        #     if (test.no.now == 1) {
-        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
-        #                                      n.core = 1, optimizer = optimizer,
-        #                                      Zs0 = Zs0.A, Ws0 = Ws0.A, Gammas0 = Gammas0.A,
-        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if (test.no.now == 2) {
-        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
-        #                                      n.core = 1, optimizer = optimizer,
-        #                                      Zs0 = Zs0.D, Ws0 = Ws0.D, Gammas0 = Gammas0.D,
-        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if (test.no.now == 3) {
-        #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
-        #                                      n.core = 1, optimizer = optimizer,
-        #                                      Zs0 = Zs0.AD, Ws0 = Ws0.AD, Gammas0 = Gammas0.AD,
-        #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
-        #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-        #                                      REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if ("try-error" %in% class(EMM.res2)) {
-        #       if (1 %in% test.no) {
-        #         K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-        #         ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-        #       }
-        #
-        #       if (any(MAF.cut.D)) {
-        #         if (2 %in% test.no) {
-        #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-        #           ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-        #         }
-        #
-        #         if (3 %in% test.no) {
-        #           K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-        #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-        #           ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-        #                             list(part.D = list(Z = Z.part.D, K = K.D.part)))
-        #         }
-        #       }
-        #
-        #       if (test.no.now == 1) {
-        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL,
-        #                                 n.core = 1, optimizer = optimizer,
-        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
-        #       }
-        #
-        #       if (test.no.now == 2) {
-        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
-        #                                 n.core = 1, optimizer = optimizer,
-        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
-        #       }
-        #
-        #       if (test.no.now == 3) {
-        #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
-        #                                 n.core = 1, optimizer = optimizer,
-        #                                 REML = TRUE, pred = FALSE), silent = TRUE)
-        #       }
-        #     }
-        #   } else {
-        #     if (test.no.now == 1) {
-        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL,
-        #                               n.core = 1, optimizer = optimizer,
-        #                               REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if (test.no.now == 2) {
-        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
-        #                               n.core = 1, optimizer = optimizer,
-        #                               REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #
-        #     if (test.no.now == 3) {
-        #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
-        #                               n.core = 1, optimizer = optimizer,
-        #                               REML = TRUE, pred = FALSE), silent = TRUE)
-        #     }
-        #   }
-        #
-        #   if (!("try-error" %in% class(EMM.res2))) {
-        #     LL2 <- EMM.res2$LL
-        #   } else {
-        #     LL2 <- LL0
-        #   }
-        #   LL2s[j] <- LL2
-        # }
-        # df[test.no == 1] <- 1
-        # df[test.no == 2] <- 1
-        # df[test.no == 3] <- 2
-
-        test.names <- c("A", "D", "AD")[test.no]
-
-        if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
-          Zs0.A <- Zs0.D <- Zs0.AD <-
-            Ws0.A <- Ws0.D <- Ws0.AD <-
-            Gammas0.A <- Gammas0.D <- Gammas0.AD <- NULL
-          if ("A" %in% test.names) {
-            Ws0.A <- list(W.A = W.A)
-            Zs0.A <- list(W.A = Z.part)
-            Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
+                           probaa = probaa[Mis.range],
+                           probAa = probAa[Mis.range])
           }
 
           if (any(MAF.cut.D)) {
-            if ("D" %in% test.names) {
-              Ws0.D <- list(W.D = W.D)
-              Zs0.D <- list(W.D = Z.part.D)
-              Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
-            }
-
-            if ("AD" %in% test.names) {
-              Ws0.AD <- list(W.A = W.A, W.D = W.D)
-              Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
-              Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              W.D <- calcGRM(genoMat = Mis.D,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.D],
+                             probAa = probAa[Mis.range.D])
             }
           }
 
-          Zs0.list <- list(
-            A = Zs0.A,
-            D = Zs0.D,
-            AD = Zs0.AD
-          )
+          # if (length(ZETA.now) == 1) {
+          #   if (1 %in% test.no) {
+          #     Ws0.A <- list(W.A = W.A)
+          #     Zs0.A <- list(W.A = Z.part)
+          #     Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
+          #   }
+          #
+          #   if (any(MAF.cut.D)) {
+          #     if (2 %in% test.no) {
+          #       Ws0.D <- list(W.D = W.D)
+          #       Zs0.D <- list(W.D = Z.part.D)
+          #       Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
+          #     }
+          #
+          #     if (3 %in% test.no) {
+          #       Ws0.AD <- list(W.A = W.A, W.D = W.D)
+          #       Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
+          #       Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
+          #     }
+          #   }
+          # } else {
+          #   if (1 %in% test.no) {
+          #     K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+          #     ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+          #   }
+          #
+          #   if (any(MAF.cut.D)) {
+          #     if (2 %in% test.no) {
+          #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+          #       ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          #     }
+          #
+          #     if (3 %in% test.no) {
+          #       K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+          #       K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+          #       ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+          #                         list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          #     }
+          #   }
+          # }
+          #
+          # LL2s <- df <- rep(NA, length(test.no))
+          # for (j in 1:length(test.no)) {
+          #   test.no.now <- test.no[j]
+          #   if (length(ZETA.now) == 1) {
+          #     if (test.no.now == 1) {
+          #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
+          #                                      n.core = 1, optimizer = optimizer,
+          #                                      Zs0 = Zs0.A, Ws0 = Ws0.A, Gammas0 = Gammas0.A,
+          #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+          #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+          #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if (test.no.now == 2) {
+          #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
+          #                                      n.core = 1, optimizer = optimizer,
+          #                                      Zs0 = Zs0.D, Ws0 = Ws0.D, Gammas0 = Gammas0.D,
+          #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+          #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+          #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if (test.no.now == 3) {
+          #       EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now, ZETA = ZETA.now,
+          #                                      n.core = 1, optimizer = optimizer,
+          #                                      Zs0 = Zs0.AD, Ws0 = Ws0.AD, Gammas0 = Gammas0.AD,
+          #                                      gammas.diag = TRUE, X.fix = TRUE, tol = NULL,
+          #                                      eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+          #                                      REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if ("try-error" %in% class(EMM.res2)) {
+          #       if (1 %in% test.no) {
+          #         K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+          #         ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+          #       }
+          #
+          #       if (any(MAF.cut.D)) {
+          #         if (2 %in% test.no) {
+          #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+          #           ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          #         }
+          #
+          #         if (3 %in% test.no) {
+          #           K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+          #           K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+          #           ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+          #                             list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          #         }
+          #       }
+          #
+          #       if (test.no.now == 1) {
+          #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL,
+          #                                 n.core = 1, optimizer = optimizer,
+          #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+          #       }
+          #
+          #       if (test.no.now == 2) {
+          #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
+          #                                 n.core = 1, optimizer = optimizer,
+          #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+          #       }
+          #
+          #       if (test.no.now == 3) {
+          #         EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
+          #                                 n.core = 1, optimizer = optimizer,
+          #                                 REML = TRUE, pred = FALSE), silent = TRUE)
+          #       }
+          #     }
+          #   } else {
+          #     if (test.no.now == 1) {
+          #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.A, tol = NULL,
+          #                               n.core = 1, optimizer = optimizer,
+          #                               REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if (test.no.now == 2) {
+          #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.D, tol = NULL,
+          #                               n.core = 1, optimizer = optimizer,
+          #                               REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #
+          #     if (test.no.now == 3) {
+          #       EMM.res2 <- try(EM3.cpp(y = y, X0 = X.now, ZETA = ZETA.now2.AD, tol = NULL,
+          #                               n.core = 1, optimizer = optimizer,
+          #                               REML = TRUE, pred = FALSE), silent = TRUE)
+          #     }
+          #   }
+          #
+          #   if (!("try-error" %in% class(EMM.res2))) {
+          #     LL2 <- EMM.res2$LL
+          #   } else {
+          #     LL2 <- LL0
+          #   }
+          #   LL2s[j] <- LL2
+          # }
+          # df[test.no == 1] <- 1
+          # df[test.no == 2] <- 1
+          # df[test.no == 3] <- 2
 
-          Ws0.list <- list(
-            A = Ws0.A,
-            D = Ws0.D,
-            AD = Ws0.AD
-          )
+          test.names <- c("A", "D", "AD")[test.no]
 
-          Gammas0.list <- list(
-            A = Gammas0.A,
-            D = Gammas0.D,
-            AD = Gammas0.AD
-          )
-        } else {
-          ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
-          if ("A" %in% test.names) {
-            K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-            ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-          }
-
-          if (any(MAF.cut.D)) {
-            if ("D" %in% test.names) {
-              K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-              ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+          if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+            Zs0.A <- Zs0.D <- Zs0.AD <-
+              Ws0.A <- Ws0.D <- Ws0.AD <-
+              Gammas0.A <- Gammas0.D <- Gammas0.AD <- NULL
+            if ("A" %in% test.names) {
+              Ws0.A <- list(W.A = W.A)
+              Zs0.A <- list(W.A = Z.part)
+              Gammas0.A <- list(W.A = diag(weight.Mis ^ 2))
             }
 
-            if ("AD" %in% test.names) {
+            if (any(MAF.cut.D)) {
+              if ("D" %in% test.names) {
+                Ws0.D <- list(W.D = W.D)
+                Zs0.D <- list(W.D = Z.part.D)
+                Gammas0.D <- list(W.D = diag(weight.Mis.D ^ 2))
+              }
+
+              if ("AD" %in% test.names) {
+                Ws0.AD <- list(W.A = W.A, W.D = W.D)
+                Zs0.AD <- list(W.A = Z.part, W.D = Z.part.D)
+                Gammas0.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
+              }
+            }
+
+            Zs0.list <- list(
+              A = Zs0.A,
+              D = Zs0.D,
+              AD = Zs0.AD
+            )
+
+            Ws0.list <- list(
+              A = Ws0.A,
+              D = Ws0.D,
+              AD = Ws0.AD
+            )
+
+            Gammas0.list <- list(
+              A = Gammas0.A,
+              D = Gammas0.D,
+              AD = Gammas0.AD
+            )
+          } else {
+            ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+            if ("A" %in% test.names) {
               K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-              K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-              ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-                                list(part.D = list(Z = Z.part.D, K = K.D.part)))
+              ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
             }
+
+            if (any(MAF.cut.D)) {
+              if ("D" %in% test.names) {
+                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+              }
+
+              if ("AD" %in% test.names) {
+                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+                                  list(part.D = list(Z = Z.part.D, K = K.D.part)))
+              }
+            }
+
+
+            ZETA.now2.list <- list(
+              A = ZETA.now2.A,
+              D = ZETA.now2.D,
+              AD = ZETA.now2.AD
+            )
           }
 
 
-          ZETA.now2.list <- list(
-            A = ZETA.now2.A,
-            D = ZETA.now2.D,
-            AD = ZETA.now2.AD
-          )
+          df <- c(1, 1, 2)[test.no]
+          LL2s <- sapply(X = test.names,
+                         FUN = function(test.name.now) {
+
+                           compute.LL <- TRUE
+                           if (!any(MAF.cut.D)) {
+                             if (test.name.now == "D") {
+                               LL2 <- LL0
+                               compute.LL <- FALSE
+                             } else if (test.name.now == "AD") {
+                               test.name.now <- "A"
+                             }
+                           }
+
+                           if (compute.LL) {
+                             perform.general <- FALSE
+                             if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
+                               EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now,
+                                                              ZETA = ZETA.now, optimizer = optimizer,
+                                                              Zs0 = Zs0.list[[test.name.now]],
+                                                              Ws0 = Ws0.list[[test.name.now]],
+                                                              Gammas0 = Gammas0.list[[test.name.now]],
+                                                              n.core = 1, gammas.diag = FALSE,
+                                                              X.fix = TRUE, tol = NULL,
+                                                              eigen.SGS = eigen.SGS, eigen.G = eigen.G,
+                                                              REML = TRUE, pred = FALSE, return.u.always = FALSE,
+                                                              return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
+
+                               if ("try-error" %in% class(EMM.res2)) {
+                                 perform.general <- TRUE
+
+
+                                 ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+                                 if ("A" %in% test.name.now) {
+                                   K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                   ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
+                                 }
+
+                                 if ("D" %in% test.name.now) {
+                                   K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                   ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
+                                 }
+
+                                 if ("AD" %in% test.name.now) {
+                                   K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                   K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                   ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
+                                                     list(part.D = list(Z = Z.part.D, K = K.D.part)))
+                                 }
+
+
+                                 ZETA.now2.list <- list(
+                                   A = ZETA.now2.A,
+                                   D = ZETA.now2.D,
+                                   AD = ZETA.now2.AD
+                                 )
+                               }
+                             } else {
+                               perform.general <- TRUE
+                             }
+
+                             if (perform.general) {
+                               EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.list[[test.name.now]],
+                                                           package = package.MM, tol = NULL,
+                                                           n.core = 1, optimizer = optimizer,
+                                                           REML = TRUE, pred = FALSE,
+                                                           return.u.always = FALSE,
+                                                           return.u.each = FALSE,
+                                                           return.Hinv = FALSE), silent = TRUE)
+                             }
+
+
+                             if (!("try-error" %in% class(EMM.res2))) {
+                               LL2 <- EMM.res2$LL
+                             } else {
+                               LL2 <- LL0
+                             }
+                           }
+
+                           return(LL2)
+                         }, simplify = TRUE)
+
         }
 
 
-        df <- c(1, 1, 2)[test.no]
-        LL2s <- sapply(X = test.names,
-                       FUN = function(test.name.now) {
-
-                         compute.LL <- TRUE
-                         if (!any(MAF.cut.D)) {
-                           if (test.name.now == "D") {
-                             LL2 <- LL0
-                             compute.LL <- FALSE
-                           } else if (test.name.now == "AD") {
-                             test.name.now <- "A"
-                           }
-                         }
-
-                         if (compute.LL) {
-                           perform.general <- FALSE
-                           if ((length(ZETA.now) == 1) & (package.MM == "RAINBOWR")) {
-                             EMM.res2 <- try(EM3.linker.cpp(y0 = y, X0 = X.now,
-                                                            ZETA = ZETA.now, optimizer = optimizer,
-                                                            Zs0 = Zs0.list[[test.name.now]],
-                                                            Ws0 = Ws0.list[[test.name.now]],
-                                                            Gammas0 = Gammas0.list[[test.name.now]],
-                                                            n.core = 1, gammas.diag = FALSE,
-                                                            X.fix = TRUE, tol = NULL,
-                                                            eigen.SGS = eigen.SGS, eigen.G = eigen.G,
-                                                            REML = TRUE, pred = FALSE, return.u.always = FALSE,
-                                                            return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
-
-                             if ("try-error" %in% class(EMM.res2)) {
-                               perform.general <- TRUE
-
-
-                               ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
-                               if ("A" %in% test.name.now) {
-                                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                                 ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
-                               }
-
-                               if ("D" %in% test.name.now) {
-                                 K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-                                 ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-                               }
-
-                               if ("AD" %in% test.name.now) {
-                                 K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                                 K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-                                 ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
-                                                   list(part.D = list(Z = Z.part.D, K = K.D.part)))
-                               }
-
-
-                               ZETA.now2.list <- list(
-                                 A = ZETA.now2.A,
-                                 D = ZETA.now2.D,
-                                 AD = ZETA.now2.AD
-                               )
-                             }
-                           } else {
-                             perform.general <- TRUE
-                           }
-
-                           if (perform.general) {
-                             EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2.list[[test.name.now]],
-                                                         package = package.MM, tol = NULL,
-                                                         n.core = 1, optimizer = optimizer,
-                                                         REML = TRUE, pred = FALSE,
-                                                         return.u.always = FALSE,
-                                                         return.u.each = FALSE,
-                                                         return.Hinv = FALSE), silent = TRUE)
-                           }
-
-
-                           if (!("try-error" %in% class(EMM.res2))) {
-                             LL2 <- EMM.res2$LL
-                           } else {
-                             LL2 <- LL0
-                           }
-                         }
-
-                         return(LL2)
-                       }, simplify = TRUE)
-
+        deviances <- 2 * (LL2s - LL0)
+        scores.now <- ifelse(
+          test = deviances <= 0, yes = 0,
+          no = -log10((1 - chi0.mixture) *
+                        pchisq(q = deviances, df = df,
+                               lower.tail = FALSE))
+        )
+      } else {
+        scores.now <- rep(NA, ncol.scores)
       }
-
-
-      deviances <- 2 * (LL2s - LL0)
-      scores.now <- ifelse(
-        test = deviances <= 0, yes = 0,
-        no = -log10((1 - chi0.mixture) *
-                      pchisq(q = deviances, df = df,
-                             lower.tail = FALSE))
-      )
     } else {
       scores.now <- rep(NA, ncol.scores)
     }
@@ -3215,212 +3223,215 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-      Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-          Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+        Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
-
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
-            }
-          }
-        } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
-        }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
         if (any(MAF.cut.D)) {
           if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
+            Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
           }
         }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
-      if (window.size != 1) {
-        if (weighting.center) {
-          weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+
+
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
+              }
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
+              }
+            }
           }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
+            }
+          }
         } else {
-          weight.Mis <- rep(1, window.size)
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
-          }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-      } else {
-        weight.Mis <- 1
-      }
 
-      if (any(MAF.cut.D)) {
         if (window.size != 1) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            if (weighting.center) {
-              weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-              }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            } else {
-              weight.Mis.D <- rep(1, window.size.D)
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-              }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+          if (weighting.center) {
+            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
             }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          } else {
+            weight.Mis <- rep(1, window.size)
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+            }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
-          weight.Mis.D <- 1
-        }
-      }
-
-      if (kernel.method != "linear") {
-        if (ncol(Mis) != 1) {
-          Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
-        } else {
-          Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          weight.Mis <- 1
         }
 
-        K.SNP <- calcGRM(genoMat = Mis.weighted,
-                         methodGRM = kernel.method,
-                         kernel.h = kernel.h,
-                         returnWMat = FALSE)
-
-        Ws <- list(W = Z.part)
-        Gammas <- list(Gamma = K.SNP)
-        scores.now <- score.linker.cpp(y, Ws = Ws, Gammas = Gammas,
-                                       gammas.diag = FALSE, Gu = Gu, Ge = Ge,
-                                       P0 = P0, chi0.mixture = chi0.mixture)
-      } else {
-        test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if (length(test.no) == 0) {
-          stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
-        }
-
-        if (any(test.effect %in% c("additive", "additive+dominance"))) {
-          W.A <- calcGRM(genoMat = Mis,
-                         methodGRM = "addNOIA",
-                         returnWMat = TRUE,
-                         probaa = probaa[Mis.range],
-                         probAa = probAa[Mis.range])
-        }
         if (any(MAF.cut.D)) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            W.D <- calcGRM(genoMat = Mis.D,
-                           methodGRM = "domNOIA",
+          if (window.size != 1) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              if (weighting.center) {
+                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              } else {
+                weight.Mis.D <- rep(1, window.size.D)
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              }
+            }
+          } else {
+            weight.Mis.D <- 1
+          }
+        }
+
+        if (kernel.method != "linear") {
+          if (ncol(Mis) != 1) {
+            Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
+          } else {
+            Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          }
+
+          K.SNP <- calcGRM(genoMat = Mis.weighted,
+                           methodGRM = kernel.method,
+                           kernel.h = kernel.h,
+                           returnWMat = FALSE)
+
+          Ws <- list(W = Z.part)
+          Gammas <- list(Gamma = K.SNP)
+          scores.now <- score.linker.cpp(y, Ws = Ws, Gammas = Gammas,
+                                         gammas.diag = FALSE, Gu = Gu, Ge = Ge,
+                                         P0 = P0, chi0.mixture = chi0.mixture)
+        } else {
+          test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
+          if (length(test.no) == 0) {
+            stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
+          }
+
+          if (any(test.effect %in% c("additive", "additive+dominance"))) {
+            W.A <- calcGRM(genoMat = Mis,
+                           methodGRM = "addNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.D],
-                           probAa = probAa[Mis.range.D])
+                           probaa = probaa[Mis.range],
+                           probAa = probAa[Mis.range])
           }
-        }
-
-        if (1 %in% test.no) {
-          Ws.A <- list(W.A = Z.part %*% W.A)
-          Gammas.A <- list(W.A = diag(weight.Mis ^ 2))
-        }
-
-        if (any(MAF.cut.D)) {
-          if (2 %in% test.no) {
-            Ws.D <- list(W.D = Z.part.D %*% W.D)
-            Gammas.D <- list(W.D = diag(weight.Mis.D ^ 2))
-          }
-
-          if (3 %in% test.no) {
-            Ws.AD <- list(W.A = Z.part %*% W.A, Z.part.D %*% W.D)
-            Gammas.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
-          }
-        }
-
-        scores.now <- rep(NA, length(test.no))
-        for (j in 1:length(test.no)) {
-          test.no.now <- test.no[j]
-          if (test.no.now == 1) {
-            score.now <- score.linker.cpp(y, Ws = Ws.A, Gammas = Gammas.A,
-                                          gammas.diag = TRUE, Gu = Gu, Ge = Ge,
-                                          P0 = P0, chi0.mixture = chi0.mixture)
-          }
-
-          if (test.no.now == 2) {
-            if (any(MAF.cut.D)) {
-              score.now <- score.linker.cpp(y, Ws = Ws.D, Gammas = Gammas.D,
-                                            gammas.diag = TRUE, Gu = Gu, Ge = Ge,
-                                            P0 = P0, chi0.mixture = chi0.mixture)
-            } else {
-              score.now <- 0
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              W.D <- calcGRM(genoMat = Mis.D,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.D],
+                             probAa = probAa[Mis.range.D])
             }
           }
 
-          if (test.no.now == 3) {
-            if (any(MAF.cut.D)) {
-              score.now <- score.linker.cpp(y, Ws = Ws.AD, Gammas = Gammas.AD,
-                                            gammas.diag = TRUE, Gu = Gu, Ge = Ge,
-                                            P0 = P0, chi0.mixture = chi0.mixture)
-            } else {
-              score.now <- 0
+          if (1 %in% test.no) {
+            Ws.A <- list(W.A = Z.part %*% W.A)
+            Gammas.A <- list(W.A = diag(weight.Mis ^ 2))
+          }
+
+          if (any(MAF.cut.D)) {
+            if (2 %in% test.no) {
+              Ws.D <- list(W.D = Z.part.D %*% W.D)
+              Gammas.D <- list(W.D = diag(weight.Mis.D ^ 2))
+            }
+
+            if (3 %in% test.no) {
+              Ws.AD <- list(W.A = Z.part %*% W.A, Z.part.D %*% W.D)
+              Gammas.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
             }
           }
 
-          scores.now[j] <- score.now
+          scores.now <- rep(NA, length(test.no))
+          for (j in 1:length(test.no)) {
+            test.no.now <- test.no[j]
+            if (test.no.now == 1) {
+              score.now <- score.linker.cpp(y, Ws = Ws.A, Gammas = Gammas.A,
+                                            gammas.diag = TRUE, Gu = Gu, Ge = Ge,
+                                            P0 = P0, chi0.mixture = chi0.mixture)
+            }
+
+            if (test.no.now == 2) {
+              if (any(MAF.cut.D)) {
+                score.now <- score.linker.cpp(y, Ws = Ws.D, Gammas = Gammas.D,
+                                              gammas.diag = TRUE, Gu = Gu, Ge = Ge,
+                                              P0 = P0, chi0.mixture = chi0.mixture)
+              } else {
+                score.now <- 0
+              }
+            }
+
+            if (test.no.now == 3) {
+              if (any(MAF.cut.D)) {
+                score.now <- score.linker.cpp(y, Ws = Ws.AD, Gammas = Gammas.AD,
+                                              gammas.diag = TRUE, Gu = Gu, Ge = Ge,
+                                              P0 = P0, chi0.mixture = chi0.mixture)
+              } else {
+                score.now <- 0
+              }
+            }
+
+            scores.now[j] <- score.now
+          }
         }
+        scores[i, ] <- scores.now
       }
-      scores[i, ] <- scores.now
     }
   }
 
@@ -3619,210 +3630,215 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[markNo]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-      Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-          Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+        Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
-
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
-            }
-          }
-        } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
-        }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
         if (any(MAF.cut.D)) {
           if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
+            Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
           }
         }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
-      if (window.size != 1) {
-        if (weighting.center) {
-          weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
+              }
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
+              }
+            }
           }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
+            }
+          }
         } else {
-          weight.Mis <- rep(1, window.size)
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
-          }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-      } else {
-        weight.Mis <- 1
-      }
 
-      if (any(MAF.cut.D)) {
         if (window.size != 1) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            if (weighting.center) {
-              weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-              }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            } else {
-              weight.Mis.D <- rep(1, window.size.D)
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-              }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+          if (weighting.center) {
+            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
             }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          } else {
+            weight.Mis <- rep(1, window.size)
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+            }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
-          weight.Mis.D <- 1
-        }
-      }
-
-      if (kernel.method != "linear") {
-        if (ncol(Mis) != 1) {
-          Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
-        } else {
-          Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          weight.Mis <- 1
         }
 
-
-        K.SNP <- calcGRM(genoMat = Mis.weighted,
-                         methodGRM = kernel.method,
-                         kernel.h = kernel.h,
-                         returnWMat = FALSE)
-
-        Ws <- list(W = Z.part)
-        Gammas <- list(Gamma = K.SNP)
-        scores.now <- score.linker.cpp(y, Ws = Ws, Gammas = Gammas,
-                                       gammas.diag = FALSE, Gu = Gu, Ge = Ge,
-                                       P0 = P0, chi0.mixture = chi0.mixture)
-      } else {
-        test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if (length(test.no) == 0) {
-          stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
-        }
-
-        if (any(test.effect %in% c("additive", "additive+dominance"))) {
-          W.A <- calcGRM(genoMat = Mis,
-                         methodGRM = "addNOIA",
-                         returnWMat = TRUE,
-                         probaa = probaa[Mis.range],
-                         probAa = probAa[Mis.range])
-        }
         if (any(MAF.cut.D)) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            W.D <- calcGRM(genoMat = Mis.D,
-                           methodGRM = "domNOIA",
+          if (window.size != 1) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              if (weighting.center) {
+                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              } else {
+                weight.Mis.D <- rep(1, window.size.D)
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              }
+            }
+          } else {
+            weight.Mis.D <- 1
+          }
+        }
+
+        if (kernel.method != "linear") {
+          if (ncol(Mis) != 1) {
+            Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
+          } else {
+            Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          }
+
+
+          K.SNP <- calcGRM(genoMat = Mis.weighted,
+                           methodGRM = kernel.method,
+                           kernel.h = kernel.h,
+                           returnWMat = FALSE)
+
+          Ws <- list(W = Z.part)
+          Gammas <- list(Gamma = K.SNP)
+          scores.now <- score.linker.cpp(y, Ws = Ws, Gammas = Gammas,
+                                         gammas.diag = FALSE, Gu = Gu, Ge = Ge,
+                                         P0 = P0, chi0.mixture = chi0.mixture)
+        } else {
+          test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
+          if (length(test.no) == 0) {
+            stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
+          }
+
+          if (any(test.effect %in% c("additive", "additive+dominance"))) {
+            W.A <- calcGRM(genoMat = Mis,
+                           methodGRM = "addNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.D],
-                           probAa = probAa[Mis.range.D])
+                           probaa = probaa[Mis.range],
+                           probAa = probAa[Mis.range])
           }
-        }
-
-        if (1 %in% test.no) {
-          Ws.A <- list(W.A = Z.part %*% W.A)
-          Gammas.A <- list(W.A = diag(weight.Mis ^ 2))
-        }
-
-        if (any(MAF.cut.D)) {
-          if (2 %in% test.no) {
-            Ws.D <- list(W.D = Z.part.D %*% W.D)
-            Gammas.D <- list(W.D = diag(weight.Mis.D ^ 2))
-          }
-
-          if (3 %in% test.no) {
-            Ws.AD <- list(W.A = Z.part %*% W.A, Z.part.D %*% W.D)
-            Gammas.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
-          }
-        }
-
-        scores.now <- rep(NA, length(test.no))
-        for (j in 1:length(test.no)) {
-          test.no.now <- test.no[j]
-          if (test.no.now == 1) {
-            score.now <- score.linker.cpp(y, Ws = Ws.A, Gammas = Gammas.A,
-                                          gammas.diag = TRUE, Gu = Gu, Ge = Ge,
-                                          P0 = P0, chi0.mixture = chi0.mixture)
-          }
-
-          if (test.no.now == 2) {
-            if (any(MAF.cut.D)) {
-              score.now <- score.linker.cpp(y, Ws = Ws.D, Gammas = Gammas.D,
-                                            gammas.diag = TRUE, Gu = Gu, Ge = Ge,
-                                            P0 = P0, chi0.mixture = chi0.mixture)
-            } else {
-              score.now <- 0
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              W.D <- calcGRM(genoMat = Mis.D,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.D],
+                             probAa = probAa[Mis.range.D])
             }
           }
 
-          if (test.no.now == 3) {
-            if (any(MAF.cut.D)) {
-              score.now <- score.linker.cpp(y, Ws = Ws.AD, Gammas = Gammas.AD,
-                                            gammas.diag = TRUE, Gu = Gu, Ge = Ge,
-                                            P0 = P0, chi0.mixture = chi0.mixture)
-            } else {
-              score.now <- 0
+          if (1 %in% test.no) {
+            Ws.A <- list(W.A = Z.part %*% W.A)
+            Gammas.A <- list(W.A = diag(weight.Mis ^ 2))
+          }
+
+          if (any(MAF.cut.D)) {
+            if (2 %in% test.no) {
+              Ws.D <- list(W.D = Z.part.D %*% W.D)
+              Gammas.D <- list(W.D = diag(weight.Mis.D ^ 2))
+            }
+
+            if (3 %in% test.no) {
+              Ws.AD <- list(W.A = Z.part %*% W.A, Z.part.D %*% W.D)
+              Gammas.AD <- list(W.A = diag(weight.Mis ^ 2), W.D = diag(weight.Mis.D ^ 2))
             }
           }
 
-          scores.now[j] <- score.now
+          scores.now <- rep(NA, length(test.no))
+          for (j in 1:length(test.no)) {
+            test.no.now <- test.no[j]
+            if (test.no.now == 1) {
+              score.now <- score.linker.cpp(y, Ws = Ws.A, Gammas = Gammas.A,
+                                            gammas.diag = TRUE, Gu = Gu, Ge = Ge,
+                                            P0 = P0, chi0.mixture = chi0.mixture)
+            }
+
+            if (test.no.now == 2) {
+              if (any(MAF.cut.D)) {
+                score.now <- score.linker.cpp(y, Ws = Ws.D, Gammas = Gammas.D,
+                                              gammas.diag = TRUE, Gu = Gu, Ge = Ge,
+                                              P0 = P0, chi0.mixture = chi0.mixture)
+              } else {
+                score.now <- 0
+              }
+            }
+
+            if (test.no.now == 3) {
+              if (any(MAF.cut.D)) {
+                score.now <- score.linker.cpp(y, Ws = Ws.AD, Gammas = Gammas.AD,
+                                              gammas.diag = TRUE, Gu = Gu, Ge = Ge,
+                                              P0 = P0, chi0.mixture = chi0.mixture)
+              } else {
+                score.now <- 0
+              }
+            }
+
+            scores.now[j] <- score.now
+          }
         }
+      } else {
+        scores.now <- rep(NA, ncol.scores)
       }
     } else {
       scores.now <- rep(NA, ncol.scores)
@@ -4039,112 +4055,115 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gas
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (dominance.eff) {
-      Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (dominance.eff) {
-          Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (dominance.eff) {
+        Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
 
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
+          }
+        }
+
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (dominance.eff) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
+              }
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (dominance.eff) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
+              }
+            }
+          }
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
           if (any(MAF.cut.D)) {
             if (dominance.eff) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
             }
           }
         } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (dominance.eff) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
-        if (any(MAF.cut.D)) {
-          if (dominance.eff) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
-          }
-        }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
 
-      W.A <- calcGRM(genoMat = Mis,
-                     methodGRM = "addNOIA",
-                     returnWMat = TRUE,
-                     probaa = probaa[Mis.range],
-                     probAa = probAa[Mis.range])
-
-      W.A.0 <- calcGRM(genoMat = Mis.0.0,
+        W.A <- calcGRM(genoMat = Mis,
                        methodGRM = "addNOIA",
                        returnWMat = TRUE,
-                       probaa = probaa[Mis.range.0],
-                       probAa = probAa[Mis.range.0])
+                       probaa = probaa[Mis.range],
+                       probAa = probAa[Mis.range])
 
-      W.A.list[[i]] <- W.A
-      Z.A.part.list[[i]] <- Z.part
-      W.A.0.list[[i]] <- W.A.0
-
-      if (any(MAF.cut.D)) {
-        if (dominance.eff) {
-          W.D <- calcGRM(genoMat = Mis.D,
-                         methodGRM = "domNOIA",
+        W.A.0 <- calcGRM(genoMat = Mis.0.0,
+                         methodGRM = "addNOIA",
                          returnWMat = TRUE,
-                         probaa = probaa[Mis.range.D],
-                         probAa = probAa[Mis.range.D])
+                         probaa = probaa[Mis.range.0],
+                         probAa = probAa[Mis.range.0])
 
-          W.D.0 <- calcGRM(genoMat = Mis.0.0,
+        W.A.list[[i]] <- W.A
+        Z.A.part.list[[i]] <- Z.part
+        W.A.0.list[[i]] <- W.A.0
+
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            W.D <- calcGRM(genoMat = Mis.D,
                            methodGRM = "domNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.0],
-                           probAa = probAa[Mis.range.0])
+                           probaa = probaa[Mis.range.D],
+                           probAa = probAa[Mis.range.D])
 
-          W.D.list[[i]] <- W.D
-          Z.D.part.list[[i]] <- Z.part.D
-          W.D.0.list[[i]] <- W.D.0
+            W.D.0 <- calcGRM(genoMat = Mis.0.0,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.0],
+                             probAa = probAa[Mis.range.0])
+
+            W.D.list[[i]] <- W.D
+            Z.D.part.list[[i]] <- Z.part.D
+            W.D.0.list[[i]] <- W.D.0
+          }
         }
       }
     }
@@ -4843,117 +4862,119 @@ score.calc.epistasis.LR.MC <- function(M.now, y, X.now, ZETA.now, package.MM = "
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (dominance.eff) {
-      Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (dominance.eff) {
-          Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (dominance.eff) {
+        Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
 
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
+          }
+        }
+
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (dominance.eff) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
+              }
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (dominance.eff) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
+              }
+            }
+          }
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
           if (any(MAF.cut.D)) {
             if (dominance.eff) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
             }
           }
         } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (dominance.eff) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
-        if (any(MAF.cut.D)) {
-          if (dominance.eff) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
-          }
-        }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
 
-      W.A <- calcGRM(genoMat = Mis,
-                     methodGRM = "addNOIA",
-                     returnWMat = TRUE,
-                     probaa = probaa[Mis.range],
-                     probAa = probAa[Mis.range])
-
-      W.A.0 <- calcGRM(genoMat = Mis.0.0,
+        W.A <- calcGRM(genoMat = Mis,
                        methodGRM = "addNOIA",
                        returnWMat = TRUE,
-                       probaa = probaa[Mis.range.0],
-                       probAa = probAa[Mis.range.0])
+                       probaa = probaa[Mis.range],
+                       probAa = probAa[Mis.range])
 
-      W.A.list[[i]] <- W.A
-      Z.A.part.list[[i]] <- Z.part
-      W.A.0.list[[i]] <- W.A.0
-
-      if (any(MAF.cut.D)) {
-        if (dominance.eff) {
-          W.D <- calcGRM(genoMat = Mis.D,
-                         methodGRM = "domNOIA",
+        W.A.0 <- calcGRM(genoMat = Mis.0.0,
+                         methodGRM = "addNOIA",
                          returnWMat = TRUE,
-                         probaa = probaa[Mis.range.D],
-                         probAa = probAa[Mis.range.D])
+                         probaa = probaa[Mis.range.0],
+                         probAa = probAa[Mis.range.0])
 
-          W.D.0 <- calcGRM(genoMat = Mis.0.0,
+        W.A.list[[i]] <- W.A
+        Z.A.part.list[[i]] <- Z.part
+        W.A.0.list[[i]] <- W.A.0
+
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            W.D <- calcGRM(genoMat = Mis.D,
                            methodGRM = "domNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.0],
-                           probAa = probAa[Mis.range.0])
+                           probaa = probaa[Mis.range.D],
+                           probAa = probAa[Mis.range.D])
 
-          W.D.list[[i]] <- W.D
-          Z.D.part.list[[i]] <- Z.part.D
-          W.D.0.list[[i]] <- W.D.0
+            W.D.0 <- calcGRM(genoMat = Mis.0.0,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.0],
+                             probAa = probAa[Mis.range.0])
+
+            W.D.list[[i]] <- W.D
+            Z.D.part.list[[i]] <- Z.part.D
+            W.D.0.list[[i]] <- W.D.0
+          }
         }
       }
     }
   }
-
 
   test.cands.mat <- expand.grid(
     rep(list(1:n.scores), 2)
@@ -5617,111 +5638,114 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (dominance.eff) {
-      Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (dominance.eff) {
-          Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (dominance.eff) {
+        Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
+
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
+          }
+        }
+
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (dominance.eff) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
+              }
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (dominance.eff) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
+              }
+            }
+          }
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
           if (any(MAF.cut.D)) {
             if (dominance.eff) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
             }
           }
         } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (dominance.eff) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
-        if (any(MAF.cut.D)) {
-          if (dominance.eff) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
-          }
-        }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
 
-      W.A <- calcGRM(genoMat = Mis,
-                     methodGRM = "addNOIA",
-                     returnWMat = TRUE,
-                     probaa = probaa[Mis.range],
-                     probAa = probAa[Mis.range])
-
-      W.A.0 <- calcGRM(genoMat = Mis.0.0,
+        W.A <- calcGRM(genoMat = Mis,
                        methodGRM = "addNOIA",
                        returnWMat = TRUE,
-                       probaa = probaa[Mis.range.0],
-                       probAa = probAa[Mis.range.0])
+                       probaa = probaa[Mis.range],
+                       probAa = probAa[Mis.range])
 
-      W.A.list[[i]] <- W.A
-      Z.A.part.list[[i]] <- Z.part
-      W.A.0.list[[i]] <- W.A.0
-
-      if (any(MAF.cut.D)) {
-        if (dominance.eff) {
-          W.D <- calcGRM(genoMat = Mis.D,
-                         methodGRM = "domNOIA",
+        W.A.0 <- calcGRM(genoMat = Mis.0.0,
+                         methodGRM = "addNOIA",
                          returnWMat = TRUE,
-                         probaa = probaa[Mis.range.D],
-                         probAa = probAa[Mis.range.D])
+                         probaa = probaa[Mis.range.0],
+                         probAa = probAa[Mis.range.0])
 
-          W.D.0 <- calcGRM(genoMat = Mis.0.0,
+        W.A.list[[i]] <- W.A
+        Z.A.part.list[[i]] <- Z.part
+        W.A.0.list[[i]] <- W.A.0
+
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            W.D <- calcGRM(genoMat = Mis.D,
                            methodGRM = "domNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.0],
-                           probAa = probAa[Mis.range.0])
+                           probaa = probaa[Mis.range.D],
+                           probAa = probAa[Mis.range.D])
 
-          W.D.list[[i]] <- W.D
-          Z.D.part.list[[i]] <- Z.part.D
-          W.D.0.list[[i]] <- W.D.0
+            W.D.0 <- calcGRM(genoMat = Mis.0.0,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.0],
+                             probAa = probAa[Mis.range.0])
+
+            W.D.list[[i]] <- W.D
+            Z.D.part.list[[i]] <- Z.part.D
+            W.D.0.list[[i]] <- W.D.0
+          }
         }
       }
     }
@@ -6353,111 +6377,114 @@ score.calc.epistasis.score.MC <- function(M.now, y, X.now, ZETA.now,
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (dominance.eff) {
-      Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (dominance.eff) {
-          Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (dominance.eff) {
+        Mis.D.0.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
+
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            Mis.D.0 <- Mis.D.0.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
+          }
+        }
+
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (dominance.eff) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
+              }
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (dominance.eff) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
+              }
+            }
+          }
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
           if (any(MAF.cut.D)) {
             if (dominance.eff) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
             }
           }
         } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (dominance.eff) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap, pamonce = 5)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
-        if (any(MAF.cut.D)) {
-          if (dominance.eff) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
-          }
-        }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
 
-      W.A <- calcGRM(genoMat = Mis,
-                     methodGRM = "addNOIA",
-                     returnWMat = TRUE,
-                     probaa = probaa[Mis.range],
-                     probAa = probAa[Mis.range])
-
-      W.A.0 <- calcGRM(genoMat = Mis.0.0,
+        W.A <- calcGRM(genoMat = Mis,
                        methodGRM = "addNOIA",
                        returnWMat = TRUE,
-                       probaa = probaa[Mis.range.0],
-                       probAa = probAa[Mis.range.0])
+                       probaa = probaa[Mis.range],
+                       probAa = probAa[Mis.range])
 
-      W.A.list[[i]] <- W.A
-      Z.A.part.list[[i]] <- Z.part
-      W.A.0.list[[i]] <- W.A.0
-
-      if (any(MAF.cut.D)) {
-        if (dominance.eff) {
-          W.D <- calcGRM(genoMat = Mis.D,
-                         methodGRM = "domNOIA",
+        W.A.0 <- calcGRM(genoMat = Mis.0.0,
+                         methodGRM = "addNOIA",
                          returnWMat = TRUE,
-                         probaa = probaa[Mis.range.D],
-                         probAa = probAa[Mis.range.D])
+                         probaa = probaa[Mis.range.0],
+                         probAa = probAa[Mis.range.0])
 
-          W.D.0 <- calcGRM(genoMat = Mis.0.0,
+        W.A.list[[i]] <- W.A
+        Z.A.part.list[[i]] <- Z.part
+        W.A.0.list[[i]] <- W.A.0
+
+        if (any(MAF.cut.D)) {
+          if (dominance.eff) {
+            W.D <- calcGRM(genoMat = Mis.D,
                            methodGRM = "domNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.0],
-                           probAa = probAa[Mis.range.0])
+                           probaa = probaa[Mis.range.D],
+                           probAa = probAa[Mis.range.D])
 
-          W.D.list[[i]] <- W.D
-          Z.D.part.list[[i]] <- Z.part.D
-          W.D.0.list[[i]] <- W.D.0
+            W.D.0 <- calcGRM(genoMat = Mis.0.0,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.0],
+                             probAa = probAa[Mis.range.0])
+
+            W.D.list[[i]] <- W.D
+            Z.D.part.list[[i]] <- Z.part.D
+            W.D.0.list[[i]] <- W.D.0
+          }
         }
       }
     }
@@ -7602,286 +7629,289 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-      Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-          Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1) {
+      Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+        Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
-            }
-          }
-        } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
-        }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
         if (any(MAF.cut.D)) {
           if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
+            Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
           }
         }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
-      if (window.size != 1) {
-        if (weighting.center) {
-          weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
+              }
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
+              }
+            }
           }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
+            }
+          }
         } else {
-          weight.Mis <- rep(1, window.size)
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
-          }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-      } else {
-        weight.Mis <- 1
-      }
 
-      if (any(MAF.cut.D)) {
         if (window.size != 1) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            if (weighting.center) {
-              weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-              }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            } else {
-              weight.Mis.D <- rep(1, window.size.D)
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-              }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+          if (weighting.center) {
+            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
             }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          } else {
+            weight.Mis <- rep(1, window.size)
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+            }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
-          weight.Mis.D <- 1
-        }
-      }
-
-      if (kernel.method != "linear") {
-        if (ncol(Mis) != 1) {
-          Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
-        } else {
-          Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
-        }
-
-        K.SNP <- calcGRM(genoMat = Mis.weighted,
-                         methodGRM = kernel.method,
-                         kernel.h = kernel.h,
-                         returnWMat = FALSE)
-
-
-        Z.part.sp <- as(object = Z.part, Class = "sparseMatrix")
-        Z.part.t.sp <- as(object = t(Z.part), Class = "sparseMatrix")
-        K.int <- as.matrix(Z.part.sp %*% K.SNP %*% Z.part.t.sp) * interaction.kernel
-        Z.int <- diag(nrow(interaction.kernel))
-        rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
-
-        ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP),
-                                      part.int = list(Z = Z.int, K = K.int)))
-        EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
-                                    package = package.MM, tol = NULL,
-                                    n.core = n.core, optimizer = optimizer,
-                                    REML = TRUE, pred = FALSE,
-                                    return.u.always = FALSE,
-                                    return.u.each = FALSE,
-                                    return.Hinv = FALSE), silent = TRUE)
-
-
-        if (!("try-error" %in% class(EMM.res2))) {
-          LL2s <- EMM.res2$LL
-        } else {
-          LL2s <- LL0
-        }
-
-        df <- 2
-      } else {
-        test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if (length(test.no) == 0) {
-          stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
-        }
-
-        if (any(test.effect %in% c("additive", "additive+dominance"))) {
-          W.A <- calcGRM(genoMat = Mis,
-                         methodGRM = "addNOIA",
-                         returnWMat = TRUE,
-                         probaa = probaa[Mis.range],
-                         probAa = probAa[Mis.range])
+          weight.Mis <- 1
         }
 
         if (any(MAF.cut.D)) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            W.D <- calcGRM(genoMat = Mis.D,
-                           methodGRM = "domNOIA",
+          if (window.size != 1) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              if (weighting.center) {
+                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              } else {
+                weight.Mis.D <- rep(1, window.size.D)
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              }
+            }
+          } else {
+            weight.Mis.D <- 1
+          }
+        }
+
+        if (kernel.method != "linear") {
+          if (ncol(Mis) != 1) {
+            Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
+          } else {
+            Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          }
+
+          K.SNP <- calcGRM(genoMat = Mis.weighted,
+                           methodGRM = kernel.method,
+                           kernel.h = kernel.h,
+                           returnWMat = FALSE)
+
+
+          Z.part.sp <- as(object = Z.part, Class = "sparseMatrix")
+          Z.part.t.sp <- as(object = t(Z.part), Class = "sparseMatrix")
+          K.int <- as.matrix(Z.part.sp %*% K.SNP %*% Z.part.t.sp) * interaction.kernel
+          Z.int <- diag(nrow(interaction.kernel))
+          rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
+
+          ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP),
+                                        part.int = list(Z = Z.int, K = K.int)))
+          EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
+                                      package = package.MM, tol = NULL,
+                                      n.core = n.core, optimizer = optimizer,
+                                      REML = TRUE, pred = FALSE,
+                                      return.u.always = FALSE,
+                                      return.u.each = FALSE,
+                                      return.Hinv = FALSE), silent = TRUE)
+
+
+          if (!("try-error" %in% class(EMM.res2))) {
+            LL2s <- EMM.res2$LL
+          } else {
+            LL2s <- LL0
+          }
+
+          df <- 2
+        } else {
+          test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
+          if (length(test.no) == 0) {
+            stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
+          }
+
+          if (any(test.effect %in% c("additive", "additive+dominance"))) {
+            W.A <- calcGRM(genoMat = Mis,
+                           methodGRM = "addNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.D],
-                           probAa = probAa[Mis.range.D])
-          }
-        }
-
-
-
-
-        test.names <- c("A", "D", "AD")[test.no]
-
-
-        ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
-        Z.part.sp <- as(object = Z.part, Class = "sparseMatrix")
-        Z.part.t.sp <- as(object = t(Z.part), Class = "sparseMatrix")
-        Z.int <- diag(nrow(interaction.kernel))
-        rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
-
-        if ("A" %in% test.names) {
-          K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-          K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
-
-          ZETA.now2.A <- c(ZETA.now,
-                           list(part.A = list(Z = Z.part, K = K.A.part),
-                                part.A.int = list(Z = Z.int, K = K.A.part.int)))
-        }
-
-        if (any(MAF.cut.D)) {
-          if ("D" %in% test.names) {
-            K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-            ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-            K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
-
-            ZETA.now2.D <- c(ZETA.now,
-                             list(part.D = list(Z = Z.part, K = K.D.part),
-                                  part.D.int = list(Z = Z.int, K = K.D.part.int)))
+                           probaa = probaa[Mis.range],
+                           probAa = probAa[Mis.range])
           }
 
-          if ("AD" %in% test.names) {
-            if (!("A" %in% test.names)) {
-              K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-              K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              W.D <- calcGRM(genoMat = Mis.D,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.D],
+                             probAa = probAa[Mis.range.D])
             }
+          }
 
-            if (!("D" %in% test.names)) {
+
+
+
+          test.names <- c("A", "D", "AD")[test.no]
+
+
+          ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+          Z.part.sp <- as(object = Z.part, Class = "sparseMatrix")
+          Z.part.t.sp <- as(object = t(Z.part), Class = "sparseMatrix")
+          Z.int <- diag(nrow(interaction.kernel))
+          rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
+
+          if ("A" %in% test.names) {
+            K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+            K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
+
+            ZETA.now2.A <- c(ZETA.now,
+                             list(part.A = list(Z = Z.part, K = K.A.part),
+                                  part.A.int = list(Z = Z.int, K = K.A.part.int)))
+          }
+
+          if (any(MAF.cut.D)) {
+            if ("D" %in% test.names) {
               K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+              ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
               K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
+
+              ZETA.now2.D <- c(ZETA.now,
+                               list(part.D = list(Z = Z.part, K = K.D.part),
+                                    part.D.int = list(Z = Z.int, K = K.D.part.int)))
             }
 
-            ZETA.now2.AD <- c(ZETA.now,
-                              list(part.A = list(Z = Z.part, K = K.A.part),
-                                   part.A.int = list(Z = Z.int, K = K.A.part.int),
-                                   part.D = list(Z = Z.part, K = K.D.part),
-                                   part.D.int = list(Z = Z.int, K = K.D.part.int)))
+            if ("AD" %in% test.names) {
+              if (!("A" %in% test.names)) {
+                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
+              }
+
+              if (!("D" %in% test.names)) {
+                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
+              }
+
+              ZETA.now2.AD <- c(ZETA.now,
+                                list(part.A = list(Z = Z.part, K = K.A.part),
+                                     part.A.int = list(Z = Z.int, K = K.A.part.int),
+                                     part.D = list(Z = Z.part, K = K.D.part),
+                                     part.D.int = list(Z = Z.int, K = K.D.part.int)))
+            }
           }
+
+
+          ZETA.now2.list <- list(
+            A = ZETA.now2.A,
+            D = ZETA.now2.D,
+            AD = ZETA.now2.AD
+          )
+
+
+
+          df <- c(2, 2, 4)[test.no]
+          LL2s <- sapply(X = test.names,
+                         FUN = function(test.name.now) {
+
+                           compute.LL <- TRUE
+                           if (!any(MAF.cut.D)) {
+                             if (test.name.now == "D") {
+                               LL2 <- LL0
+                               compute.LL <- FALSE
+                             } else if (test.name.now == "AD") {
+                               test.name.now <- "A"
+                             }
+                           }
+
+                           if (compute.LL) {
+                             EMM.res2 <- try(EM3.general(y = y, X0 = X.now,
+                                                         ZETA = ZETA.now2.list[[test.name.now]],
+                                                         package = package.MM, tol = NULL,
+                                                         n.core = n.core, optimizer = optimizer,
+                                                         REML = TRUE, pred = FALSE,
+                                                         return.u.always = FALSE,
+                                                         return.u.each = FALSE,
+                                                         return.Hinv = FALSE), silent = TRUE)
+
+
+                             if (!("try-error" %in% class(EMM.res2))) {
+                               LL2 <- EMM.res2$LL
+                             } else {
+                               LL2 <- LL0
+                             }
+                           }
+
+                           return(LL2)
+                         }, simplify = TRUE)
         }
 
 
-        ZETA.now2.list <- list(
-          A = ZETA.now2.A,
-          D = ZETA.now2.D,
-          AD = ZETA.now2.AD
+        deviances <- 2 * (LL2s - LL0)
+        scores.now <- ifelse(
+          test = deviances <= 0, yes = 0,
+          no = -log10((1 - chi0.mixture) *
+                        pchisq(q = deviances, df = df,
+                               lower.tail = FALSE))
         )
-
-
-
-        df <- c(2, 2, 4)[test.no]
-        LL2s <- sapply(X = test.names,
-                       FUN = function(test.name.now) {
-
-                         compute.LL <- TRUE
-                         if (!any(MAF.cut.D)) {
-                           if (test.name.now == "D") {
-                             LL2 <- LL0
-                             compute.LL <- FALSE
-                           } else if (test.name.now == "AD") {
-                             test.name.now <- "A"
-                           }
-                         }
-
-                         if (compute.LL) {
-                           EMM.res2 <- try(EM3.general(y = y, X0 = X.now,
-                                                       ZETA = ZETA.now2.list[[test.name.now]],
-                                                       package = package.MM, tol = NULL,
-                                                       n.core = n.core, optimizer = optimizer,
-                                                       REML = TRUE, pred = FALSE,
-                                                       return.u.always = FALSE,
-                                                       return.u.each = FALSE,
-                                                       return.Hinv = FALSE), silent = TRUE)
-
-
-                           if (!("try-error" %in% class(EMM.res2))) {
-                             LL2 <- EMM.res2$LL
-                           } else {
-                             LL2 <- LL0
-                           }
-                         }
-
-                         return(LL2)
-                       }, simplify = TRUE)
+        scores[i, ] <- scores.now
       }
-
-
-      deviances <- 2 * (LL2s - LL0)
-      scores.now <- ifelse(
-        test = deviances <= 0, yes = 0,
-        no = -log10((1 - chi0.mixture) *
-                      pchisq(q = deviances, df = df,
-                             lower.tail = FALSE))
-      )
-      scores[i, ] <- scores.now
     }
   }
 
@@ -8125,289 +8155,293 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
     } else {
       mark.name.now <- mark.id[gene.names == gene.name[i]]
       Mis.range.0 <- match(mark.name.now, map[, 1])
+      Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
       weighting.center <- FALSE
     }
 
-    Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
-    MAF.cut <- MAF[Mis.range.0] >= min.MAF
-    if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-      Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
-      MAF.cut.D <- MAF.D[Mis.range.0] > 0
-    } else {
-      MAF.cut.D <- rep(TRUE, length(MAF.cut))
-    }
-
-    if (any(MAF.cut)) {
-      Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
-      Mis.range <- Mis.range.0[MAF.cut]
-      Mis.range2 <- Mis.range.02[MAF.cut]
-      window.size <- ncol(Mis.0)
-      if (any(MAF.cut.D)) {
-        if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-          Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
-          Mis.range.D <- Mis.range.0[MAF.cut.D]
-          Mis.range2.D <- Mis.range.02[MAF.cut.D]
-          window.size.D <- ncol(Mis.D.0)
-        }
+    if (length(Mis.range.0) >= 1){
+      Mis.0 <- M.now[, Mis.range.0, drop = FALSE]
+      MAF.cut <- MAF[Mis.range.0] >= min.MAF
+      if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+        Mis.D.0 <- M.now[, Mis.range.0, drop = FALSE]
+        MAF.cut.D <- MAF.D[Mis.range.0] > 0
+      } else {
+        MAF.cut.D <- rep(TRUE, length(MAF.cut))
       }
 
-      if (haplotype) {
-        if (is.null(num.hap)) {
-          Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
-          Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
-          bango <- as.factor(as.numeric(Mis.fac))
-          levels(bango) <- order(unique(bango))
-          bango <- as.numeric(as.character(bango))
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
-              Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
-
-              bango.D <- as.factor(as.numeric(Mis.D.fac))
-              levels(bango.D) <- order(unique(bango.D))
-              bango.D <- as.numeric(as.character(bango.D))
-            }
-          }
-        } else {
-          kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
-          Mis <- kmed.res$medoids
-          bango <- kmed.res$clustering
-          if (any(MAF.cut.D)) {
-            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
-              Mis.D <- kmed.res.D$medoids
-              bango.D <- kmed.res.D$clustering
-            }
-          }
-        }
-        Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
-                                                 dims = c(nrow(M.now), nrow(Mis))))
+      if (any(MAF.cut)) {
+        Mis.0 <- Mis.0[, MAF.cut, drop = FALSE]
+        Mis.range <- Mis.range.0[MAF.cut]
+        Mis.range2 <- Mis.range.02[MAF.cut]
+        window.size <- ncol(Mis.0)
         if (any(MAF.cut.D)) {
           if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
-                                                       dims = c(nrow(M.now), nrow(Mis.D))))
+            Mis.D.0 <- Mis.D.0[, MAF.cut.D, drop = FALSE]
+            Mis.range.D <- Mis.range.0[MAF.cut.D]
+            Mis.range2.D <- Mis.range.02[MAF.cut.D]
+            window.size.D <- ncol(Mis.D.0)
           }
         }
-      } else {
-        Mis <- Mis.0
-        Mis.D <- Mis.D.0
-        Z.part <- Z.part.D <- diag(nrow(M.now))
-      }
 
-      if (window.size != 1) {
-        if (weighting.center) {
-          weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
+        if (haplotype) {
+          if (is.null(num.hap)) {
+            Mis.fac <- factor(apply(Mis.0, 1, function(x) paste(x, collapse = "")))
+            Mis <- Mis.0[!duplicated(as.numeric(Mis.fac)), , drop = FALSE]
+            bango <- as.factor(as.numeric(Mis.fac))
+            levels(bango) <- order(unique(bango))
+            bango <- as.numeric(as.character(bango))
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                Mis.D.fac <- factor(apply(Mis.D.0, 1, function(x) paste(x, collapse = "")))
+                Mis.D <- Mis.D.0[!duplicated(as.numeric(Mis.D.fac)), , drop = FALSE]
+
+                bango.D <- as.factor(as.numeric(Mis.D.fac))
+                levels(bango.D) <- order(unique(bango.D))
+                bango.D <- as.numeric(as.character(bango.D))
+              }
+            }
+          } else {
+            kmed.res <- cluster::pam(Mis.0, k = num.hap, pamonce = 5)
+            Mis <- kmed.res$medoids
+            bango <- kmed.res$clustering
+            if (any(MAF.cut.D)) {
+              if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+                kmed.res.D <- cluster::pam(Mis.D.0, k = num.hap)
+                Mis.D <- kmed.res.D$medoids
+                bango.D <- kmed.res.D$clustering
+              }
+            }
           }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          Z.part <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango, x = rep(1, nrow(M.now)),
+                                                   dims = c(nrow(M.now), nrow(Mis))))
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              Z.part.D <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(M.now), j = bango.D, x = rep(1, nrow(M.now)),
+                                                         dims = c(nrow(M.now), nrow(Mis.D))))
+            }
+          }
         } else {
-          weight.Mis <- rep(1, window.size)
-          weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-          if (!is.null(weighting.other)) {
-            weight.Mis <- weight.Mis * weighting.other[Mis.range]
-          }
-          weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          Mis <- Mis.0
+          Mis.D <- Mis.D.0
+          Z.part <- Z.part.D <- diag(nrow(M.now))
         }
-      } else {
-        weight.Mis <- 1
-      }
 
-      if (any(MAF.cut.D)) {
         if (window.size != 1) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            if (weighting.center) {
-              weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-              }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
-            } else {
-              weight.Mis.D <- rep(1, window.size.D)
-              weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-              if (!is.null(weighting.other)) {
-                weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-              }
-              weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+          if (weighting.center) {
+            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
             }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+          } else {
+            weight.Mis <- rep(1, window.size)
+            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+            if (!is.null(weighting.other)) {
+              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+            }
+            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
-          weight.Mis.D <- 1
-        }
-      }
-
-      if (kernel.method != "linear") {
-        if (ncol(Mis) != 1) {
-          Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
-        } else {
-          Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
-        }
-
-        K.SNP <- calcGRM(genoMat = Mis.weighted,
-                         methodGRM = kernel.method,
-                         kernel.h = kernel.h,
-                         returnWMat = FALSE)
-
-
-        Z.part.sp <- as(object = Z.part, Class = "sparseMatrix")
-        Z.part.t.sp <- as(object = t(Z.part), Class = "sparseMatrix")
-        K.int <- as.matrix(Z.part.sp %*% K.SNP %*% Z.part.t.sp) * interaction.kernel
-        Z.int <- diag(nrow(interaction.kernel))
-        rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
-
-        ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP),
-                                      part.int = list(Z = Z.int, K = K.int)))
-        EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
-                                    package = package.MM, tol = NULL,
-                                    n.core = n.core, optimizer = optimizer,
-                                    REML = TRUE, pred = FALSE,
-                                    return.u.always = FALSE,
-                                    return.u.each = FALSE,
-                                    return.Hinv = FALSE), silent = TRUE)
-
-
-        if (!("try-error" %in% class(EMM.res2))) {
-          LL2s <- EMM.res2$LL
-        } else {
-          LL2s <- LL0
-        }
-
-        df <- 2
-      } else {
-        test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
-        if (length(test.no) == 0) {
-          stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
-        }
-
-        if (any(test.effect %in% c("additive", "additive+dominance"))) {
-          W.A <- calcGRM(genoMat = Mis,
-                         methodGRM = "addNOIA",
-                         returnWMat = TRUE,
-                         probaa = probaa[Mis.range],
-                         probAa = probAa[Mis.range])
+          weight.Mis <- 1
         }
 
         if (any(MAF.cut.D)) {
-          if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-            W.D <- calcGRM(genoMat = Mis.D,
-                           methodGRM = "domNOIA",
+          if (window.size != 1) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              if (weighting.center) {
+                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              } else {
+                weight.Mis.D <- rep(1, window.size.D)
+                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                if (!is.null(weighting.other)) {
+                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                }
+                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+              }
+            }
+          } else {
+            weight.Mis.D <- 1
+          }
+        }
+
+        if (kernel.method != "linear") {
+          if (ncol(Mis) != 1) {
+            Mis.weighted <- t(apply(Mis, 1, function(x) x * weight.Mis))
+          } else {
+            Mis.weighted <- as.matrix(apply(Mis, 1, function(x) x * weight.Mis))
+          }
+
+          K.SNP <- calcGRM(genoMat = Mis.weighted,
+                           methodGRM = kernel.method,
+                           kernel.h = kernel.h,
+                           returnWMat = FALSE)
+
+
+          Z.part.sp <- as(object = Z.part, Class = "sparseMatrix")
+          Z.part.t.sp <- as(object = t(Z.part), Class = "sparseMatrix")
+          K.int <- as.matrix(Z.part.sp %*% K.SNP %*% Z.part.t.sp) * interaction.kernel
+          Z.int <- diag(nrow(interaction.kernel))
+          rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
+
+          ZETA.now2 <- c(ZETA.now, list(part = list(Z = Z.part, K = K.SNP),
+                                        part.int = list(Z = Z.int, K = K.int)))
+          EMM.res2 <- try(EM3.general(y = y, X0 = X.now, ZETA = ZETA.now2,
+                                      package = package.MM, tol = NULL,
+                                      n.core = n.core, optimizer = optimizer,
+                                      REML = TRUE, pred = FALSE,
+                                      return.u.always = FALSE,
+                                      return.u.each = FALSE,
+                                      return.Hinv = FALSE), silent = TRUE)
+
+
+          if (!("try-error" %in% class(EMM.res2))) {
+            LL2s <- EMM.res2$LL
+          } else {
+            LL2s <- LL0
+          }
+
+          df <- 2
+        } else {
+          test.no <- match(test.effect, c("additive", "dominance", "additive+dominance"))
+          if (length(test.no) == 0) {
+            stop("The effect to test should be 'additive', 'dominance' or 'additive+dominance'!")
+          }
+
+          if (any(test.effect %in% c("additive", "additive+dominance"))) {
+            W.A <- calcGRM(genoMat = Mis,
+                           methodGRM = "addNOIA",
                            returnWMat = TRUE,
-                           probaa = probaa[Mis.range.D],
-                           probAa = probAa[Mis.range.D])
-          }
-        }
-
-
-
-
-        test.names <- c("A", "D", "AD")[test.no]
-
-
-        ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
-        Z.part.sp <- as(object = Z.part, Class = "sparseMatrix")
-        Z.part.t.sp <- as(object = t(Z.part), Class = "sparseMatrix")
-        Z.int <- diag(nrow(interaction.kernel))
-        rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
-
-        if ("A" %in% test.names) {
-          K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-          K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
-
-          ZETA.now2.A <- c(ZETA.now,
-                           list(part.A = list(Z = Z.part, K = K.A.part),
-                                part.A.int = list(Z = Z.int, K = K.A.part.int)))
-        }
-
-        if (any(MAF.cut.D)) {
-          if ("D" %in% test.names) {
-            K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
-            ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
-            K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
-
-            ZETA.now2.D <- c(ZETA.now,
-                             list(part.D = list(Z = Z.part, K = K.D.part),
-                                  part.D.int = list(Z = Z.int, K = K.D.part.int)))
+                           probaa = probaa[Mis.range],
+                           probAa = probAa[Mis.range])
           }
 
-          if ("AD" %in% test.names) {
-            if (!("A" %in% test.names)) {
-              K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-              K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
+          if (any(MAF.cut.D)) {
+            if (any(test.effect %in% c("dominance", "additive+dominance"))) {
+              W.D <- calcGRM(genoMat = Mis.D,
+                             methodGRM = "domNOIA",
+                             returnWMat = TRUE,
+                             probaa = probaa[Mis.range.D],
+                             probAa = probAa[Mis.range.D])
             }
+          }
 
-            if (!("D" %in% test.names)) {
+
+
+
+          test.names <- c("A", "D", "AD")[test.no]
+
+
+          ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
+          Z.part.sp <- as(object = Z.part, Class = "sparseMatrix")
+          Z.part.t.sp <- as(object = t(Z.part), Class = "sparseMatrix")
+          Z.int <- diag(nrow(interaction.kernel))
+          rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
+
+          if ("A" %in% test.names) {
+            K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+            K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
+
+            ZETA.now2.A <- c(ZETA.now,
+                             list(part.A = list(Z = Z.part, K = K.A.part),
+                                  part.A.int = list(Z = Z.int, K = K.A.part.int)))
+          }
+
+          if (any(MAF.cut.D)) {
+            if ("D" %in% test.names) {
               K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+              ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
               K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
+
+              ZETA.now2.D <- c(ZETA.now,
+                               list(part.D = list(Z = Z.part, K = K.D.part),
+                                    part.D.int = list(Z = Z.int, K = K.D.part.int)))
             }
 
-            ZETA.now2.AD <- c(ZETA.now,
-                              list(part.A = list(Z = Z.part, K = K.A.part),
-                                   part.A.int = list(Z = Z.int, K = K.A.part.int),
-                                   part.D = list(Z = Z.part, K = K.D.part),
-                                   part.D.int = list(Z = Z.int, K = K.D.part.int)))
+            if ("AD" %in% test.names) {
+              if (!("A" %in% test.names)) {
+                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
+              }
+
+              if (!("D" %in% test.names)) {
+                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
+              }
+
+              ZETA.now2.AD <- c(ZETA.now,
+                                list(part.A = list(Z = Z.part, K = K.A.part),
+                                     part.A.int = list(Z = Z.int, K = K.A.part.int),
+                                     part.D = list(Z = Z.part, K = K.D.part),
+                                     part.D.int = list(Z = Z.int, K = K.D.part.int)))
+            }
           }
+
+
+          ZETA.now2.list <- list(
+            A = ZETA.now2.A,
+            D = ZETA.now2.D,
+            AD = ZETA.now2.AD
+          )
+
+
+
+          df <- c(2, 2, 4)[test.no]
+          LL2s <- sapply(X = test.names,
+                         FUN = function(test.name.now) {
+
+                           compute.LL <- TRUE
+                           if (!any(MAF.cut.D)) {
+                             if (test.name.now == "D") {
+                               LL2 <- LL0
+                               compute.LL <- FALSE
+                             } else if (test.name.now == "AD") {
+                               test.name.now <- "A"
+                             }
+                           }
+
+                           if (compute.LL) {
+                             EMM.res2 <- try(EM3.general(y = y, X0 = X.now,
+                                                         ZETA = ZETA.now2.list[[test.name.now]],
+                                                         package = package.MM, tol = NULL,
+                                                         n.core = n.core, optimizer = optimizer,
+                                                         REML = TRUE, pred = FALSE,
+                                                         return.u.always = FALSE,
+                                                         return.u.each = FALSE,
+                                                         return.Hinv = FALSE), silent = TRUE)
+
+
+                             if (!("try-error" %in% class(EMM.res2))) {
+                               LL2 <- EMM.res2$LL
+                             } else {
+                               LL2 <- LL0
+                             }
+                           }
+
+                           return(LL2)
+                         }, simplify = TRUE)
         }
 
 
-        ZETA.now2.list <- list(
-          A = ZETA.now2.A,
-          D = ZETA.now2.D,
-          AD = ZETA.now2.AD
+        deviances <- 2 * (LL2s - LL0)
+        scores.now <- ifelse(
+          test = deviances <= 0, yes = 0,
+          no = -log10((1 - chi0.mixture) *
+                        pchisq(q = deviances, df = df,
+                               lower.tail = FALSE))
         )
-
-
-
-        df <- c(2, 2, 4)[test.no]
-        LL2s <- sapply(X = test.names,
-                       FUN = function(test.name.now) {
-
-                         compute.LL <- TRUE
-                         if (!any(MAF.cut.D)) {
-                           if (test.name.now == "D") {
-                             LL2 <- LL0
-                             compute.LL <- FALSE
-                           } else if (test.name.now == "AD") {
-                             test.name.now <- "A"
-                           }
-                         }
-
-                         if (compute.LL) {
-                           EMM.res2 <- try(EM3.general(y = y, X0 = X.now,
-                                                       ZETA = ZETA.now2.list[[test.name.now]],
-                                                       package = package.MM, tol = NULL,
-                                                       n.core = n.core, optimizer = optimizer,
-                                                       REML = TRUE, pred = FALSE,
-                                                       return.u.always = FALSE,
-                                                       return.u.each = FALSE,
-                                                       return.Hinv = FALSE), silent = TRUE)
-
-
-                           if (!("try-error" %in% class(EMM.res2))) {
-                             LL2 <- EMM.res2$LL
-                           } else {
-                             LL2 <- LL0
-                           }
-                         }
-
-                         return(LL2)
-                       }, simplify = TRUE)
+      } else {
+        scores.now <- rep(NA, ncol.scores)
       }
-
-
-      deviances <- 2 * (LL2s - LL0)
-      scores.now <- ifelse(
-        test = deviances <= 0, yes = 0,
-        no = -log10((1 - chi0.mixture) *
-                      pchisq(q = deviances, df = df,
-                             lower.tail = FALSE))
-      )
     } else {
       scores.now <- rep(NA, ncol.scores)
     }
-
     if (is.null(gene.set)) {
       return(list(scores = scores.now, window.center = window.center))
     } else {

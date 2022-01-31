@@ -26,6 +26,7 @@ RGWAS.epistasis(
   chi0.mixture = 0.5,
   optimizer = "nlminb",
   gene.set = NULL,
+  map.gene.set = NULL,
   plot.epi.3d = TRUE,
   plot.epi.2d = TRUE,
   main.epi.3d = NULL,
@@ -55,7 +56,7 @@ ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D))
 }
 For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.}
 
-\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages: 
+\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages:
 "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
 See more details at \code{\link{EM3.general}}.}
 
@@ -73,28 +74,28 @@ You should not use this argument with n.PC > 0.}
 \item{min.MAF}{Specifies the minimum minor allele frequency (MAF).
 If a marker has a MAF less than min.MAF, it is assigned a zero score.}
 
-\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 This argument is not valid when `parallel.method = "furrr"`.}
 
-\item{parallel.method}{Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach". 
+\item{parallel.method}{Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach".
 
-When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package 
-with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`. 
+When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package
+with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`.
 
-When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package. 
-With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar, 
-so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}). 
-For `parallel.method = "furrr"`, you can perform multi-thread parallelization by 
+When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
+With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
+so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 
-When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package 
-with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package, 
-and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package. 
-With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and 
+When `parallel.method = "foreach"`, we utilize \code{\link[foreach]{foreach}} function in the `foreach` package
+with the utilization of \code{\link[parallel]{makeCluster}} function in `parallel` package,
+and \code{\link[doParallel]{registerDoParallel}} function in `doParallel` package.
+With `count = TRUE`, we also utilize \code{\link[utils]{setTxtProgressBar}} and
 \code{\link[utils]{txtProgressBar}} functions in the `utils` package to show the progress bar.
 
-We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users, 
-this parallelization method is not supported. So, if you are Windows user, 
+We recommend that you use the option `parallel.method = "mclapply"`, but for Windows users,
+this parallelization method is not supported. So, if you are Windows user,
 we recommend that you use the option `parallel.method = "foreach"`.}
 
 \item{test.method}{RGWAS supports two methods to test effects of each SNP-set.
@@ -136,6 +137,13 @@ You should assign your gene information to gene.set in the form of a "data.frame
 In the first column, you should assign the gene name. And in the second column, you should assign the names of each marker,
 which correspond to the marker names of "geno" argument.}
 
+\item{map.gene.set}{Genotype map for `gene.set` (list of haplotype blocks).
+This is a data.frame with the haplotype block (SNP-set, or gene-set) names in the first column.
+The second and third columns contain the chromosome and map position for each block.
+The forth column contains the cumulative map position for each block, which can be computed by \code{\link{cumsumPos}} function.
+If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
+It will take some time, so you can reduce the computational time by assigning this argument beforehand.}
+
 \item{plot.epi.3d}{If TRUE, draw 3d plot}
 
 \item{plot.epi.2d}{If TRUE, draw 2d plot}
@@ -147,8 +155,8 @@ which correspond to the marker names of "geno" argument.}
 \item{saveName}{When drawing any plot, you can save plots in png format. In saveName, you should substitute the name you want to save.
 When saveName = NULL, the plot is not saved.}
 
-\item{skip.check}{As default, RAINBOWR checks the type of input data and modifies it into the correct format. 
-However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure 
+\item{skip.check}{As default, RAINBOWR checks the type of input data and modifies it into the correct format.
+However, it will take some time, so if you prepare the correct format of input data, you can skip this procedure
 by setting `skip.check = TRUE`.}
 
 \item{verbose}{If this argument is TRUE, messages for the current steps will be shown.}
@@ -231,11 +239,13 @@ Check epistatic effects by kernel-based GWAS (genome-wide association studies)
   Rice_geno_score <- Rice_Zhao_etal$genoScore
   Rice_geno_map <- Rice_Zhao_etal$genoMap
   Rice_pheno <- Rice_Zhao_etal$pheno
+  Rice_haplo_block <- Rice_Zhao_etal$haploBlock
 
   ### View each dataset
   See(Rice_geno_score)
   See(Rice_geno_map)
   See(Rice_pheno)
+  See(Rice_haplo_block)
 
   ### Select one trait for example
   trait.name <- "Flowering.time.at.Arkansas"
@@ -274,6 +284,16 @@ Check epistatic effects by kernel-based GWAS (genome-wide association studies)
                                    skip.check = TRUE, n.core = 2)
 
   See(epistasis.res$scores$scores)
+
+
+  ### Check epistatic effects (by using the list of haplotype blocks estimated by PLINK)
+  ### It will take almost 2 minutes...
+  epistasis_haplo_block.res <- RGWAS.epistasis(pheno = pheno.GWAS, geno = geno.GWAS, ZETA = ZETA,
+                                               n.PC = 4, test.method = "LR", gene.set = Rice_haplo_block,
+                                               package.MM = "gaston", parallel.method = "mclapply",
+                                               skip.check = TRUE, n.core = 2)
+
+  See(epistasis_haplo_block.res$scores$scores)
 }
 }
 \references{

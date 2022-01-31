@@ -1,7 +1,7 @@
 # RAINBOWR
 ###   Reliable Association INference By Optimizing Weights with R
 #### Author : Kosuke Hamazaki (hamazaki@ut-biomet.org)
-#### Date : 2019/03/25 (Last update: 2022/01/05)
+#### Date : 2019/03/25 (Last update: 2022/01/31)
 
 ## NOTE!!!!
 ### The paper for `RAINBOWR` has been published in PLOS Computational Biology (https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1007663). If you use this `RAINBOWR` in your paper, please cite `RAINBOWR` as follows:
@@ -24,12 +24,16 @@ Here, we describe how to install and how to use `RAINBOWR`.
 ## What is `RAINBOWR`
 `RAINBOWR`(Reliable Association INference By Optimizing Weights with R) is a package to perform several types of `GWAS` as follows.
 
-- Single-SNP GWAS with `RGWAS.normal` function
-- SNP-set (or gene set) GWAS with `RGWAS.multisnp` function (which tests multiple SNPs at the same time)
-- Check epistatic (SNP-set x SNP-set interaction) effects with `RGWAS.epistasis` (very slow and less reliable)
+- Single-SNP GWAS by `RGWAS.normal` function
+- SNP-set (, haplotype-block, or gene-set) GWAS by `RGWAS.multisnp` function (which tests multiple SNPs at the same time)
+- Check epistatic (SNP-set x SNP-set interaction) effects by `RGWAS.epistasis` (very slow and less reliable)
+- Single-SNP GWAS including tests for interaction with genetic background by `RGWAS.normal` function
+- SNP-set (, haplotype-block, or gene-set) GWAS including tests for interaction with genetic background (or epistatic effects with polygenes) by `RGWAS.multisnp` function (which tests multiple SNPs at the same time)
+
 
 `RAINBOWR` also offers some functions to solve the linear mixed effects model.
 
+- Solve multi-kernel linear mixed effects model with `EM3.general` function (using `gaston`, `MM4LMM`, or `RAINBOWR` packages; fast for `gaston` and `MM4LMM`)
 - Solve one-kernel linear mixed effects model with `EMM.cpp` function
 - Solve multi-kernel linear mixed effects model with `EM3.cpp` function (for the general kernel, not so fast)
 - Solve multi-kernel linear mixed effects model with `EM3.linker.cpp` function (for the linear kernel, fast)
@@ -45,6 +49,8 @@ Finally, `RAINBOWR` offers other useful functions.
 - `genetrait` function to generate pseudo phenotypic values from marker genotype
 - `SS_GWAS` function to summarize GWAS results (only for simulation study)
 - `estPhylo` and `estNetwork` functions to estimate phylogenetic tree or haplotype network and haplotype effects with non-linear kernels for haplotype blocks of interest.
+- `convertBlockList` function to convert haplotype block list estimated by PLINK to the format which can be inputted as a `gene.set` argument in `RGWAS.multisnp`, `RGWAS.multisnp.interaction`, and `RGWAS.epistasis` functions.
+
 
 ## Installation
 The stable version of `RAINBOWR` is now available at the [CRAN (Comprehensive R Archive Network)](https://cran.r-project.org/package=RAINBOWR). The latest version of `RAINBOWR` is also available at the `KosukeHamazaki/RAINBOWR` repository in the [`GitHub`](https://github.com/KosukeHamazaki/RAINBOWR), so please run the following code in the R console.
@@ -94,8 +100,9 @@ MM4LMM,
 furrr,       # Suggests
 future,      # Suggests
 progressr,   # Suggests
-foreach,     # Suggests
-doParallel   # Suggests
+foreach,     # Suggests, but stongly recommend the installation for Windows user to parallel computation
+doParallel,  # Suggests
+data.table   # Suggests
 ```
 
 In `RAINBOWR`,  since part of the code is written in `Rcpp` (`C++` in `R`),  please check if you can use `C++` in `R`.
@@ -105,7 +112,7 @@ If you have some questions about installation, please contact us by e-mail (hama
 
 
 ##  Usage
-First, import `RAINBOWR` package and load example datasets. These example datasets consist of marker genotype (scored with {-1, 0, 1}, 1,536 SNP chip (Zhao et al., 2010; PLoS One 5(5): e10780)), map with physical position, and phenotypic data (Zhao et al., 2011; Nature Communications 2:467). Both datasets can be downloaded from `Rice Diversity` homepage (http://www.ricediversity.org/data/). 
+First, import `RAINBOWR` package and load example datasets. These example datasets consist of marker genotype (scored with {-1, 0, 1}, 1,536 SNP chip (Zhao et al., 2010; PLoS One 5(5): e10780)), map with physical position, and phenotypic data (Zhao et al., 2011; Nature Communications 2:467). Both datasets can be downloaded from `Rice Diversity` homepage (http://www.ricediversity.org/data/). Also, the dataset includes a list of haplotype blocks from the version 0.1.30. This list was estimated by the PLINK 1.9 (Taliun et al., 2014; BMC Bioinformatics, 15).
 
 ``` r
 ### Import RAINBOWR
@@ -116,11 +123,13 @@ data("Rice_Zhao_etal")
 Rice_geno_score <- Rice_Zhao_etal$genoScore
 Rice_geno_map <- Rice_Zhao_etal$genoMap
 Rice_pheno <- Rice_Zhao_etal$pheno
+Rice_haplo_block <- Rice_Zhao_etal$haploBlock
 
 ### View each dataset
 See(Rice_geno_score)
 See(Rice_geno_map)
 See(Rice_pheno)
+See(Rice_haplo_block)
 ```
 You can check the original data format by `See` function.
 Then, select one trait (here, `Flowering.time.at.Arkansas`) for example.
@@ -171,7 +180,7 @@ First, we perform single-SNP GWAS by `RGWAS.normal` function as follows.
 ``` r
 ### Perform single-SNP GWAS
 normal.res <- RGWAS.normal(pheno = pheno.GWAS, geno = geno.GWAS,
-                           ZETA = ZETA, n.PC = 4, P3D = TRUE)
+                           ZETA = ZETA, n.PC = 4, skip.check = TRUE, P3D = TRUE)
 See(normal.res$D)  ### Column 4 contains -log10(p) values for markers
 ### Automatically draw Q-Q plot and Manhattan by default.
 ```
@@ -181,35 +190,44 @@ Next, we perform SNP-set GWAS by `RGWAS.multisnp` function.
 ``` r
 ### Perform SNP-set GWAS (by regarding 11 SNPs as one SNP-set)
 SNP_set.res <- RGWAS.multisnp(pheno = pheno.GWAS, geno = geno.GWAS, ZETA = ZETA, 
-                              n.PC = 4, test.method = "LR", kernel.method = "linear", gene.set = NULL,
+                              n.PC = 4, test.method = "LR", kernel.method = "linear", 
+                              gene.set = NULL, skip.check = TRUE, 
                               test.effect = "additive", window.size.half = 5, window.slide = 11)
 
 See(SNP_set.res$D)  ### Column 4 contains -log10(p) values for markers
 ```
 
 You can perform SNP-set GWAS with sliding window by setting `window.slide = 1`.
-And you can also perform gene-set (or haplotype-based) GWAS by assigning the following data set to `gene.set` argument.
+And you can also perform gene-set (or haplotype-block based) GWAS by assigning the following data set to `gene.set` argument. (You can check the example also by `See(Rice_haplo_block)` in R.)
 
 ex.)
 
 |  gene (or haplotype block)   |  marker | 
 | :-----: | :------:| 
-| gene_1    | id1000556 | 
-| gene_1    | id1000673 | 
-| gene_2    | id1000830 | 
-| gene_2    | id1000955 | 
-| gene_2    | id1001516 | 
+| haploblock_1    | id1005261 | 
+| haploblock_1    | id1005263 | 
+| haploblock_2    | id1009557 | 
+| haploblock_2    | id1009616 | 
+| haploblock_3    | id1020154 | 
 | ...    | ... | 
+
+For example, when using the list of haplotype blocks estimated by PLINK,
+``` r
+### Perform haplotype-block based GWAS (by using hapltype blocks estimated by PLINK)
+haplo_block.res <- RGWAS.multisnp(pheno = pheno.GWAS, geno = geno.GWAS, ZETA = ZETA, 
+                              n.PC = 4, test.method = "LR", kernel.method = "linear", 
+                              gene.set = Rice_haplo_block, skip.check = TRUE, 
+                              test.effect = "additive")
+
+See(haplo_block.res$D)  ### Column 4 contains -log10(p) values for markers
+```
+
+There is no significant block for this dataset because the number of markers and blocks is too small for this dataset. However, when whole-genome sequencing data is available, the impact of using SNP-set/gene-set/haplotype-block methods becomes larger and we strongly recommend you use these methods. Please see Hamazaki and Iwata (2020, PLOS Comp Biol) for more details of the features of these methods.
 
 
 ### Help
-If you have some help before performing `GWAS` with `RAINBOWR`, please see the help for each function by `?function_name`.
-You can also check how to determine each argument by
+If you want some help before performing `GWAS` with `RAINBOWR`, please see the help for each function by `?function_name`.
 
-``` r
-RGWAS.menu()
-```
-`RGWAS.menu` function asks some questions, and by answering these question, the function tells you how to determine which function use and how to set arguments.
 
 
 ## References

@@ -45,5 +45,6 @@ Suggests:
     future,
     progressr,
     foreach,
-    doParallel
+    doParallel,
+    data.table
 VignetteBuilder: knitr
