@@ -247,6 +247,9 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
 #' @param imputeOneSNP As default, blocks including only one SNP will be discarded from the returned data.
 #' If you want to include them when creating haplotype-block list for RAINBOWR,
 #' please set `imputeOneSNP = TRUE`.
+#' @param insertZeros When naming blocks, whether or not inserting zeros to the name of blocks.
+#' For example, if there are 1,000 blocks in total, the function will name the block 1 as
+#' "block_1" when `insertZeros = FALSE` and "block_0001" when `insertZeros = TRUE`.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
 #' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach".
@@ -287,6 +290,7 @@ convertBlockList <- function(fileNameBlocksDetPlink,
                              map,
                              blockNamesHead = "haploblock_",
                              imputeOneSNP = FALSE,
+                             insertZeros = FALSE,
                              n.core = 1,
                              parallel.method = "mclapply",
                              count = FALSE) {
@@ -298,7 +302,14 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 
   nBlocks <- nrow(blockDataRaw)
   blockNos <- rep(1:nBlocks, blockDataRaw[, 5])
-  blockNames <- paste0(blockNamesHead, blockNos)
+
+  if (insertZeros) {
+    blockNames <- sprintf(fmt = paste0(blockNamesHead,
+                                       "%0", floor(log10(max(blockNos))) + 1, "i"),
+                          blockNos)
+  } else {
+    blockNames <- paste0(blockNamesHead, blockNos)
+  }
 
   marker <- map[, 1]
   blockSNPsList <- RAINBOWR::parallel.compute(vec = blockDataRaw[, 6],
@@ -344,8 +355,13 @@ convertBlockList <- function(fileNameBlocksDetPlink,
     mrkHaploBlockIdsFac <- factor(mrkHaploBlockIds, levels = unique(mrkHaploBlockIds))
     mrkHaploBlockIds <- as.numeric(mrkHaploBlockIdsFac)
 
-    blockNames <- paste0(blockNamesHead, mrkHaploBlockIds)
-
+    if (insertZeros) {
+      blockNames <- sprintf(fmt = paste0(blockNamesHead,
+                                         "%0", floor(log10(max(mrkHaploBlockIds))) + 1, "i"),
+                            mrkHaploBlockIds)
+    } else {
+      blockNames <- paste0(blockNamesHead, mrkHaploBlockIds)
+    }
     blockListDf <- data.frame(block = blockNames,
                               marker = marker)
   } else {
