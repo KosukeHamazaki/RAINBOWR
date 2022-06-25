@@ -378,6 +378,9 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
 #' @param methodGRM Method to calculate genomic relationship matrix (GRM). We offer the following methods;
 #' "addNOIA", "domNOIA", "A.mat", "linear", "gaussian", "exponential", "correlation".
 #' For NOIA methods, please refer to Vitezica et al. 2017.
+#' @param subpop Sub-population names corresponding to each individual.
+#' By utilizing `subpop` argument, you can consider the difference of allele frequencies
+#' between sub-populations when computing the genomic relationship matrix. This argument is only valid when NOIA methods are selected.
 #' @param kernel.h The hyper parameter for gaussian or exponential kernel.
 #' If kernel.h = "tuned", this hyper parameter is calculated as the median of off-diagonals of distance matrix of genotype data.
 #' @param returnWMat  If this argument is TRUE, we will return W matrix instead of GRM.
@@ -396,6 +399,7 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
 #'
 calcGRM <- function(genoMat,
                     methodGRM = "addNOIA",
+                    subpop = NULL,
                     kernel.h = "tuned",
                     returnWMat = FALSE,
                     probaa = NULL,
@@ -410,35 +414,81 @@ calcGRM <- function(genoMat,
 
   methodNOIA <- stringr::str_detect(string = methodGRM,
                                     pattern = "NOIA")
+  if ((!methodNOIA) & (!is.null(subpop))) {
+    message("`subpop` information is utilized only when you use `NOIA` methods ('addNOIA' & 'domNOIA') !")
+  }
   if (methodNOIA) {
-    if (is.null(probaa)) {
-      probaa <- apply(genoMat == -1, 2, mean)
-    }
-    if (is.null(probAa)) {
-      probAa <- apply(genoMat == 0, 2, mean)
-    }
-    if (methodGRM == "addNOIA") {
-      replaceaa <- - (2 - probAa - 2 * probaa)
-      replaceAa <- - (1 - probAa - 2 * probaa)
-      replaceAA <- - (- probAa - 2 * probaa)
-    } else if (methodGRM == "domNOIA") {
-      probAA <- 1 - probaa - probAa
-      denominator <- probAA + probaa - (probAA - probaa) ^ 2
-      replaceaa <- - 2 * probAA * probAa / denominator
-      replaceAa <- 4 * probAA * probaa / denominator
-      replaceAA <- - 2 * probaa * probAa / denominator
-    }
+    if (is.null(subpop)) {
+      if (is.null(probaa)) {
+        probaa <- apply(genoMat == -1, 2, mean)
+      }
+      if (is.null(probAa)) {
+        probAa <- apply(genoMat == 0, 2, mean)
+      }
+      if (methodGRM == "addNOIA") {
+        replaceaa <- - (2 - probAa - 2 * probaa)
+        replaceAa <- - (1 - probAa - 2 * probaa)
+        replaceAA <- - (- probAa - 2 * probaa)
+      } else if (methodGRM == "domNOIA") {
+        probAA <- 1 - probaa - probAa
+        denominator <- probAA + probaa - (probAA - probaa) ^ 2
+        replaceaa <- - 2 * probAA * probAa / denominator
+        replaceAa <- 4 * probAA * probaa / denominator
+        replaceAA <- - 2 * probaa * probAa / denominator
+      }
 
-    HMat <- sapply(1:nMarkers, function(mrkNo) {
-      HMatEachMrk <- genoMat[, mrkNo]
-      HMatEachMrk[HMatEachMrk == -1] <- replaceaa[mrkNo]
-      HMatEachMrk[HMatEachMrk == 0] <- replaceAa[mrkNo]
-      HMatEachMrk[HMatEachMrk == 1] <- replaceAA[mrkNo]
+      HMat <- sapply(1:nMarkers, function(mrkNo) {
+        HMatEachMrk <- genoMat[, mrkNo]
+        HMatEachMrk[HMatEachMrk == -1] <- replaceaa[mrkNo]
+        HMatEachMrk[HMatEachMrk == 0] <- replaceAa[mrkNo]
+        HMatEachMrk[HMatEachMrk == 1] <- replaceAA[mrkNo]
 
-      return(HMatEachMrk)
-    })
-    colnames(HMat) <- mrkNames
+        return(HMatEachMrk)
+      })
+      colnames(HMat) <- mrkNames
+    } else {
+      stopifnot(length(subpop) == nInd)
 
+      probaa <- do.call(
+        what = rbind,
+        args = sapply(X = unique(subpop),
+                      FUN = function(subpopEach) {
+                        genoMatSubpop <- genoMat[subpop %in% subpopEach, , drop = FALSE]
+                        probaaSubpop <- apply(genoMatSubpop == -1, 2, mean)
+                      },
+                      simplify = FALSE)
+      )[subpop, , drop = FALSE]
+      rownames(probaa) <- rownames(genoMat)
+
+      probAa <- do.call(
+        what = rbind,
+        args = sapply(X = unique(subpop),
+                      FUN = function(subpopEach) {
+                        genoMatSubpop <- genoMat[subpop %in% subpopEach, , drop = FALSE]
+                        probAaSubpop <- apply(genoMatSubpop == 0, 2, mean)
+                      },
+                      simplify = FALSE)
+      )[subpop, , drop = FALSE]
+      rownames(probAa) <- rownames(genoMat)
+
+
+      if (methodGRM == "addNOIA") {
+        replaceaa <- - (2 - probAa - 2 * probaa)
+        replaceAa <- - (1 - probAa - 2 * probaa)
+        replaceAA <- - (- probAa - 2 * probaa)
+      } else if (methodGRM == "domNOIA") {
+        probAA <- 1 - probaa - probAa
+        denominator <- probAA + probaa - (probAA - probaa) ^ 2
+        replaceaa <- - 2 * probAA * probAa / denominator
+        replaceAa <- 4 * probAA * probaa / denominator
+        replaceAA <- - 2 * probaa * probAa / denominator
+      }
+
+      HMat <- genoMat
+      HMat[HMat == -1] <- replaceaa[HMat == -1]
+      HMat[HMat == 0] <- replaceAa[HMat == 0]
+      HMat[HMat == 1] <- replaceAA[HMat == 1]
+    }
     HHt <- tcrossprod(HMat)
     GRM <- HHt * nInd / sum(diag(HHt))
   } else if (methodGRM == "A.mat") {
