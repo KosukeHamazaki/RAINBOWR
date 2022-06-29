@@ -523,10 +523,13 @@ calcGRM <- function(genoMat,
   }
 
 
+
   if (methodNOIA & returnWMat) {
     WMat <- HMat * sqrt(nInd / sum(HMat * HMat))
+    rownames(WMat) <- rownames(genoMat)
     return(WMat)
   } else {
+    rownames(GRM) <- colnames(GRM) <- rownames(genoMat)
     return(GRM)
   }
 }
