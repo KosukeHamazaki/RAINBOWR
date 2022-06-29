@@ -7,6 +7,7 @@
 calcGRM(
   genoMat,
   methodGRM = "addNOIA",
+  subpop = NULL,
   kernel.h = "tuned",
   returnWMat = FALSE,
   probaa = NULL,
@@ -19,6 +20,10 @@ calcGRM(
 \item{methodGRM}{Method to calculate genomic relationship matrix (GRM). We offer the following methods;
 "addNOIA", "domNOIA", "A.mat", "linear", "gaussian", "exponential", "correlation".
 For NOIA methods, please refer to Vitezica et al. 2017.}
+
+\item{subpop}{Sub-population names corresponding to each individual.
+By utilizing `subpop` argument, you can consider the difference of allele frequencies
+between sub-populations when computing the genomic relationship matrix. This argument is only valid when NOIA methods are selected.}
 
 \item{kernel.h}{The hyper parameter for gaussian or exponential kernel.
 If kernel.h = "tuned", this hyper parameter is calculated as the median of off-diagonals of distance matrix of genotype data.}

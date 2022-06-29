@@ -9,6 +9,7 @@ convertBlockList(
   map,
   blockNamesHead = "haploblock_",
   imputeOneSNP = FALSE,
+  insertZeros = FALSE,
   n.core = 1,
   parallel.method = "mclapply",
   count = FALSE
@@ -26,6 +27,10 @@ The second and third columns contain the chromosome and map position.}
 \item{imputeOneSNP}{As default, blocks including only one SNP will be discarded from the returned data.
 If you want to include them when creating haplotype-block list for RAINBOWR,
 please set `imputeOneSNP = TRUE`.}
+
+\item{insertZeros}{When naming blocks, whether or not inserting zeros to the name of blocks.
+For example, if there are 1,000 blocks in total, the function will name the block 1 as
+"block_1" when `insertZeros = FALSE` and "block_0001" when `insertZeros = TRUE`.}
 
 \item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 This argument is not valid when `parallel.method = "furrr"`.}
