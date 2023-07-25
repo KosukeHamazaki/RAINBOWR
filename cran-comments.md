@@ -646,3 +646,25 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 - We added `subpop` argument to `calcGRM` function. By utilizing `subpop` argument, you can consider the difference of allele frequencies between sub-populations when computing the genomic relationship matrix. This argument is only valid when NOIA methods are selected.
 
 - We added how to compute the marker effects from the GBLUP results in the example of `EMM.cpp` function.
+
+
+# Jul 25, 2023, RAINBOWR version 0.1.32
+## Major changes (new functions, etc...)
+- We modified the error regarding `See` function when showing  `array` objects.
+
+
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.3.1
+* win-builder release, R version 4.3.1
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 4.2.3
+
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.

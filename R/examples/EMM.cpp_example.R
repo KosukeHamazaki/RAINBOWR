@@ -95,7 +95,7 @@
 
   mrkEffectsForW <- crossprod(x = WMat,
                               y = solve(K.A)) %*% as.matrix(u)
-  mrkEffects <- mrkEffectsForW / mean(scale(x.modi %*% mrkEffectsForW, scale = F) / u)
+  mrkEffects <- mrkEffectsForW / mean(scale(x.modi %*% mrkEffectsForW, scale = FALSE) / u)
 
 
 

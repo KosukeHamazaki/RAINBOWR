@@ -195,3 +195,19 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 - We added a new argument `map.gene.set` to `RGWAS.multisnp`, `RGWAS.multisnp.interaction`, `RGWAS.epstasis`, `RGWAS.twostep`, and `RGWAS.twostep.epi` functions. If this argument is NULL, the map will be constructed by `genesetmap` function after the SNP-set GWAS. It will take some time, so you can reduce the computational time by assigning this argument beforehand.
 
 - We also updated the `README.md` and `RAINBOWR.md` for vignettes.
+
+
+
+
+# Jun 25, 2022, RAINBOWR version 0.1.31
+## Major changes (new functions, etc...)
+- We added `subpop` argument to `calcGRM` function. By utilizing `subpop` argument, you can consider the difference of allele frequencies between sub-populations when computing the genomic relationship matrix. This argument is only valid when NOIA methods are selected.
+
+- We added how to compute the marker effects from the GBLUP results in the example of `EMM.cpp` function.
+
+
+
+
+# Jul 25, 2023, RAINBOWR version 0.1.32
+## Major changes (new functions, etc...)
+- We modified the error regarding `See` function when showing  `array` objects.

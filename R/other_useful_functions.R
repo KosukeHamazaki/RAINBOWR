@@ -86,7 +86,6 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
       if (isarray) {
         n.array <- length(dim(data))
 
-        if (narray <= 4) {
           n.data.row <- nrow(data)
           if (fh) {
             start.row <- min(rowst, n.data.row)
@@ -105,8 +104,6 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
             end.col <- max(n.data.col - colst + 1, 1)
           }
 
-          start.other <- 1
-          end.other <- pmin(rep(narray, n.array - 2), dim(data)[-c(1:2)])
 
           if (n.array == 1) {
             data.show <- data[start.row:end.row, drop = drop]
@@ -116,19 +113,24 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
             data.show <- data[start.row:end.row, start.col:end.col, drop = drop]
           }
 
-          if (n.array == 3) {
-            data.show <- data[start.row:end.row, start.col:end.col,
-                              start.other:end.other, drop = drop]
+          if (n.array >= 3) {
+            start.other <- 1
+            end.other <- pmin(rep(narray, n.array - 2), dim(data)[-c(1:2)])
+
+            indices <- c(list(start.row:end.row, start.col:end.col),
+                         lapply(X = end.other, FUN = function(end.other.now) {
+                           start.other:end.other.now
+                         }))
+
+            data.show <- R.utils::extract(x = data,
+                                          indices = indices,
+                                          dims = 1:n.array,
+                                          drop = drop)
           }
 
-          if (n.array == 4) {
-            data.show <- data[start.row:end.row, start.col:end.col,
-                              start.other:end.other, start.other:end.other, drop = drop]
-          }
+
+
           dim.show <- dim(data)
-        } else {
-          stop("You can only see data whose # of the dimensions <= 4!!")
-        }
       } else {
         warning("We cannot offer the simple view of your data. Instead we will offer the structure of your data.")
         data.show <- str(data)
