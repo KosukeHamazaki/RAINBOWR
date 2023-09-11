@@ -161,6 +161,8 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
 #' @param map.0  Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
 #' @param min.MAF Specifies the minimum minor allele frequency (MAF).
 #' If a marker has a MAF less than min.MAF, it is removed from the original marker genotype data.
+#' @param max.HE Specifies the maximum heterozygous rate (HE).
+#' If a marker has a HE more than max.HE, it is removed from the original marker genotype data.
 #' @param max.MS Specifies the maximum missing rate (MS).
 #' If a marker has a MS more than max.MS, it is removed from the original marker genotype data.
 #' @param return.MAF If TRUE, MAF will be returned.
@@ -173,7 +175,7 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
 #' \item{$after}{Minor allele frequencies of the modified marker genotype.}
 #'}
 #'
-MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
+MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05, max.HE = 0.999,
                      max.MS = 0.05, return.MAF = FALSE) {
   x.unique <- sort(unique(c(x.0)), decreasing = FALSE)
   len.x.unique <- length(x.unique)
@@ -191,14 +193,24 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
   }
 
   if (is.scoring1) {
-    freq <- apply(x.0, 2, function(x) {
-      return(mean(x + 1, na.rm = TRUE) / 2)
-    })
+    freq <- apply(X = x.0 + 1, MARGIN = 2,
+                  FUN = function(x) {
+                    return(mean(x, na.rm = TRUE) / 2)
+                  })
+    freq.hetero <- apply(X = x.0, MARGIN = 2,
+                         FUN = function(x) {
+                           return(mean(x == 0, na.rm = TRUE))
+                         })
   } else {
     if (is.scoring2) {
-      freq <- apply(x.0, 2, function(x) {
-        return(mean(x, na.rm = TRUE) / 2)
-      })
+      freq <- apply(X = x.0, MARGIN = 2,
+                    FUN = function(x) {
+                      return(mean(x, na.rm = TRUE) / 2)
+                    })
+      freq.hetero <- apply(X = x.0, MARGIN = 2,
+                           FUN = function(x) {
+                             return(mean(x == 1, na.rm = TRUE))
+                           })
     } else {
       stop("Genotype data should be scored with (-1, 0, 1) or (0, 1, 2)!!")
     }
@@ -207,11 +219,15 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
   MAF.before <- pmin(freq, 1 - freq)
   mark.remain.MAF <- MAF.before >= min.MAF
 
-  MS.rate <- apply(x.0, 2, function(x)
-    mean(is.na(x)))
+  mark.remain.HE <- freq.hetero <= max.HE
+
+  MS.rate <- apply(X = x.0, MARGIN = 2,
+                   FUN = function(x) {
+                     return(mean(is.na(x)))
+                   })
   mark.remain.MS <- MS.rate <= max.MS
 
-  mark.remain <- mark.remain.MAF & mark.remain.MS
+  mark.remain <- mark.remain.MAF & mark.remain.HE & mark.remain.MS
 
 
   x <- x.0[, mark.remain]
@@ -221,12 +237,15 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05,
   } else {
     map <- NULL
   }
-  MAF.after <- MAF.before[mark.remain]
 
   if (return.MAF) {
+    MAF.after <- MAF.before[mark.remain]
+    freq.hetero.after <- freq.hetero[mark.remain]
+
     return(list(
       data = list(x = x, map = map),
-      MAF = list(before = MAF.before, after = MAF.after)
+      MAF = list(before = MAF.before, after = MAF.after),
+      HE = list(before = freq.hetero, after = freq.hetero.after)
     ))
   } else {
     return(list(x = x, map = map))

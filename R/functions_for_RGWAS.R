@@ -1320,9 +1320,18 @@ qq <- function(scores) {
 score.calc <- function(M.now, ZETA.now, y, X.now, package.MM = "gaston",
                        Hinv, P3D = TRUE, eigen.G = NULL, optimizer = "nlminb",
                        n.core = 1, min.MAF = 0.02, count = TRUE) {
+
+  M.now.all <- M.now
+  scores.all <- array(NA, ncol(M.now.all))
+  names(scores.all) <- colnames(M.now.all)
+
+  maf.cut.res <- MAF.cut(x.0 = M.now.all,
+                         min.MAF = min.MAF,
+                         return.MAF = FALSE)
+  M.now <- maf.cut.res$x
+
   n.mark <- ncol(M.now)
   scores <- array(NA, n.mark)
-
   lz <- length(ZETA.now)
   ZKZt <- matrix(0, nrow = length(y), ncol = length(y))
   for (list.no in lz) {
@@ -1350,54 +1359,55 @@ score.calc <- function(M.now, ZETA.now, y, X.now, package.MM = "gaston",
     }
 
     Mi <- M.now[, i]
-    freq <- mean(Mi + 1, na.rm = TRUE) / 2
-    MAF <- min(freq, 1 - freq)
-    if (MAF >= min.MAF) {
-      not.NA.geno <- which(!is.na(Mi))
 
-      ni <- as.integer(min(length(not.NA.geno), rank.ZKZt))
-      yi <- as.matrix(y[not.NA.geno])
-      Xi <- cbind(X.now[not.NA.geno, ], Mi[not.NA.geno])
-      p <- (ncol(X.now) + 1):ncol(Xi)
-      v1 <- length(p)
-      v2 <- ni - ncol(Xi)
+    not.NA.geno <- which(!is.na(Mi))
 
-      if (!P3D) {
-        Xi2 <- make.full(Xi)
-        # if (length(ZETA.now) > 1) {
-        #   EMM.res <- EM3.cpp(y = yi, X0 = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
-        #                      n.core = n.core, optimizer = optimizer,
-        #                      tol = NULL, n.thres = 450, REML = TRUE, pred = FALSE)
-        #
-        # } else {
-        #   EMM.res <- EMM.cpp(y = yi, X = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
-        #                      n.core = n.core, optimizer = optimizer,
-        #                      tol = NULL, n.thres = 450, REML = TRUE)
-        # }
-        EMM.res <- EM3.general(y = yi, X0 = Xi2, ZETA = ZETA.now,
-                               eigen.G = eigen.G, package = package.MM,
-                               n.core = n.core,  optimizer = optimizer,
-                               tol = NULL, REML = TRUE, pred = FALSE,
-                               return.u.always = FALSE,
-                               return.u.each = FALSE,
-                               return.Hinv = TRUE)
-        H2inv <- EMM.res$Hinv
-      } else {
-        H2inv <- Hinv[not.NA.geno, not.NA.geno]
-      }
+    ni <- as.integer(min(length(not.NA.geno), rank.ZKZt))
+    yi <- as.matrix(y[not.NA.geno])
+    Xi <- cbind(X.now[not.NA.geno, ], Mi[not.NA.geno])
+    p <- (ncol(X.now) + 1):ncol(Xi)
+    v1 <- length(p)
+    v2 <- ni - ncol(Xi)
 
-      beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
-                                   v1 = v1, v2 = v2, p = as.matrix(p)), silent = TRUE)
+    if (!P3D) {
+      Xi2 <- make.full(Xi)
+      # if (length(ZETA.now) > 1) {
+      #   EMM.res <- EM3.cpp(y = yi, X0 = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
+      #                      n.core = n.core, optimizer = optimizer,
+      #                      tol = NULL, n.thres = 450, REML = TRUE, pred = FALSE)
+      #
+      # } else {
+      #   EMM.res <- EMM.cpp(y = yi, X = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
+      #                      n.core = n.core, optimizer = optimizer,
+      #                      tol = NULL, n.thres = 450, REML = TRUE)
+      # }
+      EMM.res <- EM3.general(y = yi, X0 = Xi2, ZETA = ZETA.now,
+                             eigen.G = eigen.G, package = package.MM,
+                             n.core = n.core,  optimizer = optimizer,
+                             tol = NULL, REML = TRUE, pred = FALSE,
+                             return.u.always = FALSE,
+                             return.u.each = FALSE,
+                             return.Hinv = TRUE)
+      H2inv <- EMM.res$Hinv
+    } else {
+      H2inv <- Hinv[not.NA.geno, not.NA.geno]
+    }
 
-      if (!("try-error" %in% class(beta.stat))) {
-        scores[i] <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
-      }
+    beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
+                                 v1 = v1, v2 = v2, p = as.matrix(p)), silent = TRUE)
+
+    if (!("try-error" %in% class(beta.stat))) {
+      scores[i] <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
     }
   }
+  scores.all[colnames(M.now)] <- scores
+
   if (count) {
     cat("\n")
   }
-  return(scores)
+
+
+  return(scores.all)
 }
 
 
@@ -1478,6 +1488,14 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now,
                           n.core = 2, parallel.method = "mclapply",
                           P3D = TRUE, eigen.G = NULL, optimizer = "nlminb",
                           min.MAF = 0.02, count = TRUE) {
+  M.now.all <- M.now
+  scores.all <- array(NA, ncol(M.now.all))
+  names(scores.all) <- colnames(M.now.all)
+
+  maf.cut.res <- MAF.cut(x.0 = M.now.all,
+                         min.MAF = min.MAF,
+                         return.MAF = FALSE)
+  M.now <- maf.cut.res$x
   n.mark <- ncol(M.now)
 
   lz <- length(ZETA.now)
@@ -1495,52 +1513,49 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now,
       gc(reset = TRUE); gc(reset = TRUE)
     }
 
-    freq <- mean(Mi + 1, na.rm = TRUE) / 2
-    MAF <- min(freq, 1 - freq)
-    if (MAF >= min.MAF) {
-      not.NA.geno <- which(!is.na(Mi))
 
-      ni <- as.integer(min(length(not.NA.geno), rank.ZKZt))
-      yi <- as.matrix(y[not.NA.geno])
-      Xi <- cbind(X.now[not.NA.geno, ], Mi[not.NA.geno])
-      p <- (ncol(X.now) + 1):ncol(Xi)
-      v1 <- length(p)
-      v2 <- ni - ncol(Xi)
+    not.NA.geno <- which(!is.na(Mi))
 
-      if (!P3D) {
-        Xi2 <- make.full(Xi)
-        # if (length(ZETA.now) > 1) {
-        #   EMM.res <- EM3.cpp(y = yi, X0 = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
-        #                      n.core = 1, optimizer = optimizer,
-        #                      tol = NULL, n.thres = 450, REML = TRUE, pred = FALSE)
-        # } else {
-        #   EMM.res <- EMM.cpp(y = yi, X = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
-        #                      n.core = 1, optimizer = optimizer,
-        #                      tol = NULL, n.thres = 450, REML = TRUE)
-        # }
-        EMM.res <- EM3.general(y = yi, X0 = Xi2, ZETA = ZETA.now,
-                               eigen.G = eigen.G, package = package.MM,
-                               n.core = 1, optimizer = optimizer,
-                               tol = NULL, REML = TRUE, pred = FALSE,
-                               return.u.always = FALSE,
-                               return.u.each = FALSE,
-                               return.Hinv = TRUE)
-        H2inv <- EMM.res$Hinv
-      } else {
-        H2inv <- Hinv[not.NA.geno, not.NA.geno]
-      }
+    ni <- as.integer(min(length(not.NA.geno), rank.ZKZt))
+    yi <- as.matrix(y[not.NA.geno])
+    Xi <- cbind(X.now[not.NA.geno, ], Mi[not.NA.geno])
+    p <- (ncol(X.now) + 1):ncol(Xi)
+    v1 <- length(p)
+    v2 <- ni - ncol(Xi)
 
-      beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
-                                   v1 = v1, v2 = v2, p = as.matrix(p)), silent = TRUE)
+    if (!P3D) {
+      Xi2 <- make.full(Xi)
+      # if (length(ZETA.now) > 1) {
+      #   EMM.res <- EM3.cpp(y = yi, X0 = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
+      #                      n.core = 1, optimizer = optimizer,
+      #                      tol = NULL, n.thres = 450, REML = TRUE, pred = FALSE)
+      # } else {
+      #   EMM.res <- EMM.cpp(y = yi, X = Xi2, ZETA = ZETA.now, eigen.G = eigen.G,
+      #                      n.core = 1, optimizer = optimizer,
+      #                      tol = NULL, n.thres = 450, REML = TRUE)
+      # }
+      EMM.res <- EM3.general(y = yi, X0 = Xi2, ZETA = ZETA.now,
+                             eigen.G = eigen.G, package = package.MM,
+                             n.core = 1, optimizer = optimizer,
+                             tol = NULL, REML = TRUE, pred = FALSE,
+                             return.u.always = FALSE,
+                             return.u.each = FALSE,
+                             return.Hinv = TRUE)
+      H2inv <- EMM.res$Hinv
+    } else {
+      H2inv <- Hinv[not.NA.geno, not.NA.geno]
+    }
 
-      if (!("try-error" %in% class(beta.stat))) {
-        scores.now <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
-      } else {
-        scores.now <- NA
-      }
+    beta.stat <- try(GWAS_F_test(y = yi, x = Xi, hinv = H2inv,
+                                 v1 = v1, v2 = v2, p = as.matrix(p)), silent = TRUE)
+
+    if (!("try-error" %in% class(beta.stat))) {
+      scores.now <- -log10(pbeta(beta.stat, v2 / 2, v1 / 2))
     } else {
       scores.now <- NA
     }
+
+
     return(scores.now)
   }
 
@@ -1550,14 +1565,15 @@ score.calc.MC <- function(M.now, ZETA.now, y, X.now,
                                   parallel.method = parallel.method,
                                   count = count)
   scores <- unlist(scores.list)
+  scores.all[colnames(M.now)] <- scores
 
   if (count) {
     cat("\n")
   }
 
-
-  return(scores)
+  return(scores.all)
 }
+
 
 
 
@@ -1947,6 +1963,8 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
                                            return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
             if ("try-error" %in% class(EMM.res2)) {
               perform.general <- TRUE
+            } else if (is.infinite(EMM.res2$LL)) {
+              perform.general <- TRUE
             }
           } else {
             perform.general <- TRUE
@@ -2241,8 +2259,11 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
 
                                if ("try-error" %in% class(EMM.res2)) {
                                  perform.general <- TRUE
+                               } else if (is.infinite(EMM.res2$LL)) {
+                                 perform.general <- TRUE
+                               }
 
-
+                               if (perform.general) {
                                  ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
                                  if ("A" %in% test.name.now) {
                                    K.A.part <- W.A %*% (t(W.A) * weight.Mis)
@@ -2694,6 +2715,8 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
                                            return.u.each = FALSE, return.Hinv = FALSE), silent = TRUE)
             if ("try-error" %in% class(EMM.res2)) {
               perform.general <- TRUE
+            } else if (is.infinite(EMM.res2$LL)) {
+              perform.general <- TRUE
             }
           } else {
             perform.general <- TRUE
@@ -2984,8 +3007,11 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
 
                                if ("try-error" %in% class(EMM.res2)) {
                                  perform.general <- TRUE
+                               } else if (is.infinite(EMM.res2$LL)) {
+                                 perform.general <- TRUE
+                               }
 
-
+                               if (perform.general) {
                                  ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
                                  if ("A" %in% test.name.now) {
                                    K.A.part <- W.A %*% (t(W.A) * weight.Mis)

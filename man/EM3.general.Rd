@@ -40,18 +40,18 @@ The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.c
 If this argument is NULL, the eigen decomposition will be performed in this function.
 We recommend you assign the result of the eigen decomposition beforehand for time saving.}
 
-\item{package}{Package name to be used in this function. We only offer the following three packages: 
+\item{package}{Package name to be used in this function. We only offer the following three packages:
 "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.}
 
 \item{tol}{The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
 Eigen vectors whose eigen values are less than "tol" argument will be omitted from results.
 If tol is NULL, top 'n' eigen values will be effective.}
 
-\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores. 
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 (`n.core` will be replaced by 1 for `package = 'gaston'`)}
 
-\item{optimizer}{The function used in the optimization process. 
-We offer "optim", "optimx", and "nlminb" functions. 
+\item{optimizer}{The function used in the optimization process.
+We offer "optim", "optimx", and "nlminb" functions.
 This argument is only valid when `package = 'RAINBOWR'`.}
 
 \item{REML}{You can choose which method you will use, "REML" or "ML".
@@ -59,24 +59,24 @@ If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "
 
 \item{pred}{If TRUE, the fitting values of y is returned.}
 
-\item{return.u.always}{When using the "gaston" package with missing values or 
-using the "MM4LMM" package (with/without missings), computing BLUP will take 
-some time in addition to solving the mixed-effects model. You can choose 
+\item{return.u.always}{When using the "gaston" package with missing values or
+using the "MM4LMM" package (with/without missings), computing BLUP will take
+some time in addition to solving the mixed-effects model. You can choose
 whether BLUP (`u`; \eqn{u}) will be returned or not.}
 
-\item{return.u.each}{If TRUE, the function also computes each BLUP corresponding 
-to different kernels (when solving multi-kernel mixed-effects model). It takes 
+\item{return.u.each}{If TRUE, the function also computes each BLUP corresponding
+to different kernels (when solving multi-kernel mixed-effects model). It takes
 additional time compared to the one with `return.u.each = FALSE`  when using packages other than `RAINBOWR`.}
 
-\item{return.Hinv}{If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}} 
+\item{return.Hinv}{If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}}
 will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.
 It will take some time in addition to solving the mixed-effects model when using packages other than `RAINBOWR`.}
 
-\item{recheck.RAINBOWR}{When you use the package other than `RAINBOWR` and the ratio of variance components 
-is out of the range of `var.ratio.range`, the function will solve the mixed-effects model again 
+\item{recheck.RAINBOWR}{When you use the package other than `RAINBOWR` and the ratio of variance components
+is out of the range of `var.ratio.range`, the function will solve the mixed-effects model again
 with `RAINBOWR` package, if `recheck.RAINBOWR = TRUE`.}
 
-\item{var.ratio.range}{The range of variance components to check that the results by 
+\item{var.ratio.range}{The range of variance components to check that the results by
 the package other than RAINBOWR is correct or not when `recheck.RAINBOWR = TRUE`.}
 }
 \value{
@@ -94,9 +94,9 @@ the package other than RAINBOWR is correct or not when `recheck.RAINBOWR = TRUE`
 }
 }
 \description{
-This function solves the following multi-kernel linear mixed effects model 
-using \code{\link[MM4LMM]{MMEst}} function in `MM4LMM` package, 
-\code{\link[gaston]{lmm.aireml}} or \code{\link[gaston]{lmm.diago}} functions in `gaston` package, 
+This function solves the following multi-kernel linear mixed effects model
+using \code{\link[MM4LMM]{MMEst}} function in `MM4LMM` package,
+\code{\link[gaston]{lmm.aireml}} or \code{\link[gaston]{lmm.diago}} functions in `gaston` package,
 or \code{\link[RAINBOWR]{EM3.cpp}} function in `RAINBOWR` package.
 
 \eqn{y = X \beta + \sum _{l=1} ^ {L} Z _ {l} u _ {l} + \epsilon}
@@ -260,18 +260,18 @@ Kang, H.M. et al. (2008) Efficient Control of Population Structure
 Zhou, X. and Stephens, M. (2012) Genome-wide efficient mixed-model analysis
  for association studies. Nat Genet. 44(7): 821-824.
 
-Johnson, D. L., & Thompson, R. (1995). Restricted maximum likelihood estimation of variance 
-components for univariate animal models using sparse matrix techniques and average information. 
-Journal of dairy science, 78(2), 449-456. 
+Johnson, D. L., & Thompson, R. (1995). Restricted maximum likelihood estimation of variance
+components for univariate animal models using sparse matrix techniques and average information.
+Journal of dairy science, 78(2), 449-456.
 
-Hunter, D. R., & Lange, K. (2004). A tutorial on MM algorithms. 
-The American Statistician, 58(1), 30-37. 
+Hunter, D. R., & Lange, K. (2004). A tutorial on MM algorithms.
+The American Statistician, 58(1), 30-37.
 
-Zhou, H., Hu, L., Zhou, J., & Lange, K. (2015). MM algorithms for variance components models. 
+Zhou, H., Hu, L., Zhou, J., & Lange, K. (2015). MM algorithms for variance components models.
 arXiv preprint arXiv:1509.07426.
 
-Gilmour, A. R., Thompson, R., & Cullis, B. R. (1995), Average information REML: 
-an efficient algorithm for variance parameter estimation in linear mixed models, 
+Gilmour, A. R., Thompson, R., & Cullis, B. R. (1995), Average information REML:
+an efficient algorithm for variance parameter estimation in linear mixed models,
 Biometrics, 1440-1450.
 }
 \seealso{

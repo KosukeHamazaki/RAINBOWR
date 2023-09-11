@@ -95,11 +95,11 @@ If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "
 
 \item{return.u.always}{If TRUE, BLUP (`u`; \eqn{u}) will be returned.}
 
-\item{return.u.each}{If TRUE, the function also computes each BLUP corresponding 
-to different kernels (when solving multi-kernel mixed-effects model). It takes 
+\item{return.u.each}{If TRUE, the function also computes each BLUP corresponding
+to different kernels (when solving multi-kernel mixed-effects model). It takes
 additional time compared to the one with `return.u.each = FALSE`.}
 
-\item{return.Hinv}{If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}} 
+\item{return.Hinv}{If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}}
 will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.}
 }
 \value{

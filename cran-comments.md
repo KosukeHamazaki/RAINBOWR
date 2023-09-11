@@ -668,3 +668,33 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 #### There were no WARNINGs.
 
 #### There were no NOTEs.
+
+
+
+
+
+
+# Sep 11, 2023, RAINBOWR version 0.1.33
+## Major changes (new functions, etc...)
+- We added the new special sentinel "_PACKAGE" to the `RAINBOWR.R` file in order to automatically add a -package alias.
+- We added `max.HE` argument to the `MAF.cut` function so that it can also remove markers with a large heterozygous rate.
+- We added some codes to cut MAF for marker genotype beforehand in the `score.calc` and `score.calc.MC` functions.
+- We added some codes to cut MAF for `gene.set` argument beforehand inside the `RGWAS.multisnp`, `RGWAS.epistasis`, and `RGWAS.multisnp.interaction` functions.
+- We added some code to try performing other function to solve mixed effects model if the log-likelihood is returned as infinity when using the `score.calc.LR`, `score.calc.LR.MC`, and `EM3.general` functions.
+
+
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.3.1
+* win-builder release, R version 4.3.1
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 4.2.3
+
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.

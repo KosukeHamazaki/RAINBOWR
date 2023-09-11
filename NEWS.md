@@ -211,3 +211,11 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 # Jul 25, 2023, RAINBOWR version 0.1.32
 ## Major changes (new functions, etc...)
 - We modified the error regarding `See` function when showing  `array` objects.
+
+
+# Sep 11, 2023, RAINBOWR version 0.1.33
+## Major changes (new functions, etc...)
+- We added `max.HE` argument to the `MAF.cut` function so that it can also remove markers with a large heterozygous rate.
+- We added some codes to cut MAF for marker genotype beforehand in the `score.calc` and `score.calc.MC` functions.
+- We added some codes to cut MAF for `gene.set` argument beforehand inside the `RGWAS.multisnp`, `RGWAS.epistasis`, and `RGWAS.multisnp.interaction` functions.
+- We added some code to try performing other function to solve mixed effects model if the log-likelihood is returned as infinity when using the `score.calc.LR`, `score.calc.LR.MC`, and `EM3.general` functions.

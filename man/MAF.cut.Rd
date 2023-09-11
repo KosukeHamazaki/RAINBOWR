@@ -4,7 +4,14 @@
 \alias{MAF.cut}
 \title{Function to remove the minor alleles}
 \usage{
-MAF.cut(x.0, map.0 = NULL, min.MAF = 0.05, max.MS = 0.05, return.MAF = FALSE)
+MAF.cut(
+  x.0,
+  map.0 = NULL,
+  min.MAF = 0.05,
+  max.HE = 0.999,
+  max.MS = 0.05,
+  return.MAF = FALSE
+)
 }
 \arguments{
 \item{x.0}{A \eqn{n \times m} original marker genotype matrix.}
@@ -13,6 +20,9 @@ MAF.cut(x.0, map.0 = NULL, min.MAF = 0.05, max.MS = 0.05, return.MAF = FALSE)
 
 \item{min.MAF}{Specifies the minimum minor allele frequency (MAF).
 If a marker has a MAF less than min.MAF, it is removed from the original marker genotype data.}
+
+\item{max.HE}{Specifies the maximum heterozygous rate (HE).
+If a marker has a HE more than max.HE, it is removed from the original marker genotype data.}
 
 \item{max.MS}{Specifies the maximum missing rate (MS).
 If a marker has a MS more than max.MS, it is removed from the original marker genotype data.}

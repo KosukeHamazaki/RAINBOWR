@@ -304,6 +304,7 @@ RGWAS.epistasis <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
     n.scores.each <- (chr.tab + (window.slide - 1)) %/% window.slide
     n.scores <- sum(n.scores.each)
   } else {
+    gene.set <- gene.set[gene.set$marker %in% geno$marker, ]
     n.scores <- length(unique(gene.set[, 1]))
   }
 

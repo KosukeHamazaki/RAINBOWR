@@ -5,5 +5,4 @@
 #' In detail, please check our preprint on bioRxiv: Kosuke Hamazaki and Hiroyoshi Iwata (2019) <doi:10.1101/612028>.
 #'
 #' @name RAINBOWR
-#' @docType package
-NULL
+"_PACKAGE"
