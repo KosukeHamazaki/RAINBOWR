@@ -219,3 +219,9 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 - We added some codes to cut MAF for marker genotype beforehand in the `score.calc` and `score.calc.MC` functions.
 - We added some codes to cut MAF for `gene.set` argument beforehand inside the `RGWAS.multisnp`, `RGWAS.epistasis`, and `RGWAS.multisnp.interaction` functions.
 - We added some code to try performing other function to solve mixed effects model if the log-likelihood is returned as infinity when using the `score.calc.LR`, `score.calc.LR.MC`, and `EM3.general` functions.
+
+
+# Sep 19, 2023, RAINBOWR version 0.1.34
+## Major changes (new functions, etc...)
+- We changed the argument name `nCores` to `n.core` and added the argument `parallel.method` in the `estPhylo` and `estNetwork` functions.
+- We modified the `estPhylo` and `estNetwork` functions so that they can perform parallel computing even in Windows OS by using the `parallel.compute` function.

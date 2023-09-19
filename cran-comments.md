@@ -698,3 +698,27 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 #### There were no WARNINGs.
 
 #### There were no NOTEs.
+
+
+
+# Sep 19, 2023, RAINBOWR version 0.1.34
+## Major changes (new functions, etc...)
+- We changed the argument name `nCores` to `n.core` and added the argument `parallel.method` in the `estPhylo` and `estNetwork` functions.
+- We modified the `estPhylo` and `estNetwork` functions so that they can perform parallel computing even in Windows OS by using the `parallel.compute` function.
+
+
+## Test environments 
+* platform x86_64-apple-darwin17.0, R version 4.3.1
+* win-builder release, R version 4.3.1
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 4.2.3
+
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.
