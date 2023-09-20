@@ -458,7 +458,8 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #' You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "phylo").
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
-#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach".
+#' @param parallel.method Method for parallel computation in optimizing hyperparameters for estimating haplotype effects.
+#'  We offer three methods, "mclapply", "furrr", and "foreach".
 #'
 #' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package
 #' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`.
@@ -722,6 +723,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
       } else {
         pValChi2Test <- NA
       }
+    } else {
+      pValChi2Test <- NA
     }
 
     haplotypeInfo <- list(haploCluster = haploCluster,
@@ -1341,7 +1344,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "diffusion").
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
-#' @param parallel.method Method for parallel computation. We offer three methods, "mclapply", "furrr", and "foreach".
+#' @param parallel.method Method for parallel computation in optimizing hyperparameters for estimating haplotype effects.
+#' We offer three methods, "mclapply", "furrr", and "foreach".
 #'
 #' When `parallel.method = "mclapply"`, we utilize \code{\link[pbmcapply]{pbmclapply}} function in the `pbmcapply` package
 #' with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parallel` package with `count = FALSE`.
@@ -1616,6 +1620,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       } else {
         pValChi2Test <- NA
       }
+    } else {
+      pValChi2Test <- NA
     }
 
     haplotypeInfo <- list(haploCluster = haploCluster,

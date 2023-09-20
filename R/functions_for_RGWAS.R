@@ -199,6 +199,10 @@ parallel.compute <- function(vec,
 
     parallel::stopCluster(cl = clust)
 
+    all.res <- lapply(X = 1:length(all.res),
+                      FUN = function(x) {
+                        return(all.res[x])
+                      })
     if (count) {
       cat("\n")
     }
@@ -210,6 +214,7 @@ parallel.compute <- function(vec,
 
   return(all.res)
 }
+
 
 
 

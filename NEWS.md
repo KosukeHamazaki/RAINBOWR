@@ -225,3 +225,4 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 ## Major changes (new functions, etc...)
 - We changed the argument name `nCores` to `n.core` and added the argument `parallel.method` in the `estPhylo` and `estNetwork` functions.
 - We modified the `estPhylo` and `estNetwork` functions so that they can perform parallel computing even in Windows OS by using the `parallel.compute` function.
+- We also modified the `parallel.compute` function so that `parallel.method = 'foreach'` option can return the same values as `parallel.method = 'mclapply'`.
