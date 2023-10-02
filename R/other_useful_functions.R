@@ -86,51 +86,51 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
       if (isarray) {
         n.array <- length(dim(data))
 
-          n.data.row <- nrow(data)
-          if (fh) {
-            start.row <- min(rowst, n.data.row)
-            end.row <- min(rowst + rown - 1, n.data.row)
-          } else {
-            start.row <- max(n.data.row - rowst - rown + 2, 1)
-            end.row <- max(n.data.row - rowst + 1, 1)
-          }
+        n.data.row <- nrow(data)
+        if (fh) {
+          start.row <- min(rowst, n.data.row)
+          end.row <- min(rowst + rown - 1, n.data.row)
+        } else {
+          start.row <- max(n.data.row - rowst - rown + 2, 1)
+          end.row <- max(n.data.row - rowst + 1, 1)
+        }
 
-          n.data.col <- ncol(data)
-          if (fl) {
-            start.col <- min(colst, n.data.col)
-            end.col <- min(colst + coln - 1, n.data.col)
-          } else {
-            start.col <- max(n.data.col - colst - coln + 2, 1)
-            end.col <- max(n.data.col - colst + 1, 1)
-          }
-
-
-          if (n.array == 1) {
-            data.show <- data[start.row:end.row, drop = drop]
-          }
-
-          if (n.array == 2) {
-            data.show <- data[start.row:end.row, start.col:end.col, drop = drop]
-          }
-
-          if (n.array >= 3) {
-            start.other <- 1
-            end.other <- pmin(rep(narray, n.array - 2), dim(data)[-c(1:2)])
-
-            indices <- c(list(start.row:end.row, start.col:end.col),
-                         lapply(X = end.other, FUN = function(end.other.now) {
-                           start.other:end.other.now
-                         }))
-
-            data.show <- R.utils::extract(x = data,
-                                          indices = indices,
-                                          dims = 1:n.array,
-                                          drop = drop)
-          }
+        n.data.col <- ncol(data)
+        if (fl) {
+          start.col <- min(colst, n.data.col)
+          end.col <- min(colst + coln - 1, n.data.col)
+        } else {
+          start.col <- max(n.data.col - colst - coln + 2, 1)
+          end.col <- max(n.data.col - colst + 1, 1)
+        }
 
 
+        if (n.array == 1) {
+          data.show <- data[start.row:end.row, drop = drop]
+        }
 
-          dim.show <- dim(data)
+        if (n.array == 2) {
+          data.show <- data[start.row:end.row, start.col:end.col, drop = drop]
+        }
+
+        if (n.array >= 3) {
+          start.other <- 1
+          end.other <- pmin(rep(narray, n.array - 2), dim(data)[-c(1:2)])
+
+          indices <- c(list(start.row:end.row, start.col:end.col),
+                       lapply(X = end.other, FUN = function(end.other.now) {
+                         start.other:end.other.now
+                       }))
+
+          data.show <- R.utils::extract(x = data,
+                                        indices = indices,
+                                        dims = 1:n.array,
+                                        drop = drop)
+        }
+
+
+
+        dim.show <- dim(data)
       } else {
         warning("We cannot offer the simple view of your data. Instead we will offer the structure of your data.")
         data.show <- str(data)
@@ -420,6 +420,8 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #' @param posRegion You can specify the haplotype block (or gene set, SNP-set) of interest by the marker position in `geno`.
 #' Please assign the position in the chromosome to this argument.
 #' @param blockName You can specify the haplotype block (or gene set, SNP-set) of interest by the name of haplotype block in `geno`.
+#' @param nHaplo Number of haplotypes. If not defined, this is automatically defined by the data.
+#' If defined, k-medoids clustering　is performed to define haplotypes.
 #' @param pheno Data frame where the first column is the line name (gid).
 #' The remaining columns should be a phenotype to test.
 #' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
@@ -516,6 +518,7 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #' \describe{A list / lists of
 #' \item{$haplotypeInfo}{\describe{A list of haplotype information with
 #' \item{$haploCluster}{A vector indicating each individual belongs to which haplotypes.}
+#' \item{$haploMat}{A n x h matrix where n is the number of genotypes and h is the number of haplotypes.}
 #' \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
 #' }
 #' }
@@ -545,7 +548,7 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #'
 estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set = NULL,
                      indexRegion = 1:10, chrInterest = NULL, posRegion = NULL, blockName = NULL,
-                     pheno = NULL, geno = NULL, ZETA = NULL,
+                     nHaplo = NULL, pheno = NULL, geno = NULL, ZETA = NULL,
                      chi2Test = TRUE, thresChi2Test = 5e-2,  plotTree = TRUE,
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
                      subpopInfo = NULL, groupingMethod = "kmedoids",
@@ -685,15 +688,37 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
     stringBlock <- apply(blockInterest, 1, function(x) paste0(x, collapse = ""))
     blockInterestUnique <- blockInterest[!duplicated(stringBlock), ]
-    nHaplo <- length(unique(stringBlock))
-    haploClusterNow <- as.numeric(factor(stringBlock))
-    names(haploClusterNow) <- lineNames
+    if (is.null(nHaplo)) {
+      nHaplo <- length(unique(stringBlock))
+      haploClusterNow <- as.numeric(factor(stringBlock))
+      lineNames <- rownames(blockInterest)
+      names(haploClusterNow) <- lineNames
 
-    blockInterestUniqueSorted <- blockInterestUnique[order(unique(stringBlock)), ]
-    haploNames <- paste0("haplo_", 1:nHaplo)
+      blockInterestUniqueSorted <- blockInterestUnique[order(unique(stringBlock)), , drop = FALSE]
+    } else {
+      kmedRes <- cluster::pam(blockInterest, k = nHaplo, pamonce = 5)
+      blockInterestMed <- kmedRes$medoids
+      stringBlockMed <- apply(blockInterestMed, 1, function(x) paste0(x, collapse = ""))
+      haploClusterNow <- kmedRes$clustering
+
+      blockInterestUniqueSorted <- blockInterestMed[order(unique(stringBlockMed)), , drop = FALSE]
+    }
+
+
+    haploNames <- paste0("h", 1:nHaplo)
     rownames(blockInterestUniqueSorted) <- haploNames
+    stringBlockUniqueSorted <- apply(blockInterestUniqueSorted, 1,
+                                     function(x) paste0(x, collapse = ""))
     haploCluster <- haploNames[haploClusterNow]
     names(haploCluster) <- lineNames
+
+    haploMat <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(blockInterest),
+                                               j = haploClusterNow,
+                                               x = rep(1, nrow(blockInterest)),
+                                               dims = c(nrow(blockInterest),
+                                                        nrow(blockInterestUniqueSorted))))
+    rownames(haploMat) <- rownames(blockInterest)
+    colnames(haploMat) <- haploNames
 
     if (!is.null(subpopInfo)) {
       tableRes <- table(haploCluster = haploCluster,
@@ -728,6 +753,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     }
 
     haplotypeInfo <- list(haploCluster = haploCluster,
+                          haploMat = haploMat,
                           haploBlock = blockInterestUniqueSorted)
 
 
@@ -811,15 +837,15 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
             if (length(hStarts) >= 2) {
               solnList <- parallel.compute(vec = hStarts,
-                                            func = function(h) {
-                                              soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                             lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                           func = function(h) {
+                                             soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                            lower = 0, upper = 1e06, control = list(iter.max = maxIter))
 
-                                              return(soln)
-                                            },
-                                            n.core = n.core,
-                                            parallel.method = parallel.method,
-                                            count = verbose)
+                                             return(soln)
+                                           },
+                                           n.core = n.core,
+                                           parallel.method = parallel.method,
+                                           count = verbose)
               solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
               soln <- solnList[[solnNo]]
             } else {
@@ -1287,6 +1313,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' @param posRegion You can specify the haplotype block (or gene set, SNP-set) of interest by the marker position in `geno`.
 #' Please assign the position in the chromosome to this argument.
 #' @param blockName You can specify the haplotype block (or gene set, SNP-set) of interest by the name of haplotype block in `geno`.
+#' @param nHaplo Number of haplotypes. If not defined, this is automatically defined by the data.
+#' If defined, k-medoids clustering　is performed to define haplotypes.
 #' @param pheno Data frame where the first column is the line name (gid).
 #' The remaining columns should be a phenotype to test.
 #' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
@@ -1404,6 +1432,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' \describe{A list / lists of
 #' \item{$haplotypeInfo}{\describe{A list of haplotype information with
 #' \item{$haploCluster}{A vector indicating each individual belongs to which haplotypes.}
+#' \item{$haploMat}{A n x h matrix where n is the number of genotypes and h is the number of haplotypes.}
 #' \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
 #' }
 #' }
@@ -1437,7 +1466,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #'
 estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set = NULL,
                        indexRegion = 1:10, chrInterest = NULL, posRegion = NULL, blockName = NULL,
-                       pheno = NULL, geno = NULL, ZETA = NULL, chi2Test = TRUE,
+                       nHaplo = NULL, pheno = NULL, geno = NULL, ZETA = NULL, chi2Test = TRUE,
                        thresChi2Test = 5e-2,  plotNetwork = TRUE, distMat = NULL,
                        distMethod = "manhattan", evolutionDist = FALSE, complementHaplo = "phylo",
                        subpopInfo = NULL, groupingMethod = "kmedoids", nGrp = 3,
@@ -1578,19 +1607,38 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                   blockName = NULL) {
     stringBlock <- apply(blockInterest, 1, function(x) paste0(x, collapse = ""))
     blockInterestUnique <- blockInterest[!duplicated(stringBlock), ]
-    nHaplo <- length(unique(stringBlock))
-    haploClusterNow <- as.numeric(factor(stringBlock))
-    lineNames <- rownames(blockInterest)
-    names(haploClusterNow) <- lineNames
+    if (is.null(nHaplo)) {
+      nHaplo <- length(unique(stringBlock))
+      haploClusterNow <- as.numeric(factor(stringBlock))
+      lineNames <- rownames(blockInterest)
+      names(haploClusterNow) <- lineNames
+
+      blockInterestUniqueSorted <- blockInterestUnique[order(unique(stringBlock)), , drop = FALSE]
+    } else {
+      kmedRes <- cluster::pam(blockInterest, k = nHaplo, pamonce = 5)
+      blockInterestMed <- kmedRes$medoids
+      stringBlockMed <- apply(blockInterestMed, 1, function(x) paste0(x, collapse = ""))
+      haploClusterNow <- kmedRes$clustering
+
+      blockInterestUniqueSorted <- blockInterestMed[order(unique(stringBlockMed)), , drop = FALSE]
+    }
 
 
-    blockInterestUniqueSorted <- blockInterestUnique[order(unique(stringBlock)), ]
     haploNames <- paste0("h", 1:nHaplo)
     rownames(blockInterestUniqueSorted) <- haploNames
     stringBlockUniqueSorted <- apply(blockInterestUniqueSorted, 1,
                                      function(x) paste0(x, collapse = ""))
     haploCluster <- haploNames[haploClusterNow]
     names(haploCluster) <- lineNames
+
+    haploMat <- as.matrix(Matrix::sparseMatrix(i = 1:nrow(blockInterest),
+                                               j = haploClusterNow,
+                                               x = rep(1, nrow(blockInterest)),
+                                               dims = c(nrow(blockInterest),
+                                                        nrow(blockInterestUniqueSorted))))
+    rownames(haploMat) <- rownames(blockInterest)
+    colnames(haploMat) <- haploNames
+
 
     if (!is.null(subpopInfo)) {
       tableRes <- table(haploCluster = haploCluster,
@@ -1625,6 +1673,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     }
 
     haplotypeInfo <- list(haploCluster = haploCluster,
+                          haploMat = haploMat,
                           haploBlock = blockInterestUniqueSorted)
 
 
@@ -1934,15 +1983,15 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
 
             if (length(hStarts) >= 2) {
               solnList <- parallel.compute(vec = hStarts,
-                                            func = function(h) {
-                                              soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
-                                                             lower = 0, upper = 1e06, control = list(iter.max = maxIter))
+                                           func = function(h) {
+                                             soln <- nlminb(start = h, objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                                            lower = 0, upper = 1e06, control = list(iter.max = maxIter))
 
-                                              return(soln)
-                                            },
-                                            n.core = n.core,
-                                            parallel.method = parallel.method,
-                                            count = verbose)
+                                             return(soln)
+                                           },
+                                           n.core = n.core,
+                                           parallel.method = parallel.method,
+                                           count = verbose)
               solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
               soln <- solnList[[solnNo]]
             } else {

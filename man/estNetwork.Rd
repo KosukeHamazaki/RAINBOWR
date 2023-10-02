@@ -13,6 +13,7 @@ estNetwork(
   chrInterest = NULL,
   posRegion = NULL,
   blockName = NULL,
+  nHaplo = NULL,
   pheno = NULL,
   geno = NULL,
   ZETA = NULL,
@@ -79,6 +80,9 @@ Please assign the chromosome number to this argument.}
 Please assign the position in the chromosome to this argument.}
 
 \item{blockName}{You can specify the haplotype block (or gene set, SNP-set) of interest by the name of haplotype block in `geno`.}
+
+\item{nHaplo}{Number of haplotypes. If not defined, this is automatically defined by the data.
+If defined, k-medoids clustering　is performed to define haplotypes.}
 
 \item{pheno}{Data frame where the first column is the line name (gid).
 The remaining columns should be a phenotype to test.}
@@ -238,6 +242,7 @@ alpha for complemented haplotype will be same as the alpha for original haplotyp
 \describe{A list / lists of
 \item{$haplotypeInfo}{\describe{A list of haplotype information with
 \item{$haploCluster}{A vector indicating each individual belongs to which haplotypes.}
+\item{$haploMat}{A n x h matrix where n is the number of genotypes and h is the number of haplotypes.}
 \item{$haploBlock}{Marker genotype of haplotype block of interest for the representing haplotypes.}
 }
 }

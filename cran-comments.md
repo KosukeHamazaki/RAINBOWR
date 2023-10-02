@@ -701,10 +701,11 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 
 
-# Sep 19, 2023, RAINBOWR version 0.1.34
+# Oct 2, 2023, RAINBOWR version 0.1.34
 ## Major changes (new functions, etc...)
 - We changed the argument name `nCores` to `n.core` and added the argument `parallel.method` in the `estPhylo` and `estNetwork` functions.
 - We modified the `estPhylo` and `estNetwork` functions so that they can perform parallel computing even in Windows OS by using the `parallel.compute` function.
+- We modified the `estPhylo` and `estNetwork` functions so that they can return a n x h matrix where n is the number of genotypes and h is the number of haplotypes for each block of interest. Also, they were extended so that they could perform k-medoids clustering to define the haplotype when the number of haplotypes is predefined.
 - We also modified the `parallel.compute` function so that `parallel.method = 'foreach'` option can return the same values as `parallel.method = 'mclapply'`.
 
 
