@@ -413,6 +413,31 @@ calcGRM <- function(genoMat,
                         "gaussian", "exponential", "correlation")
   stopifnot(methodGRM %in% supportedMethods)
 
+  genoMatUniq <- sort(unique(c(genoMat)), decreasing = FALSE)
+  genoMatUniqLen <- length(genoMatUniq)
+
+  if (genoMatUniqLen == 2) {
+    isScoring1 <- all(genoMatUniq == c(-1, 1))
+    isScoring2 <- all(genoMatUniq == c(0, 2))
+  } else {
+    if (genoMatUniqLen == 3) {
+      isScoring1 <- all(genoMatUniq == c(-1, 0, 1))
+      isScoring2 <- all(genoMatUniq == c(0, 1, 2))
+    } else {
+      stop("Something wrong with your genotype data!!")
+    }
+  }
+
+  if (isScoring1) {
+    genoMat <- genoMat
+  } else {
+    if (isScoring2) {
+      genoMat <- genoMat - 1
+    } else {
+      stop("Genotype data should be scored with (-1, 0, 1) or (0, 1, 2)!!")
+    }
+  }
+
   nInd <- nrow(genoMat)
   nMarkers <- ncol(genoMat)
   mrkNames <- colnames(genoMat)

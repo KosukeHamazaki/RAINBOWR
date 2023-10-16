@@ -227,3 +227,8 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 - We modified the `estPhylo` and `estNetwork` functions so that they can perform parallel computing even in Windows OS by using the `parallel.compute` function.
 - We modified the `estPhylo` and `estNetwork` functions so that they can return a n x h matrix where n is the number of genotypes and h is the number of haplotypes for each block of interest. Also, they were extended so that they could perform k-medoids clustering to define the haplotype when the number of haplotypes is predefined.
 - We also modified the `parallel.compute` function so that `parallel.method = 'foreach'` option can return the same values as `parallel.method = 'mclapply'`.
+
+
+# Oct 16, 2023, RAINBOWR version 0.1.35
+## Major changes (new functions, etc...)
+- We modified the `calcGRM` function so that it can compute the genomic relationship matrix with the input of marker genotype scored with {0, 1, 2}.
