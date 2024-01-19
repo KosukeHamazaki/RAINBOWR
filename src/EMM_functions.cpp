@@ -1733,8 +1733,8 @@ double GWAS_F_test(Rcpp::NumericMatrix y, Rcpp::NumericMatrix x,
   const MapMat Hinv = Rcpp::as<MapMat>(hinv);
   const MapMat P = Rcpp::as<MapMat>(p);
   const int pSize(P.rows());
-  double pMin = P(0, 0);
-  double pMax= P(pSize - 1, 0);
+  int pMin = static_cast<int>(P(0, 0));
+  int pMax=  static_cast<int>(P(pSize - 1, 0));
 
   MatrixXd W = crossprod(X, Hinv * X);
   MatrixXd Winv = inv(W);
