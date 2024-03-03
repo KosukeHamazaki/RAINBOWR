@@ -2,7 +2,7 @@
 #'
 #' @name Rice_geno_score
 #'
-#' @description A dataset containing the information of marker genotype (scored with {-1, 0, 1})
+#' @description A dataset containing the information of marker genotype (scored with [-1, 0, 1])
 #'  of rice genome (Zhao et al., 2010; PLoS One 5(5): e10780).
 #'
 #' @format A data frame with 1311 rows and 395 variables:

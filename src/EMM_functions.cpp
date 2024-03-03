@@ -21,7 +21,7 @@ MatrixXd solve(MatrixXd A, MatrixXd B){
   return Sol;
 }
 
-MatrixXd  inv(MatrixXd A){
+MatrixXd inv(MatrixXd A){
 
   Rcpp::Environment pkg = Rcpp::Environment::namespace_env("MASS");
   Rcpp::Function f = pkg["ginv"];
@@ -1733,8 +1733,8 @@ double GWAS_F_test(Rcpp::NumericMatrix y, Rcpp::NumericMatrix x,
   const MapMat Hinv = Rcpp::as<MapMat>(hinv);
   const MapMat P = Rcpp::as<MapMat>(p);
   const int pSize(P.rows());
-  int pMin = static_cast<int>(P(0, 0));
-  int pMax=  static_cast<int>(P(pSize - 1, 0));
+  double pMin = P(0, 0);
+  double pMax= P(pSize - 1, 0);
 
   MatrixXd W = crossprod(X, Hinv * X);
   MatrixXd Winv = inv(W);
@@ -1748,7 +1748,9 @@ double GWAS_F_test(Rcpp::NumericMatrix y, Rcpp::NumericMatrix x,
   MatrixXd CovBeta = s2 * Winv;
 
   if(pMin == pMax){
-    Fstat = beta(pMin - 1, 0) * beta(pMin - 1, 0) / CovBeta(pMin - 1, pMin - 1);
+    double betaDouble = beta.coeff(pMin - 1, 0) * beta.coeff(pMin - 1, 0);
+    double CovBetaDouble = CovBeta.coeff(pMin - 1, pMin - 1);
+    Fstat = betaDouble / CovBetaDouble;
   } else {
     MatrixXd CovBetaPart = CovBeta.block(pMin - 1, pMin - 1, pMax - pMin + 1, pMax - pMin + 1);
     MatrixXd CovBetaPartInv = inv(CovBetaPart);

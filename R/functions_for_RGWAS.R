@@ -242,12 +242,15 @@ is.diag <- function(x) {
 #' @param input Data frame of GWAS results where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
 #' @param sig.level  Significance level for the threshold. The default is 0.05. You can also assign vector of sinificance levels.
-#' @param method Two methods are offered:
+#' @param method Three methods are offered:
 #'
-#' "BH" : Benjamini-Hochberg method. To control FDR, use this method.
-#' "Bonf" : Bonferroni method. To perform simple correction of multiple testing, use this method.
+#' "BH": Benjamini-Hochberg method. To control FDR, use this method.
 #'
-#' You can also assign both of them by 'method = c("BH", "Bonf")'
+#' "Bonf": Bonferroni method. To perform simple correction of multiple testing, use this method.
+#'
+#' "Sidak": Sidak method.
+#'
+#' You can also assign two of them by 'method = c("BH", "Bonf")'
 #'
 #' @return The value of the threshold. If there is no threshold, it returns NA.
 #'
@@ -368,6 +371,11 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
     if (method.now == "Bonf") {
       n.mark <- nrow(input)
       threshold <- -log10(sig.level.now / n.mark)
+    }
+
+    if (method.now == "Sidak") {
+      n.mark <- nrow(input)
+      threshold <- -log10(x = 1 - (1 - sig.level.now) ^ (1 / n.mark))
     }
 
     thresholds[thres.no] <- threshold

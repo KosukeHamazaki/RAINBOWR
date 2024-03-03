@@ -2,7 +2,7 @@
 #'
 #' @param res Data frame of GWAS results where the first column is the marker names,
 #' the second and third column is the chromosome amd map position, and the forth column is -log10(p) for each marker.
-#' @param x A N (lines) x M (markers) marker genotype data (matrix), coded as {-1, 0, 1} = {aa, Aa, AA}.
+#' @param x A N (lines) x M (markers) marker genotype data (matrix), coded as [-1, 0, 1] = [aa, Aa, AA].
 #' @param map.x Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
 #' @param qtn.candidate A vector of causal markers. You should assign where those causal markers are positioned in our marker genotype,
 #' rather than physical position of those causal markers.

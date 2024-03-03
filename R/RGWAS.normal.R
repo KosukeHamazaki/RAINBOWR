@@ -23,7 +23,7 @@
 #'
 #' @param pheno Data frame where the first column is the line name (gid). The remaining columns should be a phenotype to test.
 #' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
-#'        Columns 4 and higher contain the marker scores for each line, coded as {-1, 0, 1} = {aa, Aa, AA}.
+#'        Columns 4 and higher contain the marker scores for each line, coded as [-1, 0, 1] = [aa, Aa, AA].
 #' @param ZETA A list of covariance (relationship) matrix (K: \eqn{m \times m}) and its design matrix (Z: \eqn{n \times m}) of random effects.
 #' Please set names of list "Z" and "K"! You can use more than one kernel matrix.
 #' For example,

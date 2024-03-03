@@ -132,9 +132,22 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
 
         dim.show <- dim(data)
       } else {
-        warning("We cannot offer the simple view of your data. Instead we will offer the structure of your data.")
-        data.show <- str(data)
-        dim.show <-  NULL
+        if (islist) {
+          n.data <- length(data)
+          if (fh) {
+            start <- min(rowst, n.data)
+            end <- min(rowst + rown - 1, n.data)
+          } else {
+            start <- max(n.data - rowst - rown + 2, 1)
+            end <- max(n.data - rowst + 1, 1)
+          }
+          data.show <- str(data[start:end])
+          dim.show <- n.data
+        } else {
+          warning("We cannot offer the simple view of your data. Instead we will offer the structure of your data.")
+          data.show <- str(data)
+          dim.show <-  NULL
+        }
       }
     }
   }
@@ -421,11 +434,11 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #' Please assign the position in the chromosome to this argument.
 #' @param blockName You can specify the haplotype block (or gene set, SNP-set) of interest by the name of haplotype block in `geno`.
 #' @param nHaplo Number of haplotypes. If not defined, this is automatically defined by the data.
-#' If defined, k-medoids clustering　is performed to define haplotypes.
+#' If defined, k-medoids clustering is performed to define haplotypes.
 #' @param pheno Data frame where the first column is the line name (gid).
 #' The remaining columns should be a phenotype to test.
 #' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
-#'        Columns 4 and higher contain the marker scores for each line, coded as {-1, 0, 1} = {aa, Aa, AA}.
+#'        Columns 4 and higher contain the marker scores for each line, coded as [-1, 0, 1] = [aa, Aa, AA].
 #' @param ZETA A list of covariance (relationship) matrix (K: \eqn{m \times m}) and its design matrix (Z: \eqn{n \times m}) of random effects.
 #' Please set names of list "Z" and "K"! You can use more than one kernel matrix.
 #' For example,
@@ -1314,11 +1327,11 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' Please assign the position in the chromosome to this argument.
 #' @param blockName You can specify the haplotype block (or gene set, SNP-set) of interest by the name of haplotype block in `geno`.
 #' @param nHaplo Number of haplotypes. If not defined, this is automatically defined by the data.
-#' If defined, k-medoids clustering　is performed to define haplotypes.
+#' If defined, k-medoids clustering is performed to define haplotypes.
 #' @param pheno Data frame where the first column is the line name (gid).
 #' The remaining columns should be a phenotype to test.
 #' @param geno Data frame with the marker names in the first column. The second and third columns contain the chromosome and map position.
-#'        Columns 4 and higher contain the marker scores for each line, coded as {-1, 0, 1} = {aa, Aa, AA}.
+#'        Columns 4 and higher contain the marker scores for each line, coded as [-1, 0, 1] = [aa, Aa, AA].
 #' @param ZETA A list of covariance (relationship) matrix (K: \eqn{m \times m}) and its design matrix (Z: \eqn{n \times m}) of random effects.
 #' Please set names of list "Z" and "K"! You can use more than one kernel matrix.
 #' For example,
@@ -1356,8 +1369,8 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #'  'rmst' is recommended.
 #' @param autogamous This argument will be valid only when you use `complementHaplo = "all"` or `complementHaplo = "TCS"`.
 #' This argument specifies whether the plant is autogamous or not. If autogamous = TRUE,
-#' complemented haplotype will consist of only homozygous sites ({-1, 1}).
-#' If FALSE, complemented haplotype will consist of both homozygous & heterozygous sites ({-1, 0, 1}).
+#' complemented haplotype will consist of only homozygous sites ([-1, 1]).
+#' If FALSE, complemented haplotype will consist of both homozygous & heterozygous sites ([-1, 0, 1]).
 #' @param probParsimony Equal to the argument `prob` in `haplotypes::parsimnet` function:
 #'
 #' A numeric vector of length one in the range [0.01, 0.99] giving the probability of parsimony as defined in Templeton et al. (1992).

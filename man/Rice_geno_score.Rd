@@ -14,7 +14,7 @@ A data frame with 1311 rows and 395 variables:
 \url{http://www.ricediversity.org/data/}
 }
 \description{
-A dataset containing the information of marker genotype (scored with {-1, 0, 1})
+A dataset containing the information of marker genotype (scored with [-1, 0, 1])
  of rice genome (Zhao et al., 2010; PLoS One 5(5): e10780).
 }
 \references{

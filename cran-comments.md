@@ -727,6 +727,27 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 
 
 
-# Oct 16, 2023, RAINBOWR version 0.1.35
+# Mar 03, 2024, RAINBOWR version 0.1.35
 ## Major changes (new functions, etc...)
 - We modified the `calcGRM` function so that it can compute the genomic relationship matrix with the input of marker genotype scored with {0, 1, 2}.
+- We modified the `See` function so that it can show the shorter results for `list` objects.
+- We added the `method = "Sidak"` option in the `CalcThreshold` function.
+- We fixed the error "error: no match for 'operator/'" in `EMM_functions.cpp` by explicitly extracting each element from the matrix by using `.coeff`.
+
+
+
+## Test environments 
+* platform x86_64-apple-darwin20, R version 4.3.3
+* win-builder release, R version 4.3.3
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 4.2.3
+
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.
