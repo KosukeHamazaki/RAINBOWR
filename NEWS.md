@@ -235,3 +235,8 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 - We modified the `See` function so that it can show the shorter results for `list` objects.
 - We added the `method = "Sidak"` option in the `CalcThreshold` function.
 - We fixed the error "error: no match for 'operator/'" in `EMM_functions.cpp` by explicitly extracting each element from the matrix by using `.coeff`.
+
+
+# Mar 21, 2024, RAINBOWR version 0.1.36
+## Major changes (new functions, etc...)
+- We modified the `calcGRM` function so that it can compute the genomic relationship matrix with the input of marker genotype scored with {0, 1} or {-1, 0}.

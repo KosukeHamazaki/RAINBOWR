@@ -751,3 +751,9 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 #### There were no WARNINGs.
 
 #### There were no NOTEs.
+
+
+
+# Mar 21, 2024, RAINBOWR version 0.1.36
+## Major changes (new functions, etc...)
+- We modified the `calcGRM` function so that it can compute the genomic relationship matrix with the input of marker genotype scored with {0, 1} or {-1, 0}.

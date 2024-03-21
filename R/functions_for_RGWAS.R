@@ -425,8 +425,8 @@ calcGRM <- function(genoMat,
   genoMatUniqLen <- length(genoMatUniq)
 
   if (genoMatUniqLen == 2) {
-    isScoring1 <- all(genoMatUniq == c(-1, 1))
-    isScoring2 <- all(genoMatUniq == c(0, 2))
+    isScoring1 <- all(genoMatUniq == c(-1, 1)) | all(genoMatUniq == c(-1, 0))
+    isScoring2 <- all(genoMatUniq == c(0, 2)) | all(genoMatUniq == c(0, 1))
   } else {
     if (genoMatUniqLen == 3) {
       isScoring1 <- all(genoMatUniq == c(-1, 0, 1))
