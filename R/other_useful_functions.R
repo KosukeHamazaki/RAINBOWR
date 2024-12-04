@@ -575,10 +575,11 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      ggPlotTree = FALSE, cexMaxForGG = 0.12, cexMinForGG = 0.06,
                      alphaBase = c(0.9, 0.3), verbose = TRUE) {
   if (requireNamespace("ggtree", quietly = TRUE) &
-      requireNamespace("phylobase", quietly = TRUE)) {
+      requireNamespace("phylobase", quietly = TRUE) &
+      requireNamespace("ggimage", quietly = TRUE)) {
     ggPlotTree <- ggPlotTree
   } else {
-    warning(paste0("If you want to plot phylogenetic trees, please install `ggtree` and `phylobase` packages from Bioconductor! \n",
+    warning(paste0("If you want to plot phylogenetic trees, please install `ggtree`, `phylobase`, and `ggimage` packages from Bioconductor! \n",
                    "We switched `ggPlotTree = FALSE`."))
     ggPlotTree <- FALSE
   }
@@ -837,6 +838,20 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                        kernel.h = h)
               }
 
+              eigenGPart <- eigen(gKernelPart)
+              if (sum(eigenGPart$values < 0) >= 1) {
+                eigenGPartVal <- eigenGPart$values + 1e-06
+                whichPositive <- eigenGPartVal >= 0
+                if (sum(!whichPositive) == 0) {
+                  diag(gKernelPart) <- diag(gKernelPart) + 1e-06
+                } else {
+                  gKernelPart <- eigenGPart$vectors[, whichPositive, drop = FALSE] %*%
+                    tcrossprod(diag(eigenGPartVal[whichPositive]), eigenGPart$vectors[, whichPositive, drop = FALSE])
+                }
+                eigenGPart$vectors <- eigenGPart$vectors[, whichPositive, drop = FALSE]
+                eigenGPart$values <- eigenGPartVal[whichPositive]
+              }
+
               ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
               EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow), silent = TRUE)
               if (!("try-error" %in% class(EM3Res))) {
@@ -876,7 +891,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
 
           if (kernelType == "phylo") {
-            gKernel <- exp(- hOpt * distNodes)
+            gKernel <- exp(- hOpt * distNodes ^ 2)
 
             gKernelPart <- gKernel[1:nHaplo, 1:nHaplo]
           } else {
@@ -893,6 +908,20 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
         if (verbose) {
           print("Now estimating genotypic values...")
+        }
+
+        eigenGPart <- eigen(gKernelPart)
+        if (sum(eigenGPart$values < 0) >= 1) {
+          eigenGPartVal <- eigenGPart$values + 1e-06
+          whichPositive <- eigenGPartVal >= 0
+          if (sum(!whichPositive) == 0) {
+            diag(gKernelPart) <- diag(gKernelPart) + 1e-06
+          } else {
+            gKernelPart <- eigenGPart$vectors[, whichPositive, drop = FALSE] %*%
+              tcrossprod(diag(eigenGPartVal[whichPositive]), eigenGPart$vectors[, whichPositive, drop = FALSE])
+          }
+          eigenGPart$vectors <- eigenGPart$vectors[, whichPositive, drop = FALSE]
+          eigenGPart$values <- eigenGPartVal[whichPositive]
         }
 
         ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
@@ -933,6 +962,21 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
             maximizeFunc2 <- function(h) {
               gKernel <- exp(- h * distNodes ^ 2)
+
+              eigenG <- eigen(gKernel)
+              if (sum(eigenG$values < 0) >= 1) {
+                eigenGVal <- eigenG$values + 1e-06
+                whichPositive <- eigenGVal >= 0
+                if (sum(!whichPositive) == 0) {
+                  diag(gKernel) <- diag(gKernel) + 1e-06
+                } else {
+                  gKernel <- eigenG$vectors[, whichPositive, drop = FALSE] %*%
+                    tcrossprod(diag(eigenGVal[whichPositive]), eigenG$vectors[, whichPositive, drop = FALSE])
+                }
+                eigenG$vectors <- eigenG$vectors[, whichPositive, drop = FALSE]
+                eigenG$values <- eigenGVal[whichPositive]
+              }
+
               ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel))
 
               EMMRes <- try(EMM.cpp(y = gvEst2, ZETA = ZETA2), silent = TRUE)
@@ -974,6 +1018,22 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           }
 
           gKernel2 <- exp(- hOpt2 * distNodes ^ 2)
+
+          eigenG <- eigen(gKernel2)
+          if (sum(eigenG$values < 0) >= 1) {
+            eigenGVal <- eigenG$values + 1e-06
+            whichPositive <- eigenGVal >= 0
+            if (sum(!whichPositive) == 0) {
+              diag(gKernel2) <- diag(gKernel2) + 1e-06
+            } else {
+              warning("K not positive semi-definite; we only use positive eigen values.")
+              gKernel2 <- eigenG$vectors[, whichPositive, drop = FALSE] %*%
+                tcrossprod(diag(eigenGVal[whichPositive]), eigenG$vectors[, whichPositive, drop = FALSE])
+            }
+            eigenG$vectors <- eigenG$vectors[, whichPositive, drop = FALSE]
+            eigenG$values <- eigenGVal[whichPositive]
+          }
+
           ZETA2 <- list(Part = list(Z = ZgKernel, K = gKernel2))
 
           EMMRes <- EMM.cpp(y = gvEst2, ZETA = ZETA2)
@@ -1173,18 +1233,20 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
 
         plt <- ggtree::ggtree(tr = trPhylo42,
-                              ggtree::aes(col = I(ggplot2::.data$color)),
+                              ggtree::aes(col = I(trPhylo42@data$color)),
                               layout = "equal_angle")
 
 
         if (plotNode) {
-          piesNode <- ggtree::nodepie(colorForNodeDF, cols = 1:2,
-                                      color = colNodeBase,
+          piesNode <- ggtree::nodepie(colorForNodeDF,
+                                      cols = 1:2,
+                                      color = colNodeBase[order(colnames(colorForNodeDF)[1:2])],
                                       alpha = alphaNode)
-
-          plt <- plt + ggtree::geom_inset(insets = piesNode,
-                                          width = cexNodeForGG,
-                                          height = cexNodeForGG)
+          for (nodeNo in 1:nNode) {
+            plt <- plt + ggtree::geom_inset(insets = piesNode[nodeNo],
+                                            width = cexNodeForGG[nodeNo],
+                                            height = cexNodeForGG[nodeNo])
+          }
         }
 
         if (tipLabel) {
@@ -1195,31 +1257,49 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           }
 
           if (!all(is.na(EMMRes))) {
-            piesPlus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
-                                        cols = 1:nGrp,
-                                        color = colTipBaseForPie,
-                                        alpha = alphaBase[1])
-            piesMinus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
-                                         cols = 1:nGrp,
-                                         color = colTipBaseForPie,
-                                         alpha = alphaBase[2])
+            if (nGrp > 0) {
+              piesPlus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
+                                          cols = 1:nGrp, color = colTipBaseForPie,
+                                          alpha = alphaBase[1])
+              piesMinus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
+                                           cols = 1:nGrp, color = colTipBaseForPie,
+                                           alpha = alphaBase[2])
+            } else {
+              piesPlus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
+                                          cols = 1, color = "gray",
+                                          alpha = alphaBase[1])
+              piesMinus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
+                                           cols = 1, color = "gray",
+                                           alpha = alphaBase[2])
+            }
 
-            plt <- plt + ggtree::geom_inset(insets = piesPlus,
-                                            width = cexTipForGG[alphaTip == alphaBase[1]],
-                                            height = cexTipForGG[alphaTip == alphaBase[1]])
+            for (tipNo in 1:sum(alphaTip == alphaBase[1])) {
+              plt <- plt + ggtree::geom_inset(insets = piesPlus[tipNo],
+                                              width = cexTipForGG[alphaTip == alphaBase[1]][tipNo],
+                                              height = cexTipForGG[alphaTip == alphaBase[1]][tipNo])
+            }
 
-            plt <- plt + ggtree::geom_inset(insets = piesMinus,
-                                            width = cexTipForGG[alphaTip == alphaBase[2]],
-                                            height = cexTipForGG[alphaTip == alphaBase[2]])
+            for (tipNo in 1:sum(alphaTip == alphaBase[2])) {
+              plt <- plt + ggtree::geom_inset(insets = piesMinus[tipNo],
+                                              width = cexTipForGG[alphaTip == alphaBase[2]][tipNo],
+                                              height = cexTipForGG[alphaTip == alphaBase[2]][tipNo])
+            }
           } else {
-            piesTip <- ggtree::nodepie(clusterNosRatioDF,
-                                       cols = 1:nGrp,
-                                       color = colTipBaseForPie,
-                                       alpha = mean(alphaBase))
+            if (nGrp > 0) {
+              piesTip <- ggtree::nodepie(clusterNosRatioDF,
+                                         cols = 1:nGrp, color = colTipBaseForPie,
+                                         alpha = mean(alphaBase))
+            } else {
+              piesTip <- ggtree::nodepie(clusterNosRatioDF,
+                                         cols = 1, color = "gray",
+                                         alpha = mean(alphaBase))
+            }
 
-            plt <- plt + ggtree::geom_inset(insets = piesTip,
-                                            width = cexTipForGG,
-                                            height = cexTipForGG)
+            for (tipNo in 1:length(piesTip)) {
+              plt <- plt + ggtree::geom_inset(insets = piesTip[tipNo],
+                                              width = cexTipForGG[tipNo],
+                                              height = cexTipForGG[tipNo])
+            }
           }
         }
         plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(colnames(pheno)[2],
@@ -2437,6 +2517,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           alphaAll[compNames] <- alphaComp
         } else {
           colorForAllCompDF <- clusterNosRatioDF
+          colorForAllCompDF <- cbind(clusterNosRatioDF,
+                                     Complement = rep(0, nHaplo))
 
           if (EM3Res$weights[2] > 1e-06) {
             alphaHaplo <- ifelse(gvScaled[haploNames] > 0, alphaBase[1], alphaBase[2])
@@ -2462,20 +2544,20 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
 
 
         plt <- ggplot2::ggplot(data = mdsPointsForPlotDF,
-                               ggplot2::aes(x = ggplot2::.data$MDS1,
-                                            y = ggplot2::.data$MDS2))
+                               ggplot2::aes(x = MDS1,
+                                            y = MDS2))
         if (any(alphaAll == alpha2)) {
           plt <- plt +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                        ggplot2::aes(x = ggplot2::.data$MDS1,
-                                                     y = ggplot2::.data$MDS2,
-                                                     r = ggplot2::.data$cex),
+                                        ggplot2::aes(x = MDS1,
+                                                     y = MDS2,
+                                                     r = cex),
                                         cols = colnames(colorForAllCompDF),
                                         col = NA, alpha = alpha1) +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha2, ],
-                                        ggplot2::aes(x = ggplot2::.data$MDS1,
-                                                     y = ggplot2::.data$MDS2,
-                                                     r = ggplot2::.data$cex),
+                                        ggplot2::aes(x = MDS1,
+                                                     y = MDS2,
+                                                     r = cex),
                                         cols = colnames(colorForAllCompDF),
                                         col = NA, alpha = alpha2) +
             ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
@@ -2486,9 +2568,9 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         } else {
           plt <- plt +
             scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                        ggplot2::aes(x = ggplot2::.data$MDS1,
-                                                     y = ggplot2::.data$MDS2,
-                                                     r = ggplot2::.data$cex),
+                                        ggplot2::aes(x = MDS1,
+                                                     y = MDS2,
+                                                     r = cex),
                                         cols = colnames(colorForAllCompDF),
                                         col = NA, alpha = alpha1) +
             ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
@@ -2505,10 +2587,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                     x2 = mdsPoints[mstResComp[, 2], 1],
                                     y2 = mdsPoints[mstResComp[, 2], 2])
 
-        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = ggplot2::.data$x1,
-                                                        y = ggplot2::.data$y1,
-                                                        xend = ggplot2::.data$x2,
-                                                        yend = ggplot2::.data$y2),
+        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = x1,
+                                                        y = y1,
+                                                        xend = x2,
+                                                        yend = y2),
                                            data = mdsSegmentsDF,
                                            col = colConnection[1],
                                            lty = ltyConnection[1],
@@ -2519,10 +2601,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                           x2 = mdsPoints[mstResCompPlus[, 2], 1],
                                           y2 = mdsPoints[mstResCompPlus[, 2], 2])
 
-          plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = ggplot2::.data$x1,
-                                                          y = ggplot2::.data$y1,
-                                                          xend = ggplot2::.data$x2,
-                                                          yend = ggplot2::.data$y2),
+          plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = x1,
+                                                          y = y1,
+                                                          xend = x2,
+                                                          yend = y2),
                                              data = mdsSegmentsPlusDF,
                                              col = colConnection[2],
                                              lty = ltyConnection[2],
@@ -2530,7 +2612,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         }
 
 
-        plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(colnames(pheno)[2],
+        plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(traitName,
                                                              blockName, kernelType), collapse = "_"),
                                                      " (-log10p: ", round(minuslog10p, 2), ")"))
 
@@ -2652,10 +2734,11 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
                           cexMax = 2, cexMin = 0.7, edgeColoring = TRUE, tipLabel = TRUE,
                           ggPlotTree = FALSE, cexMaxForGG = 0.12, cexMinForGG = 0.06, alphaBase = c(0.9, 0.3)) {
   if (requireNamespace("ggtree", quietly = TRUE) &
-      requireNamespace("phylobase", quietly = TRUE)) {
+      requireNamespace("phylobase", quietly = TRUE) &
+      requireNamespace("ggimage", quietly = TRUE)) {
     ggPlotTree <- ggPlotTree
   } else {
-    warning(paste0("If you want to plot phylogenetic trees, please install `ggtree` and `phylobase` packages from Bioconductor! \n",
+    warning(paste0("If you want to plot phylogenetic trees, please install `ggtree`, `phylobase`, and `ggimage` packages from Bioconductor! \n",
                    "We switched `ggPlotTree = FALSE`."))
     ggPlotTree <- FALSE
   }
@@ -2870,18 +2953,20 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
 
 
       plt <- ggtree::ggtree(tr = trPhylo42,
-                            ggtree::aes(col = I(ggplot2::.data$color)),
+                            ggtree::aes(col = I(trPhylo42@data$color)),
                             layout = "equal_angle")
 
 
       if (plotNode) {
-        piesNode <- ggtree::nodepie(colorForNodeDF, cols = 1:2,
-                                    color = colNodeBase,
+        piesNode <- ggtree::nodepie(colorForNodeDF,
+                                    cols = 1:2,
+                                    color = colNodeBase[order(colnames(colorForNodeDF)[1:2])],
                                     alpha = alphaNode)
-
-        plt <- plt + ggtree::geom_inset(insets = piesNode,
-                                        width = cexNodeForGG,
-                                        height = cexNodeForGG)
+        for (nodeNo in 1:nNode) {
+          plt <- plt + ggtree::geom_inset(insets = piesNode[nodeNo],
+                                          width = cexNodeForGG[nodeNo],
+                                          height = cexNodeForGG[nodeNo])
+        }
       }
 
       if (tipLabel) {
@@ -2892,31 +2977,52 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
         }
 
         if (!all(is.na(EMMRes))) {
-          piesPlus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
-                                      cols = 1:nGrp,
-                                      color = colTipBaseForPie,
-                                      alpha = alphaBase[1])
-          piesMinus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
+          if (nGrp > 0) {
+            piesPlus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
+                                        cols = 1:nGrp,
+                                        color = colTipBaseForPie,
+                                        alpha = alphaBase[1])
+            piesMinus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
+                                         cols = 1:nGrp,
+                                         color = colTipBaseForPie,
+                                         alpha = alphaBase[2])
+          } else {
+            piesPlus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[1], ],
+                                        cols = 1, color = "gray",
+                                        alpha = alphaBase[1])
+            piesMinus <- ggtree::nodepie(clusterNosRatioDF[alphaTip == alphaBase[2], ],
+                                         cols = 1, color = "gray",
+                                         alpha = alphaBase[2])
+          }
+
+          for (tipNo in 1:sum(alphaTip == alphaBase[1])) {
+            plt <- plt + ggtree::geom_inset(insets = piesPlus[tipNo],
+                                            width = cexTipForGG[alphaTip == alphaBase[1]][tipNo],
+                                            height = cexTipForGG[alphaTip == alphaBase[1]][tipNo])
+          }
+
+          for (tipNo in 1:sum(alphaTip == alphaBase[2])) {
+            plt <- plt + ggtree::geom_inset(insets = piesMinus[tipNo],
+                                            width = cexTipForGG[alphaTip == alphaBase[2]][tipNo],
+                                            height = cexTipForGG[alphaTip == alphaBase[2]][tipNo])
+          }
+        } else {
+          if (nGrp > 0) {
+            piesTip <- ggtree::nodepie(clusterNosRatioDF,
                                        cols = 1:nGrp,
                                        color = colTipBaseForPie,
-                                       alpha = alphaBase[2])
+                                       alpha = mean(alphaBase))
+          } else {
+            piesTip <- ggtree::nodepie(clusterNosRatioDF,
+                                       cols = 1, color = "gray",
+                                       alpha = mean(alphaBase))
+          }
 
-          plt <- plt + ggtree::geom_inset(insets = piesPlus,
-                                          width = cexTipForGG[alphaTip == alphaBase[1]],
-                                          height = cexTipForGG[alphaTip == alphaBase[1]])
-
-          plt <- plt + ggtree::geom_inset(insets = piesMinus,
-                                          width = cexTipForGG[alphaTip == alphaBase[2]],
-                                          height = cexTipForGG[alphaTip == alphaBase[2]])
-        } else {
-          piesTip <- ggtree::nodepie(clusterNosRatioDF,
-                                     cols = 1:nGrp,
-                                     color = colTipBaseForPie,
-                                     alpha = mean(alphaBase))
-
-          plt <- plt + ggtree::geom_inset(insets = piesTip,
-                                          width = cexTipForGG,
-                                          height = cexTipForGG)
+          for (tipNo in 1:length(piesTip)) {
+            plt <- plt + ggtree::geom_inset(insets = piesTip[tipNo],
+                                            width = cexTipForGG[tipNo],
+                                            height = cexTipForGG[tipNo])
+          }
         }
       }
       plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(traitName[2],
@@ -3352,6 +3458,8 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
         alphaAll[compNames] <- alphaComp
       } else {
         colorForAllCompDF <- clusterNosRatioDF
+        colorForAllCompDF <- cbind(clusterNosRatioDF,
+                                   Complement = rep(0, nHaplo))
 
         if (EM3Res$weights[2] > 1e-06) {
           alphaHaplo <- ifelse(gvScaled[haploNames] > 0, alphaBase[1], alphaBase[2])
@@ -3377,20 +3485,20 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
 
 
       plt <- ggplot2::ggplot(data = mdsPointsForPlotDF,
-                             ggplot2::aes(x = ggplot2::.data$MDS1,
-                                          y = ggplot2::.data$MDS2))
+                             ggplot2::aes(x = MDS1,
+                                          y = MDS2))
       if (any(alphaAll == alpha2)) {
         plt <- plt +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                      ggplot2::aes(x = ggplot2::.data$MDS1,
-                                                   y = ggplot2::.data$MDS2,
-                                                   r = ggplot2::.data$cex),
+                                      ggplot2::aes(x = MDS1,
+                                                   y = MDS2,
+                                                   r = cex),
                                       cols = colnames(colorForAllCompDF),
                                       col = NA, alpha = alpha1) +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha2, ],
-                                      ggplot2::aes(x = ggplot2::.data$MDS1,
-                                                   y = ggplot2::.data$MDS2,
-                                                   r = ggplot2::.data$cex),
+                                      ggplot2::aes(x = MDS1,
+                                                   y = MDS2,
+                                                   r = cex),
                                       cols = colnames(colorForAllCompDF),
                                       col = NA, alpha = alpha2) +
           ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
@@ -3401,9 +3509,9 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
       } else {
         plt <- plt +
           scatterpie::geom_scatterpie(data = mdsPointsForPlotDF[alphaAll == alpha1, ],
-                                      ggplot2::aes(x = ggplot2::.data$MDS1,
-                                                   y = ggplot2::.data$MDS2,
-                                                   r = ggplot2::.data$cex),
+                                      ggplot2::aes(x = MDS1,
+                                                   y = MDS2,
+                                                   r = cex),
                                       cols = colnames(colorForAllCompDF),
                                       col = NA, alpha = alpha1) +
           ggplot2::scale_fill_manual(values = c(colHaploBaseForPie,
@@ -3420,10 +3528,10 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                                   x2 = mdsPoints[mstResComp[, 2], 1],
                                   y2 = mdsPoints[mstResComp[, 2], 2])
 
-      plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = ggplot2::.data$x1,
-                                                      y = ggplot2::.data$y1,
-                                                      xend = ggplot2::.data$x2,
-                                                      yend = ggplot2::.data$y2),
+      plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = x1,
+                                                      y = y1,
+                                                      xend = x2,
+                                                      yend = y2),
                                          data = mdsSegmentsDF,
                                          col = colConnection[1],
                                          lty = ltyConnection[1],
@@ -3434,10 +3542,10 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                                         x2 = mdsPoints[mstResCompPlus[, 2], 1],
                                         y2 = mdsPoints[mstResCompPlus[, 2], 2])
 
-        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = ggplot2::.data$x1,
-                                                        y = ggplot2::.data$y1,
-                                                        xend = ggplot2::.data$x2,
-                                                        yend = ggplot2::.data$y2),
+        plt <- plt + ggplot2::geom_segment(ggplot2::aes(x = x1,
+                                                        y = y1,
+                                                        xend = x2,
+                                                        yend = y2),
                                            data = mdsSegmentsPlusDF,
                                            col = colConnection[2],
                                            lty = ltyConnection[2],

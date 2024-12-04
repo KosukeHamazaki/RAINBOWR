@@ -240,3 +240,8 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 # Mar 21, 2024, RAINBOWR version 0.1.36
 ## Major changes (new functions, etc...)
 - We modified the `calcGRM` function so that it can compute the genomic relationship matrix with the input of marker genotype scored with {0, 1} or {-1, 0}.
+
+
+# Dec 05, 2024, RAINBOWR version 0.1.37
+## Major changes (new functions, etc...)
+- We modified the `estPhylo`, `plotPhyloTree`, `estNetwork`, and `plotHaploNetwork` functions to fix some errors.
