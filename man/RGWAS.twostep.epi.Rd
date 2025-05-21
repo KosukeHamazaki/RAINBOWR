@@ -101,7 +101,7 @@ with `count = TRUE` and \code{\link[parallel]{mclapply}} function in the `parall
 
 When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 

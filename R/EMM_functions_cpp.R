@@ -2040,3 +2040,529 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
                   Vinv = Vinv,
                   Hinv = Hinv)
 }
+
+
+
+
+
+#' Equation of mixed model for multi-kernel considering covariance structure between kernels
+#'
+#' @description This function solves the following multi-kernel linear mixed effects model with covairance structure.
+#'
+#' \eqn{y = X \beta + \sum _{l=1} ^ {L} Z _ {l} u _ {l} + \epsilon}
+#'
+#' where \eqn{Var[y] = \sum _{i=1} ^ {L} Z _ {i} K _ {i} Z _ {i}' \sigma _ {i} ^ 2 + \sum _{i=1} ^ {L-1} \sum _{j=1} ^ {L} (Z _ {i} K _ {i j} Z _ {j}' + Z _ {j} K _ {j i} Z _ {i}') \sigma _ {i}  \sigma _ {j} \rho _{i j} + I \sigma _ {e} ^ {2}}.
+#'
+#' Here, \eqn{K _ {i j}} and \eqn{K _ {j i}} are \eqn{m_i \times m_j} and \eqn{m_j \times m_i} matrices representing covariance structure between two random effects.
+#' \eqn{\rho _{i j}} is a correlation parameter to be estimated in addition to \eqn{\sigma^2_i} and \eqn{\sigma_{e}^2}.
+#'
+#'
+#' @param y A \eqn{n \times 1} vector. A vector of phenotypic values should be used. NA is allowed.
+#' @param X0 A \eqn{n \times p} matrix. You should assign mean vector (rep(1, n)) and covariates. NA is not allowed.
+#' @param ZETA A list of variance matrices and its design matrices of random effects. You can use more than one kernel matrix.
+#' For example, ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D)) (A for additive, D for dominance)
+#' Please set names of lists "Z" and "K"!
+#' @param covList A list of matrices representing covariance structure between paired random effects.
+#' If there are \eqn{L} random effects in the model, the list should contain \eqn{L} lists each consisting of \eqn{L} lists.
+#' Each \eqn{\{i, j\}} element of the list includes a matrix \eqn{K_{ij}} representing covariance structure between \eqn{i}-th and \eqn{j}-th random effects.
+#'  See examples for details.
+#' @param eigen.G A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
+#' The result of the eigen decompsition of \eqn{G = ZKZ'}. You can use "spectralG.cpp" function in RAINBOWR.
+#' If this argument is NULL, the eigen decomposition will be performed in this function.
+#' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param eigen.SGS A list with
+#' \describe{
+#' \item{$values}{Eigen values}
+#' \item{$vectors}{Eigen vectors}
+#' }
+#' The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1}X'}, \eqn{G = ZKZ'}.
+#' You can use "spectralG.cpp" function in RAINBOWR.
+#' If this argument is NULL, the eigen decomposition will be performed in this function.
+#' We recommend you assign the result of the eigen decomposition beforehand for time saving.
+#' @param optimizer The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.
+#' @param traceInside Perform trace for the optimzation if traceInside >= 1, and this argument shows the frequency of reports.
+#' @param nIterOptimization Maximum number of iterations allowed. Defaults are different depending on `optimizer`.
+#' @param n.thres If \eqn{n >= n.thres}, perform EMM1.cpp. Else perform EMM2.cpp.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
+#' @param tol The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
+#' Eigen vectors whose eigen values are less than "tol" argument will be omitted from results.
+#' If tol is NULL, top 'n' eigen values will be effective.
+#' @param REML You can choose which method you will use, "REML" or "ML".
+#' If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".
+#' @param pred If TRUE, the fitting values of y is returned.
+#' @param return.u.always If TRUE, BLUP (`u`; \eqn{u}) will be returned.
+#' @param return.u.each If TRUE, the function also computes each BLUP corresponding
+#' to different kernels (when solving multi-kernel mixed-effects model). It takes
+#' additional time compared to the one with `return.u.each = FALSE`.
+#' @param return.Hinv If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}}
+#' will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.
+#'
+#' @return
+#' \describe{
+#' \item{$y.pred}{The fitting values of y \eqn{y = X\beta + Zu}}
+#' \item{$Vu}{Estimator for \eqn{\sigma^2_u}, all of the genetic variance}
+#' \item{$Ve}{Estimator for \eqn{\sigma^2_e}}
+#' \item{$beta}{BLUE(\eqn{\beta})}
+#' \item{$u}{BLUP(Sum of \eqn{Zu})}
+#' \item{$u.each}{BLUP(Each \eqn{u})}
+#' \item{$weights}{The proportion of each genetic variance (corresponding to each kernel of ZETA) to Vu}
+#' \item{$rhosMat}{The estimator for a matrix of correlation parameters \eqn{\rho}. Diagonal elements are always 0.}
+#' \item{$LL}{Maximized log-likelihood (full or restricted, depending on method)}
+#' \item{$Vinv}{The inverse of \eqn{V = Vu \times ZKZ' + Ve \times I}}
+#' \item{$Hinv}{The inverse of \eqn{H = ZKZ' + \lambda I}}
+#' }
+#'
+#' @references Kang, H.M. et al. (2008) Efficient Control of Population Structure
+#'  in Model Organism Association Mapping. Genetics. 178(3): 1709-1723.
+#'
+#' Zhou, X. and Stephens, M. (2012) Genome-wide efficient mixed-model analysis
+#'  for association studies. Nat Genet. 44(7): 821-824.
+#'
+#'
+#' @example R/examples/EM3.cov_example.R
+#'
+#'
+#'
+#'
+EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NULL,
+                    tol = NULL, n.core = NA, optimizer = "optim", traceInside = 0,
+                    nIterOptimization = NULL, n.thres = 450, REML = TRUE, pred = TRUE,
+                    return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {
+  n <- length(as.matrix(y))
+  y <- matrix(y, n, 1)
+
+  not.NA <- which(!is.na(y))
+
+  if (is.null(X0)) {
+    p <- 1
+    X0 <- matrix(rep(1, n), n, 1)
+  }
+  p <- ncol(X0)
+
+  lz <- length(ZETA)
+  weights <- rep(1 / lz, lz)
+
+  ns <- unlist(x = lapply(
+    X = ZETA,
+    FUN = function(x) {
+      nrow(x$K)
+    }
+  ))
+  names(ns) <- NULL
+  ranEffNames <- lapply(
+    X = ZETA,
+    FUN = function(x) {
+      rownames(x$K)
+    }
+  )
+
+  if (is.null(covList)) {
+    covList <- rep(list(rep(list(NULL), lz)), lz)
+
+    for (i in 1:lz) {
+      for (j in 1:lz) {
+        covList[[i]][[j]] <- matrix(data = 0,
+                                    nrow = ns[i],
+                                    ncol = ns[j],
+                                    dimnames = c(ranEffNames[i],
+                                                 ranEffNames[j]))
+      }
+    }
+  }
+
+  # check
+  covLen <- unlist(x = lapply(X = covList, FUN = length))
+  stopifnot(all(covLen == rep(lz, lz)))
+  covClass <- unlist(x = lapply(X = covList, FUN = class))
+  stopifnot(all(covClass == rep("list", lz)))
+  covDimListCheck <- rep(list(rep(list(NULL), lz)), lz)
+  for (i in 1:lz) {
+    for (j in 1:lz) {
+      if (i == j) {
+        covDimListCheck[[i]][[j]] <- rep(0, 2)
+      } else {
+        covDimListCheck[[i]][[j]] <- c(ns[i], ns[j])
+      }
+    }
+  }
+  covDimList <- lapply(X = covList,
+                       FUN = function(covEach) {
+                         lapply(
+                           X = covEach,
+                           FUN = function(covMat) {
+                             if (is.null(covMat)) {
+                               covDim <- c(0, 0)
+                             } else {
+                               covDim <- dim(covMat)
+                             }
+
+                             return(covDim)
+                           }
+                         )
+                       })
+  stopifnot(identical(covDimListCheck, covDimList))
+
+  for (i in 1:lz) {
+    for (j in 1:lz) {
+      if (!is.null(covList[[i]][[j]])) {
+        dimnames(covList[[i]][[j]]) <- c(ranEffNames[i],
+                                         ranEffNames[j])
+      }
+    }
+  }
+
+
+  if (lz >= 2) {
+    if (is.null(eigen.G)) {
+      Z <- c()
+      ms <- rep(NA, lz)
+      for (i in 1:lz) {
+        Z.now <- ZETA[[i]]$Z
+
+        if (is.null(Z.now)) {
+          Z.now <- diag(n)
+        }
+        m <- ncol(Z.now)
+        if (is.null(m)) {
+          m <- 1
+          Z.now <- matrix(Z.now, length(Z.now), 1)
+        }
+
+        K.now <- ZETA[[i]]$K
+
+        if (!is.null(K.now)) {
+          stopifnot(nrow(K.now) == m)
+          stopifnot(ncol(K.now) == m)
+        }
+
+        Z <- cbind(Z, Z.now)
+        ms[i] <- m
+      }
+
+      stopifnot(nrow(Z) == n)
+      stopifnot(nrow(X0) == n)
+
+      Z <- Z[not.NA, , drop = FALSE]
+      X <- X0[not.NA, , drop = FALSE]
+      n <- length(not.NA)
+      y <- matrix(y[not.NA], n, 1)
+
+      spI <- diag(n)
+      S <- spI - tcrossprod(X %*% solve(crossprod(X)), X)
+
+
+      minimfunctionouter <- function(params = c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))) {
+        weights <- params[1:lz]
+        weights <- weights / sum(weights)
+
+        rhosMat <- matrix(data = 0,
+                          nrow = lz, ncol = lz)
+        rhos <- params[(lz + 1):length(params)]
+        count <- 0
+        for (i in 1:(lz - 1)) {
+          for (j in (i + 1):lz) {
+            count <- count + 1
+            rhosMat[i, j] <- rhos[count]
+          }
+        }
+        rhosMat <- rhosMat + t(rhosMat)
+
+        ZKZt <- matrix(0, nrow = n, ncol = n)
+        for (i in 1:lz) {
+          ZKZt <- ZKZt + weights[i] * tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
+                                                   ZETA[[i]]$K, ZETA[[i]]$Z[not.NA, ])
+          for (j in 1:lz) {
+            if (i != j) {
+              ZKZt <- ZKZt + sqrt(weights[i] * weights[j]) * rhosMat[i, j] *
+                tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
+                             covList[[i]][[j]], ZETA[[j]]$Z[not.NA, ])
+            }
+          }
+        }
+
+
+        res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
+        lambda <- res$lambda
+        eta <- res$eta
+        phi <- res$phi
+
+        if (REML) {
+          minimfunc <- function(delta) {
+            (n - p) * log(sum(eta ^ 2/{
+              lambda + delta
+            })) + sum(log(lambda + delta))
+          }
+        } else {
+          minimfunc <- function(delta) {
+            n * log(sum(eta ^ 2/{
+              lambda + delta
+            })) + sum(log(phi + delta))
+          }
+        }
+
+        optimout <- optimize(minimfunc, lower = 0, upper = 10000)
+        return(optimout$objective)
+      }
+
+
+      parInit <- c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))
+      parLower <- c(rep(0, lz), rep(-Inf, lz * (lz - 1) / 2))
+      parUpper <- c(rep(1, lz), rep(Inf, lz * (lz - 1) / 2))
+      traceNo <- ifelse(traceInside > 0, 3, 0)
+      traceREPORT <- ifelse(traceInside > 0, traceInside, 1)
+      if (is.null(nIterOptimization)) {
+        if (optimizer == "nlminb") {
+          nIterOptimization <- 150
+        } else {
+          nIterOptimization <- 100
+        }
+      }
+
+      if (optimizer == "optim") {
+        soln <- optim(par = parInit, fn = minimfunctionouter,
+                      control = list(trace = traceNo, REPORT = traceREPORT, maxit = nIterOptimization),
+                      method = "L-BFGS-B", lower = parLower, upper = parUpper)
+        params <- soln$par
+      } else if (optimizer == "optimx") {
+        soln <- optimx::optimx(par = parInit, fn = minimfunctionouter, gr = NULL, hess = NULL,
+                               lower = parLower, upper = parUpper, method = "L-BFGS-B", hessian = FALSE,
+                               control = list(trace = traceNo, starttests = FALSE, maximize = FALSE,
+                                              REPORT = traceREPORT, kkt = FALSE, maxit = nIterOptimization))
+        params <- as.matrix(soln)[1, 1:(lz * (lz + 1) / 2)]
+      } else if (optimizer == "nlminb") {
+        soln <- nlminb(start = parInit, objective = minimfunctionouter, gradient = NULL, hessian = NULL,
+                       lower = parLower, upper = parUpper, control = list(trace = traceInside))
+        params <- soln$par
+      } else {
+        warning("We offer 'optim', 'optimx', and 'nlminb' as optimzers. Here we use 'optim' instead.")
+        soln <- optim(par = parInit, fn = minimfunctionouter,
+                      control = list(trace = traceNo, REPORT = traceREPORT, iter.max = nIterOptimization),
+                      method = "L-BFGS-B", lower = parLower, upper = parUpper)
+        params <- soln$par
+      }
+    }
+  } else {
+    params <- c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))
+  }
+
+
+  Z <- c()
+  ms <- rep(NA, lz)
+  for (i in 1:lz) {
+    Z.now <- ZETA[[i]]$Z
+
+    if (is.null(Z.now)) {
+      Z.now <- diag(n)
+    }
+    m <- ncol(Z.now)
+    if (is.null(m)) {
+      m <- 1
+      Z.now <- matrix(Z.now, length(Z.now), 1)
+    }
+
+    K.now <- ZETA[[i]]$K
+
+    if (!is.null(K.now)) {
+      stopifnot(nrow(K.now) == m)
+      stopifnot(ncol(K.now) == m)
+    }
+
+    Z <- cbind(Z, Z.now)
+    ms[i] <- m
+  }
+
+  Z <- Z[not.NA, , drop = FALSE]
+  if ((lz == 1) | (!is.null(eigen.G))) {
+    X <- X0[not.NA, , drop = FALSE]
+    n <- length(not.NA)
+    y <- matrix(y[not.NA], n, 1)
+    spI <- diag(n)
+  }
+
+  weights <- params[1:lz]
+  weights <- weights / sum(weights)
+
+  if (lz >= 2) {
+    rhosMat <- matrix(data = 0,
+                      nrow = lz, ncol = lz)
+    rhos <- params[(lz + 1):length(params)]
+    count <- 0
+    for (i in 1:(lz - 1)) {
+      for (j in (i + 1):lz) {
+        count <- count + 1
+        rhosMat[i, j] <- rhos[count]
+      }
+    }
+    rhosMat <- rhosMat + t(rhosMat)
+  } else {
+    rhosMat <- matrix(data = 0,
+                      nrow = 1, ncol = 1)
+  }
+
+  ZKZt <- matrix(0, nrow = n, ncol = n)
+
+  K <- matrix(
+    data = NA,
+    nrow = ncol(Z),
+    ncol = ncol(Z)
+  )
+  KSizes <- sapply(X = ZETA, FUN = function(x) {
+    nrow(x$K)
+  }, simplify = TRUE)
+  KSizesCum <- c(0, cumsum(KSizes))
+  for (i in 1:lz) {
+    iRange <- (KSizesCum[i] + 1):KSizesCum[i + 1]
+    K[iRange, iRange] <- weights[i] * ZETA[[i]]$K
+
+    ZKZt <- ZKZt + weights[i] * tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
+                                             ZETA[[i]]$K, ZETA[[i]]$Z[not.NA, ])
+    for (j in 1:lz) {
+      if (i != j) {
+        jRange <- (KSizesCum[j] + 1):KSizesCum[j + 1]
+        K[iRange, jRange] <- sqrt(weights[i] * weights[j]) * rhosMat[i, j] * covList[[i]][[j]]
+
+        ZKZt <- ZKZt + sqrt(weights[i] * weights[j]) * rhosMat[i, j] *
+          tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
+                       covList[[i]][[j]], ZETA[[j]]$Z[not.NA, ])
+      }
+    }
+  }
+
+  ZK <- as.matrix(Z %*% K)
+
+
+
+  if (is.null(eigen.G)) {
+    if (nrow(Z) <= n.thres) {
+      # return.SGS <- TRUE
+      return.SGS <-  FALSE
+    } else {
+      return.SGS <- FALSE
+    }
+    spectralG.res <- spectralG.cpp(ZETA = lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K)),
+                                   X = X, weights = weights, return.G = TRUE, return.SGS = return.SGS,
+                                   tol = tol, df.H = NULL)
+
+    eigen.G <- spectralG.res[[1]]
+    eigen.SGS <- spectralG.res[[2]]
+  }
+
+  return.Hinv.EMM <- return.Hinv | return.u.each | return.u.always
+  if (lz >= 2) {
+    ZETA.list <- list(A = list(Z = diag(n), K = ZKZt))
+    EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = eigen.G,
+                           eigen.SGS = eigen.SGS, n.core = n.core,
+                           traceInside = traceInside, optimizer = optimizer,
+                           tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
+  } else {
+    ZETA.list <- lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K))
+    EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list,
+                           n.core = n.core, traceInside = traceInside, optimizer = optimizer, eigen.G = eigen.G,
+                           eigen.SGS = eigen.SGS, tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
+  }
+
+
+  Vu <- EMM.cpp.res$Vu
+  Ve <- EMM.cpp.res$Ve
+  beta <- EMM.cpp.res$beta
+  LL <- EMM.cpp.res$LL
+  if (n == nrow(X0)) {
+    u <- as.matrix(EMM.cpp.res$u)
+    rownames(u) <- rownames(ZETA.list[[1]]$K)
+  } else {
+    u <- NULL
+  }
+
+
+
+  if (pred & (!return.u.always)) {
+    return.u.always <- TRUE
+    message("`return.u.always` is switched to TRUE because you require predicted values.")
+  }
+
+
+  if (return.Hinv.EMM) {
+    Hinv <- EMM.cpp.res$Hinv
+    Vinv <- (1 / Vu) * Hinv
+
+
+    if (return.u.always | return.u.each) {
+      if ((length(ZETA) >= 2) | (is.null(u))) {
+        ZAll <- do.call(
+          what = cbind,
+          args = lapply(X = ZETA,
+                        FUN = function(x) {
+                          x$Z
+                        })
+        )
+        KAll <- Matrix::.bdiag(lst = sapply(X = 1:length(ZETA),
+                                            FUN = function(x) {
+                                              ZETA[[x]]$K * weights[x]
+                                            },
+                                            simplify = FALSE))
+        ZKAll <- as.matrix(ZAll %*% KAll)
+
+        e <- y - X %*% beta
+        u.each <- crossprod(ZKAll[not.NA, ], Hinv %*% e)
+
+        if (is.null(u)) {
+          u <- ZAll %*% u.each
+        }
+      } else {
+        u.each <- u
+      }
+
+      rownames(u.each) <- paste0(
+        paste0("K_", rep(1:length(ZETA),
+                         lapply(X = ZETA,
+                                FUN = function(x) {
+                                  nrow(x$K)
+                                }))),
+        "_",
+        unlist(lapply(X = ZETA,
+                      FUN = function(x) {
+                        rownames(x$K)
+                      }))
+      )
+    } else {
+      u.each <- NULL
+    }
+
+
+
+    if (!return.Hinv) {
+      Vinv <- NULL
+      Hinv <- NULL
+    }
+  } else {
+    u.each <- Vinv <- Hinv <- NULL
+  }
+
+
+  if (pred & (!is.null(u))) {
+    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+  } else {
+    y.pred <- NULL
+  }
+
+
+
+  results <- list(y.pred = y.pred,
+                  Vu = Vu,
+                  Ve = Ve,
+                  beta = beta,
+                  u = u,
+                  u.each = u.each,
+                  weights = weights,
+                  rhosMat = rhosMat,
+                  LL = LL,
+                  Vinv = Vinv,
+                  Hinv = Hinv)
+
+  return(results)
+}
+

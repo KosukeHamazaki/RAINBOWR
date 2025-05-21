@@ -51,7 +51,7 @@ welcome_to_RGWAS <- function() {
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -402,6 +402,11 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
 #' If NULL (default), it will be calculated from genoMat.
 #' @param probAa Probability of being heterozygous for the reference and alternative alleles for each marker
 #' If NULL (default), it will be calculated from genoMat.
+#' @param batchSize Split marker genotype data into subsets consisting of `batchSize` SNPs, and compute GRM.
+#' If NULL, all the markers will be used for the computation at a time.
+#' We recommend using this argument when the total number of markers is too large.
+#' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
+#' This argument is only valid `batchSize` is not `NULL`.
 #' @return genomic relationship matrix (GRM)
 #'
 #' @references
@@ -416,7 +421,9 @@ calcGRM <- function(genoMat,
                     kernel.h = "tuned",
                     returnWMat = FALSE,
                     probaa = NULL,
-                    probAa = NULL) {
+                    probAa = NULL,
+                    batchSize = NULL,
+                    n.core = 1) {
   supportedMethods <- c("addNOIA", "domNOIA", "A.mat", "linear",
                         "gaussian", "exponential", "correlation")
   stopifnot(methodGRM %in% supportedMethods)
@@ -527,12 +534,64 @@ calcGRM <- function(genoMat,
       HMat[HMat == 0] <- replaceAa[HMat == 0]
       HMat[HMat == 1] <- replaceAA[HMat == 1]
     }
-    HHt <- tcrossprod(HMat)
+
+    if (is.null(batchSize)) {
+      HHt <- tcrossprod(HMat)
+    } else {
+      batchIds <- 1:ncol(HMat) %/% batchSize + 1
+
+      HHtList <- parallel.compute(
+        vec = 1:max(batchIds),
+        func = function(batchNo) {
+          HHtBatch <- tcrossprod(HMat[, batchIds == batchNo])
+
+          return(HHtBatch)
+        },
+        n.core = n.core,
+        count = FALSE
+      )
+
+      HHt <- Reduce(
+        f = `+`,
+        x = HHtList
+      )
+    }
+
     GRM <- HHt * nInd / sum(diag(HHt))
   } else if (methodGRM == "A.mat") {
     GRM <- rrBLUP::A.mat(X = genoMat)
   } else if (methodGRM == "linear") {
-    HHt <- tcrossprod(genoMat)
+    if (is.null(batchSize)) {
+      HHt <- tcrossprod(HMat)
+    } else {
+      batchIds <- 1:ncol(HMat) %/% batchSize + 1
+
+      if (n.core == 1) {
+        HHtList <- lapply(
+          X = 1:max(batchIds),
+          FUN = function(batchNo) {
+            HHtBatch <- tcrossprod(HMat[, batchIds == batchNo])
+
+            return(HHtBatch)
+          }
+        )
+      } else {
+        HHtList <- parallel::mclapply(
+          X = 1:max(batchIds),
+          FUN = function(batchNo) {
+            HHtBatch <- tcrossprod(HMat[, batchIds == batchNo])
+
+            return(HHtBatch)
+          },
+          mc.cores = n.core
+        )
+      }
+      HHt <- Reduce(
+        f = `+`,
+        x = HHtList
+      )
+    }
+
     GRM <- HHt * nInd / sum(diag(HHt))
   } else if (methodGRM == "gaussian") {
     distMat <- Rfast::Dist(x = genoMat) / sqrt(ncol(genoMat))
@@ -1475,7 +1534,7 @@ score.calc <- function(M.now, ZETA.now, y, X.now, package.MM = "gaston",
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -2437,7 +2496,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -3602,7 +3661,7 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -4837,7 +4896,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gas
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -6351,7 +6410,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -7347,7 +7406,7 @@ score.calc.int <- function(M.now, ZETA.now, y, X.now,
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -8119,7 +8178,7 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'

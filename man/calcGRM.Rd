@@ -11,7 +11,9 @@ calcGRM(
   kernel.h = "tuned",
   returnWMat = FALSE,
   probaa = NULL,
-  probAa = NULL
+  probAa = NULL,
+  batchSize = NULL,
+  n.core = 1
 )
 }
 \arguments{
@@ -36,6 +38,13 @@ If NULL (default), it will be calculated from genoMat.}
 
 \item{probAa}{Probability of being heterozygous for the reference and alternative alleles for each marker
 If NULL (default), it will be calculated from genoMat.}
+
+\item{batchSize}{Split marker genotype data into subsets consisting of `batchSize` SNPs, and compute GRM.
+If NULL, all the markers will be used for the computation at a time.
+We recommend using this argument when the total number of markers is too large.}
+
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
+This argument is only valid `batchSize` is not `NULL`.}
 }
 \value{
 genomic relationship matrix (GRM)

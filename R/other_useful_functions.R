@@ -1,3 +1,6 @@
+utils::globalVariables(c("MDS1", "MDS2", "cex", "x1",
+                         "y1", "x2", "y2", "traitName"))
+
 #' Function to view the first part of data (like head(), tail())
 #'
 #' @param data Your data. 'vector', 'matrix', 'array' (whose dimensions <= 4), 'data.frame' are supported format.
@@ -293,7 +296,7 @@ MAF.cut <-  function(x.0, map.0 = NULL, min.MAF = 0.05, max.HE = 0.999,
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -481,7 +484,7 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'
@@ -1473,7 +1476,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #'
 #' When `parallel.method = "furrr"`, we utilize \code{\link[furrr]{future_map}} function in the `furrr` package.
 #' With `count = TRUE`, we also utilize \code{\link[progressr]{progressor}} function in the `progressr` package to show the progress bar,
-#' so please install the `progressr` package from github (\url{https://github.com/HenrikBengtsson/progressr}).
+#' so please install the `progressr` package from github (\url{https://github.com/futureverse/progressr}).
 #' For `parallel.method = "furrr"`, you can perform multi-thread parallelization by
 #' sharing memories, which results in saving your memory, but quite slower compared to `parallel.method = "mclapply"`.
 #'

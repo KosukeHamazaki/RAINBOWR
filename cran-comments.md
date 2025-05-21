@@ -762,3 +762,24 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 # Dec 05, 2024, RAINBOWR version 0.1.37
 ## Major changes (new functions, etc...)
 - We modified the `estPhylo`, `plotPhyloTree`, `estNetwork`, and `plotHaploNetwork` functions to fix some errors.
+
+# May 21, 2025, RAINBOWR version 0.1.38
+## Major changes (new functions, etc...)
+- We enabled the `calcGRM` function to compute GRM by subsets of marker genotype. To achieve this, we added new arguments `batchSize` and `n.core` for the `calcGRM` function.
+- We implemented a new function `EM3.cov`, which solves a multi-kernel linear mixed-effects model considering covariance structure between random effects. We added the function to `NAMESPACE` file.
+
+## Test environments 
+* platform aarch64-apple-darwin20, R version 4.5.0
+* win-builder release, R version 4.5.0
+* win-builder devel, R Under development (unstable)
+* win-builder oldrelease, R version 4.4.3
+
+
+## R CMD check results
+#### Status: OK
+
+#### There were no ERRORs.
+
+#### There were no WARNINGs.
+
+#### There were no NOTEs.

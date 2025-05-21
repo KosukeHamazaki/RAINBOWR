@@ -245,3 +245,8 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 # Dec 05, 2024, RAINBOWR version 0.1.37
 ## Major changes (new functions, etc...)
 - We modified the `estPhylo`, `plotPhyloTree`, `estNetwork`, and `plotHaploNetwork` functions to fix some errors.
+
+# May 21, 2025, RAINBOWR version 0.1.38
+## Major changes (new functions, etc...)
+- We enabled the `calcGRM` function to compute GRM by subsets of marker genotype. To achieve this, we added new arguments `batchSize` and `n.core` for the `calcGRM` function.
+- We implemented a new function `EM3.cov`, which solves a multi-kernel linear mixed-effects model considering covariance structure between random effects. We added the function to `NAMESPACE` file.
