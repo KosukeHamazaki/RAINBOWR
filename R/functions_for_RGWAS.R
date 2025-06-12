@@ -562,15 +562,15 @@ calcGRM <- function(genoMat,
     GRM <- rrBLUP::A.mat(X = genoMat)
   } else if (methodGRM == "linear") {
     if (is.null(batchSize)) {
-      HHt <- tcrossprod(HMat)
+      HHt <- tcrossprod(genoMat)
     } else {
-      batchIds <- 1:ncol(HMat) %/% batchSize + 1
+      batchIds <- 1:ncol(genoMat) %/% batchSize + 1
 
       if (n.core == 1) {
         HHtList <- lapply(
           X = 1:max(batchIds),
           FUN = function(batchNo) {
-            HHtBatch <- tcrossprod(HMat[, batchIds == batchNo])
+            HHtBatch <- tcrossprod(genoMat[, batchIds == batchNo])
 
             return(HHtBatch)
           }
@@ -579,7 +579,7 @@ calcGRM <- function(genoMat,
         HHtList <- parallel::mclapply(
           X = 1:max(batchIds),
           FUN = function(batchNo) {
-            HHtBatch <- tcrossprod(HMat[, batchIds == batchNo])
+            HHtBatch <- tcrossprod(genoMat[, batchIds == batchNo])
 
             return(HHtBatch)
           },

@@ -1117,17 +1117,28 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         colTip <- colTipBase[colTipNo]
         names(colTipNo) <- names(colTip) <- lineNames
 
-        colTip <- tapply(colTip, INDEX = haploCluster, FUN = function(x) {
-          as.numeric(names(which.max(table(x) / sum(table(x)))))
-        })[haploNames]
+        colTip <- tapply(X = colTip,
+                         INDEX = haploCluster,
+                         FUN = function(x) {
+                           colTipNow <- names(which.max(table(x) / sum(table(x))))
+                           if (is.numeric(colTip)) {
+                             colTipNow <- as.numeric(colTipNow)
+                           }
+
+                           return(colTipNow)
+                         })[haploNames]
 
         clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploCluster,
                                          FUN = table)[haploNames]
 
-        edgeCol <- as.numeric(colTip[njRes$edge[, 2]])
+        edgeCol <- colTip[njRes$edge[, 2]]
+        if (is.numeric(colTip)) {
+          edgeCol <- as.numeric(edgeCol)
+        }
 
         clusterNosDF <- data.frame(do.call(what = rbind,
                                            args = clusterNosForHaplotype))
+        colnames(clusterNosDF) <- sprintf(paste0("X%0", nchar(nGrp), "d"), 1:nGrp)
         clusterNosRatioDF <- data.frame(t(apply(clusterNosDF, 1,
                                                 function(x) x / sum(x))))
 
@@ -1138,6 +1149,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         colTipBase <- "gray"
 
         edgeCol <- colTip[njRes$edge[, 2]]
+
         clusterNosForHaplotype <- NA
 
         clusterNosRatioDF <- data.frame(matrix(data = 1,
@@ -2837,17 +2849,28 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
       colTip <- colTipBase[colTipNo]
       names(colTipNo) <- names(colTip) <- lineNames
 
-      colTip <- tapply(colTip, INDEX = haploCluster, FUN = function(x) {
-        as.numeric(names(which.max(table(x) / sum(table(x)))))
-      })[haploNames]
+      colTip <- tapply(X = colTip,
+                       INDEX = haploCluster,
+                       FUN = function(x) {
+                         colTipNow <- names(which.max(table(x) / sum(table(x))))
+                         if (is.numeric(colTip)) {
+                           colTipNow <- as.numeric(colTipNow)
+                         }
+
+                         return(colTipNow)
+                       })[haploNames]
 
       clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploCluster,
                                        FUN = table)[haploNames]
 
-      edgeCol <- as.numeric(colTip[njRes$edge[, 2]])
+      edgeCol <- colTip[njRes$edge[, 2]]
+      if (is.numeric(colTip)) {
+        edgeCol <- as.numeric(edgeCol)
+      }
 
       clusterNosDF <- data.frame(do.call(what = rbind,
                                          args = clusterNosForHaplotype))
+      colnames(clusterNosDF) <- sprintf(paste0("X%0", nchar(nGrp), "d"), 1:nGrp)
       clusterNosRatioDF <- data.frame(t(apply(clusterNosDF, 1,
                                               function(x) x / sum(x))))
 
@@ -2956,7 +2979,7 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
 
 
       plt <- ggtree::ggtree(tr = trPhylo42,
-                            ggtree::aes(col = I(trPhylo42@data$color)),
+                            mapping = ggtree::aes(col = I(trPhylo42@data$color)),
                             layout = "equal_angle")
 
 
@@ -2998,16 +3021,11 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
                                          alpha = alphaBase[2])
           }
 
-          for (tipNo in 1:sum(alphaTip == alphaBase[1])) {
-            plt <- plt + ggtree::geom_inset(insets = piesPlus[tipNo],
-                                            width = cexTipForGG[alphaTip == alphaBase[1]][tipNo],
-                                            height = cexTipForGG[alphaTip == alphaBase[1]][tipNo])
-          }
-
-          for (tipNo in 1:sum(alphaTip == alphaBase[2])) {
-            plt <- plt + ggtree::geom_inset(insets = piesMinus[tipNo],
-                                            width = cexTipForGG[alphaTip == alphaBase[2]][tipNo],
-                                            height = cexTipForGG[alphaTip == alphaBase[2]][tipNo])
+          piesAll <- c(piesPlus, piesMinus)[as.character(1:nGrp)]
+          for (tipNo in 1:nGrp) {
+            plt <- plt + ggtree::geom_inset(insets = piesAll[tipNo],
+                                            width = cexTipForGG[tipNo],
+                                            height = cexTipForGG[tipNo])
           }
         } else {
           if (nGrp > 0) {
@@ -3060,8 +3078,6 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
       }
     }
   }
-
-
 }
 
 

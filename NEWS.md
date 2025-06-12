@@ -250,3 +250,9 @@ Then, we fixed this by using the canonical URL of the CRAN package "https://cran
 ## Major changes (new functions, etc...)
 - We enabled the `calcGRM` function to compute GRM by subsets of marker genotype. To achieve this, we added new arguments `batchSize` and `n.core` for the `calcGRM` function.
 - We implemented a new function `EM3.cov`, which solves a multi-kernel linear mixed-effects model considering covariance structure between random effects. We added the function to `NAMESPACE` file.
+
+
+# June 13, 2025, RAINBOWR version 0.1.39
+## Major changes (new functions, etc...)
+- We fixed the error in `calcGRM` function with `methodGRM == "linear` option.
+- We fixed the error in `estPhylo` and `plotPhyloTree` functions when drawing phylogenetic trees.
