@@ -1138,7 +1138,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
         clusterNosDF <- data.frame(do.call(what = rbind,
                                            args = clusterNosForHaplotype))
-        colnames(clusterNosDF) <- sprintf(paste0("X%0", nchar(nGrp), "d"), 1:nGrp)
+        isNumericSubpop <- all(suppressWarnings(!is.na(as.numeric(as.character(subpopInfo)))))
+        if (isNumericSubpop) {
+          colnames(clusterNosDF) <- sprintf(paste0("X%0", nchar(nGrp), "d"), 1:nGrp)
+        }
         clusterNosRatioDF <- data.frame(t(apply(clusterNosDF, 1,
                                                 function(x) x / sum(x))))
 
@@ -1910,7 +1913,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
       namesBlockInterestComp <- c(haploNames, compNames)
       rownames(distMatComp) <- colnames(distMatComp) <- namesBlockInterestComp
     } else if (complementHaplo == "TCS") {
-      extractParsimnetRes <- function (parsimnetRes) {
+      extractParsimnetRes <- function(parsimnetRes) {
         nHapEachNet <- parsimnetRes@nhap
         distForEachNet <- parsimnetRes@d
         nNet <- length(distForEachNet)
@@ -2323,7 +2326,13 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         names(colHaploNo) <- names(colHaplo) <- lineNames
 
         colHaplo <- tapply(colHaplo, INDEX = haploCluster, FUN = function(x) {
-          as.numeric(names(which.max(table(x) / sum(table(x)))))
+          colHaploNow <- names(which.max(table(x) / sum(table(x))))
+
+          if (is.numeric(colHaplo)) {
+            colHaploNow <- as.numeric(colHaploNow)
+          }
+
+          return(colHaploNow)
         })[haploNames]
 
         clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploCluster,
@@ -2460,6 +2469,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         if (!is.null(subpopInfo)) {
           clusterNosDF <- data.frame(do.call(what = rbind,
                                              args = clusterNosForHaplotype))
+          isNumericSubpop <- all(suppressWarnings(!is.na(as.numeric(as.character(subpopInfo)))))
+          if (isNumericSubpop) {
+            colnames(clusterNosDF) <- sprintf(paste0("X%0", nchar(nGrp), "d"), 1:nGrp)
+          }
           clusterNosRatioDF <- data.frame(t(apply(clusterNosDF, 1,
                                                   function(x) x / sum(x))))
           colHaploBaseForPie <- colHaploBase
@@ -2532,8 +2545,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           alphaAll[compNames] <- alphaComp
         } else {
           colorForAllCompDF <- clusterNosRatioDF
-          colorForAllCompDF <- cbind(clusterNosRatioDF,
-                                     Complement = rep(0, nHaplo))
+          # colorForAllCompDF <- cbind(clusterNosRatioDF,
+          #                            Complement = rep(0, nHaplo))
 
           if (EM3Res$weights[2] > 1e-06) {
             alphaHaplo <- ifelse(gvScaled[haploNames] > 0, alphaBase[1], alphaBase[2])
@@ -2870,7 +2883,10 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
 
       clusterNosDF <- data.frame(do.call(what = rbind,
                                          args = clusterNosForHaplotype))
-      colnames(clusterNosDF) <- sprintf(paste0("X%0", nchar(nGrp), "d"), 1:nGrp)
+      isNumericSubpop <- all(suppressWarnings(!is.na(as.numeric(as.character(subpopInfo)))))
+      if (isNumericSubpop) {
+        colnames(clusterNosDF) <- sprintf(paste0("X%0", nchar(nGrp), "d"), 1:nGrp)
+      }
       clusterNosRatioDF <- data.frame(t(apply(clusterNosDF, 1,
                                               function(x) x / sum(x))))
 
@@ -2923,7 +2939,7 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
       if (tipLabel) {
         ape::tiplabels(pch = pchTip, cex = cexTip, col = colTip)
       }
-      title(main = paste0(paste(c(traitName[2],
+      title(main = paste0(paste(c(traitName,
                                   blockName, kernelType), collapse = "_"),
                           " (-log10p: ", round(minuslog10p, 2), ")"))
       if (plotNode) {
@@ -3021,11 +3037,16 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
                                          alpha = alphaBase[2])
           }
 
-          piesAll <- c(piesPlus, piesMinus)[as.character(1:nGrp)]
-          for (tipNo in 1:nGrp) {
-            plt <- plt + ggtree::geom_inset(insets = piesAll[tipNo],
-                                            width = cexTipForGG[tipNo],
-                                            height = cexTipForGG[tipNo])
+          for (tipNo in 1:sum(alphaTip == alphaBase[1])) {
+            plt <- plt + ggtree::geom_inset(insets = piesPlus[tipNo],
+                                            width = cexTipForGG[alphaTip == alphaBase[1]][tipNo],
+                                            height = cexTipForGG[alphaTip == alphaBase[1]][tipNo])
+          }
+
+          for (tipNo in 1:sum(alphaTip == alphaBase[2])) {
+            plt <- plt + ggtree::geom_inset(insets = piesMinus[tipNo],
+                                            width = cexTipForGG[alphaTip == alphaBase[2]][tipNo],
+                                            height = cexTipForGG[alphaTip == alphaBase[2]][tipNo])
           }
         } else {
           if (nGrp > 0) {
@@ -3046,7 +3067,7 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
           }
         }
       }
-      plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(traitName[2],
+      plt <- plt + ggplot2::ggtitle(label = paste0(paste(c(traitName,
                                                            blockName, kernelType), collapse = "_"),
                                                    " (-log10p: ", round(minuslog10p, 2), ")"))
 
@@ -3268,7 +3289,13 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
       names(colHaploNo) <- names(colHaplo) <- lineNames
 
       colHaplo <- tapply(colHaplo, INDEX = haploCluster, FUN = function(x) {
-        as.numeric(names(which.max(table(x) / sum(table(x)))))
+        colHaploNow <- names(which.max(table(x) / sum(table(x))))
+
+        if (is.numeric(colHaplo)) {
+          colHaploNow <- as.numeric(colHaploNow)
+        }
+
+        return(colHaploNow)
       })[haploNames]
 
       clusterNosForHaplotype <- tapply(subpopInfo, INDEX = haploCluster,
@@ -3405,6 +3432,10 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
       if (!is.null(subpopInfo)) {
         clusterNosDF <- data.frame(do.call(what = rbind,
                                            args = clusterNosForHaplotype))
+        isNumericSubpop <- all(suppressWarnings(!is.na(as.numeric(as.character(subpopInfo)))))
+        if (isNumericSubpop) {
+          colnames(clusterNosDF) <- sprintf(paste0("X%0", nchar(nGrp), "d"), 1:nGrp)
+        }
         clusterNosRatioDF <- data.frame(t(apply(clusterNosDF, 1,
                                                 function(x) x / sum(x))))
         colHaploBaseForPie <- colHaploBase
@@ -3477,8 +3508,8 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
         alphaAll[compNames] <- alphaComp
       } else {
         colorForAllCompDF <- clusterNosRatioDF
-        colorForAllCompDF <- cbind(clusterNosRatioDF,
-                                   Complement = rep(0, nHaplo))
+        # colorForAllCompDF <- cbind(clusterNosRatioDF,
+        #                            Complement = rep(0, nHaplo))
 
         if (EM3Res$weights[2] > 1e-06) {
           alphaHaplo <- ifelse(gvScaled[haploNames] > 0, alphaBase[1], alphaBase[2])
@@ -3501,7 +3532,6 @@ plotHaploNetwork <- function(estNetworkRes, traitName = NULL, blockName = NULL,
                                   colorForAllCompDF)
       colnames(mdsPointsForPlotDF)[1:2] <- paste0("MDS", 1:2)
       mdsPointsForPlotDF$cex <- cexAll
-
 
       plt <- ggplot2::ggplot(data = mdsPointsForPlotDF,
                              ggplot2::aes(x = MDS1,

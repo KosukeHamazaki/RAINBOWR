@@ -789,3 +789,4 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 ## Major changes (new functions, etc...)
 - We fixed the error in `calcGRM` function with `methodGRM == "linear` option.
 - We fixed the error in `estPhylo` and `plotPhyloTree` functions when drawing phylogenetic trees.
+- We fixed the error in `estNetwork` and `plotHaploNetwork` functions when drawing haplotype network.
