@@ -785,8 +785,9 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 #### There were no NOTEs.
 
 
-# June 13, 2025, RAINBOWR version 0.1.39
+# June 26, 2025, RAINBOWR version 0.1.39
 ## Major changes (new functions, etc...)
 - We fixed the error in `calcGRM` function with `methodGRM == "linear` option.
 - We fixed the error in `estPhylo` and `plotPhyloTree` functions when drawing phylogenetic trees.
 - We fixed the error in `estNetwork` and `plotHaploNetwork` functions when drawing haplotype network.
+- We added new options for `EM3.cov` so that the user can determine initial weights for the genetic variance from outside.

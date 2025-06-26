@@ -2085,6 +2085,10 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
 #' We recommend you assign the result of the eigen decomposition beforehand for time saving.
 #' @param optimizer The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.
 #' @param traceInside Perform trace for the optimzation if traceInside >= 1, and this argument shows the frequency of reports.
+#' @param optimizeWeights Optimize weights for the genetic variance and correlation parameters simultaneously or not. Default is `optimizeWeights = TRUE`.
+#' If `optimizeWeights = FALSE`, fixed values set by `parInitForWeights` will be used for the weights.
+#' @param parInitForWeights Initial parameter for weights for the genetic variance.
+#' If `parInitForWeights = NULL`, `1/lz` where `lz` is the number of parameters will be assigned.
 #' @param nIterOptimization Maximum number of iterations allowed. Defaults are different depending on `optimizer`.
 #' @param n.thres If \eqn{n >= n.thres}, perform EMM1.cpp. Else perform EMM2.cpp.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
@@ -2130,6 +2134,7 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
 #'
 EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NULL,
                     tol = NULL, n.core = NA, optimizer = "optim", traceInside = 0,
+                    optimizeWeights = TRUE, parInitForWeights = NULL,
                     nIterOptimization = NULL, n.thres = 450, REML = TRUE, pred = TRUE,
                     return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {
   n <- length(as.matrix(y))
@@ -2254,14 +2259,10 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
       spI <- diag(n)
       S <- spI - tcrossprod(X %*% solve(crossprod(X)), X)
 
-
-      minimfunctionouter <- function(params = c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))) {
-        weights <- params[1:lz]
-        weights <- weights / sum(weights)
-
+      computeObjFunc <- function(weights, rhos) {
         rhosMat <- matrix(data = 0,
                           nrow = lz, ncol = lz)
-        rhos <- params[(lz + 1):length(params)]
+
         count <- 0
         for (i in 1:(lz - 1)) {
           for (j in (i + 1):lz) {
@@ -2284,7 +2285,6 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
           }
         }
 
-
         res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
         lambda <- res$lambda
         eta <- res$eta
@@ -2305,13 +2305,48 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
         }
 
         optimout <- optimize(minimfunc, lower = 0, upper = 10000)
+
         return(optimout$objective)
       }
 
+      if (optimizeWeights) {
+        minimfunctionouter <- function(params = c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))) {
+          weights <- params[1:lz]
+          weights <- weights / sum(weights)
 
-      parInit <- c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))
-      parLower <- c(rep(0, lz), rep(-Inf, lz * (lz - 1) / 2))
-      parUpper <- c(rep(1, lz), rep(Inf, lz * (lz - 1) / 2))
+          rhosMat <- matrix(data = 0,
+                            nrow = lz, ncol = lz)
+          rhos <- params[(lz + 1):length(params)]
+
+          return(computeObjFunc(weights, rhos))
+        }
+      } else {
+        minimfunctionouter <- function(params = rep(0, lz * (lz - 1) / 2)) {
+          weights <- parInitForWeights
+          rhos <- params
+
+          return(computeObjFunc(weights, rhos))
+        }
+      }
+
+      if (is.null(parInitForWeights)) {
+        parInitForWeights <- rep(1 / lz, lz)
+      } else {
+        stopifnot(length(parInitForWeights) == lz)
+        parInitForWeights <- parInitForWeights / sum(parInitForWeights)
+      }
+      parInitForRhos <- rep(0, lz * (lz - 1) / 2)
+
+      if (optimizeWeights) {
+        parInit <- c(parInitForWeights, parInitForRhos)
+        parLower <- c(rep(0, lz), rep(-Inf, lz * (lz - 1) / 2))
+        parUpper <- c(rep(1, lz), rep(Inf, lz * (lz - 1) / 2))
+      } else {
+        parInit <- parInitForRhos
+        parLower <- rep(-Inf, lz * (lz - 1) / 2)
+        parUpper <- rep(Inf, lz * (lz - 1) / 2)
+      }
+
       traceNo <- ifelse(traceInside > 0, 3, 0)
       traceREPORT <- ifelse(traceInside > 0, traceInside, 1)
       if (is.null(nIterOptimization)) {
@@ -2343,6 +2378,10 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
                       control = list(trace = traceNo, REPORT = traceREPORT, iter.max = nIterOptimization),
                       method = "L-BFGS-B", lower = parLower, upper = parUpper)
         params <- soln$par
+      }
+
+      if (!optimizeWeights) {
+        params <- c(parInitForWeights, params)
       }
     }
   } else {
@@ -2565,4 +2604,3 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
 
   return(results)
 }
-
