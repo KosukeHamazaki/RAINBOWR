@@ -1027,14 +1027,8 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
   Ve <- EMM.cpp.res$Ve
   beta <- EMM.cpp.res$beta
   LL <- EMM.cpp.res$LL
-  if (n == nrow(X0)) {
-    u <- as.matrix(EMM.cpp.res$u)
-    rownames(u) <- rownames(ZETA.list[[1]]$K)
-  } else {
-    u <- NULL
-  }
-
-
+  u <- as.matrix(EMM.cpp.res$u)
+  rownames(u) <- rownames(ZETA.list[[1]]$K)
 
   if (pred & (!return.u.always)) {
     return.u.always <- TRUE
@@ -1100,12 +1094,15 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
   }
 
 
-  if (pred & (!is.null(u))) {
-    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+  if (pred) {
+    if ((length(ZETA) >= 2)) {
+      y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+    } else {
+      y.pred <- (X0 %*% as.matrix(beta) + ZETA[[1]]$Z %*% u)[, 1]
+    }
   } else {
     y.pred <- NULL
   }
-
 
 
   results <- list(y.pred = y.pred,
@@ -1395,12 +1392,8 @@ EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   Ve <- EMM.cpp.res$Ve
   beta <- EMM.cpp.res$beta
   LL <- EMM.cpp.res$LL
-  if (n == nrow(X0)) {
-    u <- as.matrix(EMM.cpp.res$u)
-    rownames(u) <- rownames(ZETA.list[[1]]$K)
-  } else {
-    u <- NULL
-  }
+  u <- as.matrix(EMM.cpp.res$u)
+  rownames(u) <- rownames(ZETA.list[[1]]$K)
 
 
 
@@ -1448,8 +1441,12 @@ EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   }
 
 
-  if (pred & (!is.null(u))) {
-    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+  if (pred) {
+    if ((length(ZETA) >= 2)) {
+      y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+    } else {
+      y.pred <- (X0 %*% as.matrix(beta) + ZETA[[1]]$Z %*% u)[, 1]
+    }
   } else {
     y.pred <- NULL
   }
@@ -2021,8 +2018,12 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
   }
 
 
-  if (pred & (!is.null(u))) {
-    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+  if (pred & (n != nrow(X0))) {
+    if ((length(ZETA) >= 2)) {
+      y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+    } else {
+      y.pred <- (X0 %*% as.matrix(beta) + ZETA[[1]]$Z %*% u)[, 1]
+    }
   } else {
     y.pred <- NULL
   }
@@ -2132,8 +2133,8 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
 #'
 #'
 #'
-EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NULL,
-                    tol = NULL, n.core = NA, optimizer = "optim", traceInside = 0,
+EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
+                    n.core = NA, optimizer = "optim", traceInside = 0,
                     optimizeWeights = TRUE, parInitForWeights = NULL,
                     nIterOptimization = NULL, n.thres = 450, REML = TRUE, pred = TRUE,
                     return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {
@@ -2222,167 +2223,165 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
 
 
   if (lz >= 2) {
-    if (is.null(eigen.G)) {
-      Z <- c()
-      ms <- rep(NA, lz)
-      for (i in 1:lz) {
-        Z.now <- ZETA[[i]]$Z
+    Z <- c()
+    ms <- rep(NA, lz)
+    for (i in 1:lz) {
+      Z.now <- ZETA[[i]]$Z
 
-        if (is.null(Z.now)) {
-          Z.now <- diag(n)
-        }
-        m <- ncol(Z.now)
-        if (is.null(m)) {
-          m <- 1
-          Z.now <- matrix(Z.now, length(Z.now), 1)
-        }
-
-        K.now <- ZETA[[i]]$K
-
-        if (!is.null(K.now)) {
-          stopifnot(nrow(K.now) == m)
-          stopifnot(ncol(K.now) == m)
-        }
-
-        Z <- cbind(Z, Z.now)
-        ms[i] <- m
+      if (is.null(Z.now)) {
+        Z.now <- diag(n)
+      }
+      m <- ncol(Z.now)
+      if (is.null(m)) {
+        m <- 1
+        Z.now <- matrix(Z.now, length(Z.now), 1)
       }
 
-      stopifnot(nrow(Z) == n)
-      stopifnot(nrow(X0) == n)
+      K.now <- ZETA[[i]]$K
 
-      Z <- Z[not.NA, , drop = FALSE]
-      X <- X0[not.NA, , drop = FALSE]
-      n <- length(not.NA)
-      y <- matrix(y[not.NA], n, 1)
+      if (!is.null(K.now)) {
+        stopifnot(nrow(K.now) == m)
+        stopifnot(ncol(K.now) == m)
+      }
 
-      spI <- diag(n)
-      S <- spI - tcrossprod(X %*% solve(crossprod(X)), X)
+      Z <- cbind(Z, Z.now)
+      ms[i] <- m
+    }
 
-      computeObjFunc <- function(weights, rhos) {
+    stopifnot(nrow(Z) == n)
+    stopifnot(nrow(X0) == n)
+
+    Z <- Z[not.NA, , drop = FALSE]
+    X <- X0[not.NA, , drop = FALSE]
+    n <- length(not.NA)
+    y <- matrix(y[not.NA], n, 1)
+
+    spI <- diag(n)
+    S <- spI - tcrossprod(X %*% solve(crossprod(X)), X)
+
+    computeObjFunc <- function(weights, rhos) {
+      rhosMat <- matrix(data = 0,
+                        nrow = lz, ncol = lz)
+
+      count <- 0
+      for (i in 1:(lz - 1)) {
+        for (j in (i + 1):lz) {
+          count <- count + 1
+          rhosMat[i, j] <- rhos[count]
+        }
+      }
+      rhosMat <- rhosMat + t(rhosMat)
+
+      ZKZt <- matrix(0, nrow = n, ncol = n)
+      for (i in 1:lz) {
+        ZKZt <- ZKZt + weights[i] * tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
+                                                 ZETA[[i]]$K, ZETA[[i]]$Z[not.NA, ])
+        for (j in 1:lz) {
+          if (i != j) {
+            ZKZt <- ZKZt + sqrt(weights[i] * weights[j]) * rhosMat[i, j] *
+              tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
+                           covList[[i]][[j]], ZETA[[j]]$Z[not.NA, ])
+          }
+        }
+      }
+
+      res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
+      lambda <- res$lambda
+      eta <- res$eta
+      phi <- res$phi
+
+      if (REML) {
+        minimfunc <- function(delta) {
+          (n - p) * log(sum(eta ^ 2/{
+            lambda + delta
+          })) + sum(log(lambda + delta))
+        }
+      } else {
+        minimfunc <- function(delta) {
+          n * log(sum(eta ^ 2/{
+            lambda + delta
+          })) + sum(log(phi + delta))
+        }
+      }
+
+      optimout <- optimize(minimfunc, lower = 0, upper = 10000)
+
+      return(optimout$objective)
+    }
+
+    if (optimizeWeights) {
+      minimfunctionouter <- function(params = c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))) {
+        weights <- params[1:lz]
+        weights <- weights / sum(weights)
+
         rhosMat <- matrix(data = 0,
                           nrow = lz, ncol = lz)
+        rhos <- params[(lz + 1):length(params)]
 
-        count <- 0
-        for (i in 1:(lz - 1)) {
-          for (j in (i + 1):lz) {
-            count <- count + 1
-            rhosMat[i, j] <- rhos[count]
-          }
-        }
-        rhosMat <- rhosMat + t(rhosMat)
-
-        ZKZt <- matrix(0, nrow = n, ncol = n)
-        for (i in 1:lz) {
-          ZKZt <- ZKZt + weights[i] * tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
-                                                   ZETA[[i]]$K, ZETA[[i]]$Z[not.NA, ])
-          for (j in 1:lz) {
-            if (i != j) {
-              ZKZt <- ZKZt + sqrt(weights[i] * weights[j]) * rhosMat[i, j] *
-                tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
-                             covList[[i]][[j]], ZETA[[j]]$Z[not.NA, ])
-            }
-          }
-        }
-
-        res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
-        lambda <- res$lambda
-        eta <- res$eta
-        phi <- res$phi
-
-        if (REML) {
-          minimfunc <- function(delta) {
-            (n - p) * log(sum(eta ^ 2/{
-              lambda + delta
-            })) + sum(log(lambda + delta))
-          }
-        } else {
-          minimfunc <- function(delta) {
-            n * log(sum(eta ^ 2/{
-              lambda + delta
-            })) + sum(log(phi + delta))
-          }
-        }
-
-        optimout <- optimize(minimfunc, lower = 0, upper = 10000)
-
-        return(optimout$objective)
+        return(computeObjFunc(weights, rhos))
       }
+    } else {
+      minimfunctionouter <- function(params = rep(0, lz * (lz - 1) / 2)) {
+        weights <- parInitForWeights
+        rhos <- params
 
-      if (optimizeWeights) {
-        minimfunctionouter <- function(params = c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))) {
-          weights <- params[1:lz]
-          weights <- weights / sum(weights)
+        return(computeObjFunc(weights, rhos))
+      }
+    }
 
-          rhosMat <- matrix(data = 0,
-                            nrow = lz, ncol = lz)
-          rhos <- params[(lz + 1):length(params)]
+    if (is.null(parInitForWeights)) {
+      parInitForWeights <- rep(1 / lz, lz)
+    } else {
+      stopifnot(length(parInitForWeights) == lz)
+      parInitForWeights <- parInitForWeights / sum(parInitForWeights)
+    }
+    parInitForRhos <- rep(0, lz * (lz - 1) / 2)
 
-          return(computeObjFunc(weights, rhos))
-        }
+    if (optimizeWeights) {
+      parInit <- c(parInitForWeights, parInitForRhos)
+      parLower <- c(rep(0, lz), rep(-Inf, lz * (lz - 1) / 2))
+      parUpper <- c(rep(1, lz), rep(Inf, lz * (lz - 1) / 2))
+    } else {
+      parInit <- parInitForRhos
+      parLower <- rep(-Inf, lz * (lz - 1) / 2)
+      parUpper <- rep(Inf, lz * (lz - 1) / 2)
+    }
+
+    traceNo <- ifelse(traceInside > 0, 3, 0)
+    traceREPORT <- ifelse(traceInside > 0, traceInside, 1)
+    if (is.null(nIterOptimization)) {
+      if (optimizer == "nlminb") {
+        nIterOptimization <- 150
       } else {
-        minimfunctionouter <- function(params = rep(0, lz * (lz - 1) / 2)) {
-          weights <- parInitForWeights
-          rhos <- params
-
-          return(computeObjFunc(weights, rhos))
-        }
+        nIterOptimization <- 100
       }
+    }
 
-      if (is.null(parInitForWeights)) {
-        parInitForWeights <- rep(1 / lz, lz)
-      } else {
-        stopifnot(length(parInitForWeights) == lz)
-        parInitForWeights <- parInitForWeights / sum(parInitForWeights)
-      }
-      parInitForRhos <- rep(0, lz * (lz - 1) / 2)
+    if (optimizer == "optim") {
+      soln <- optim(par = parInit, fn = minimfunctionouter,
+                    control = list(trace = traceNo, REPORT = traceREPORT, maxit = nIterOptimization),
+                    method = "L-BFGS-B", lower = parLower, upper = parUpper)
+      params <- soln$par
+    } else if (optimizer == "optimx") {
+      soln <- optimx::optimx(par = parInit, fn = minimfunctionouter, gr = NULL, hess = NULL,
+                             lower = parLower, upper = parUpper, method = "L-BFGS-B", hessian = FALSE,
+                             control = list(trace = traceNo, starttests = FALSE, maximize = FALSE,
+                                            REPORT = traceREPORT, kkt = FALSE, maxit = nIterOptimization))
+      params <- as.matrix(soln)[1, 1:(lz * (lz + 1) / 2)]
+    } else if (optimizer == "nlminb") {
+      soln <- nlminb(start = parInit, objective = minimfunctionouter, gradient = NULL, hessian = NULL,
+                     lower = parLower, upper = parUpper, control = list(trace = traceInside))
+      params <- soln$par
+    } else {
+      warning("We offer 'optim', 'optimx', and 'nlminb' as optimzers. Here we use 'optim' instead.")
+      soln <- optim(par = parInit, fn = minimfunctionouter,
+                    control = list(trace = traceNo, REPORT = traceREPORT, iter.max = nIterOptimization),
+                    method = "L-BFGS-B", lower = parLower, upper = parUpper)
+      params <- soln$par
+    }
 
-      if (optimizeWeights) {
-        parInit <- c(parInitForWeights, parInitForRhos)
-        parLower <- c(rep(0, lz), rep(-Inf, lz * (lz - 1) / 2))
-        parUpper <- c(rep(1, lz), rep(Inf, lz * (lz - 1) / 2))
-      } else {
-        parInit <- parInitForRhos
-        parLower <- rep(-Inf, lz * (lz - 1) / 2)
-        parUpper <- rep(Inf, lz * (lz - 1) / 2)
-      }
-
-      traceNo <- ifelse(traceInside > 0, 3, 0)
-      traceREPORT <- ifelse(traceInside > 0, traceInside, 1)
-      if (is.null(nIterOptimization)) {
-        if (optimizer == "nlminb") {
-          nIterOptimization <- 150
-        } else {
-          nIterOptimization <- 100
-        }
-      }
-
-      if (optimizer == "optim") {
-        soln <- optim(par = parInit, fn = minimfunctionouter,
-                      control = list(trace = traceNo, REPORT = traceREPORT, maxit = nIterOptimization),
-                      method = "L-BFGS-B", lower = parLower, upper = parUpper)
-        params <- soln$par
-      } else if (optimizer == "optimx") {
-        soln <- optimx::optimx(par = parInit, fn = minimfunctionouter, gr = NULL, hess = NULL,
-                               lower = parLower, upper = parUpper, method = "L-BFGS-B", hessian = FALSE,
-                               control = list(trace = traceNo, starttests = FALSE, maximize = FALSE,
-                                              REPORT = traceREPORT, kkt = FALSE, maxit = nIterOptimization))
-        params <- as.matrix(soln)[1, 1:(lz * (lz + 1) / 2)]
-      } else if (optimizer == "nlminb") {
-        soln <- nlminb(start = parInit, objective = minimfunctionouter, gradient = NULL, hessian = NULL,
-                       lower = parLower, upper = parUpper, control = list(trace = traceInside))
-        params <- soln$par
-      } else {
-        warning("We offer 'optim', 'optimx', and 'nlminb' as optimzers. Here we use 'optim' instead.")
-        soln <- optim(par = parInit, fn = minimfunctionouter,
-                      control = list(trace = traceNo, REPORT = traceREPORT, iter.max = nIterOptimization),
-                      method = "L-BFGS-B", lower = parLower, upper = parUpper)
-        params <- soln$par
-      }
-
-      if (!optimizeWeights) {
-        params <- c(parInitForWeights, params)
-      }
+    if (!optimizeWeights) {
+      params <- c(parInitForWeights, params)
     }
   } else {
     params <- c(rep(1 / lz, lz), rep(0, lz * (lz - 1) / 2))
@@ -2415,7 +2414,7 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
   }
 
   Z <- Z[not.NA, , drop = FALSE]
-  if ((lz == 1) | (!is.null(eigen.G))) {
+  if (lz == 1) {
     X <- X0[not.NA, , drop = FALSE]
     n <- length(not.NA)
     y <- matrix(y[not.NA], n, 1)
@@ -2474,34 +2473,18 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
   ZK <- as.matrix(Z %*% K)
 
 
-
-  if (is.null(eigen.G)) {
-    if (nrow(Z) <= n.thres) {
-      # return.SGS <- TRUE
-      return.SGS <-  FALSE
-    } else {
-      return.SGS <- FALSE
-    }
-    spectralG.res <- spectralG.cpp(ZETA = lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K)),
-                                   X = X, weights = weights, return.G = TRUE, return.SGS = return.SGS,
-                                   tol = tol, df.H = NULL)
-
-    eigen.G <- spectralG.res[[1]]
-    eigen.SGS <- spectralG.res[[2]]
-  }
-
   return.Hinv.EMM <- return.Hinv | return.u.each | return.u.always
   if (lz >= 2) {
     ZETA.list <- list(A = list(Z = diag(n), K = ZKZt))
-    EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = eigen.G,
-                           eigen.SGS = eigen.SGS, n.core = n.core,
+    EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = NULL,
+                           eigen.SGS = NULL, n.core = n.core,
                            traceInside = traceInside, optimizer = optimizer,
                            tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
   } else {
     ZETA.list <- lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K))
     EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list,
-                           n.core = n.core, traceInside = traceInside, optimizer = optimizer, eigen.G = eigen.G,
-                           eigen.SGS = eigen.SGS, tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
+                           n.core = n.core, traceInside = traceInside, optimizer = optimizer, eigen.G = NULL,
+                           eigen.SGS = NULL, tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
   }
 
 
@@ -2509,12 +2492,9 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
   Ve <- EMM.cpp.res$Ve
   beta <- EMM.cpp.res$beta
   LL <- EMM.cpp.res$LL
-  if (n == nrow(X0)) {
-    u <- as.matrix(EMM.cpp.res$u)
-    rownames(u) <- rownames(ZETA.list[[1]]$K)
-  } else {
-    u <- NULL
-  }
+  u <- as.matrix(EMM.cpp.res$u)
+  rownames(u) <- rownames(ZETA.list[[1]]$K)
+
 
 
 
@@ -2582,8 +2562,12 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, eigen.G = NULL, eigen.SGS = NUL
   }
 
 
-  if (pred & (!is.null(u))) {
-    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+  if (pred) {
+    if ((length(ZETA) >= 2)) {
+      y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
+    } else {
+      y.pred <- (X0 %*% as.matrix(beta) + ZETA[[1]]$Z %*% u)[, 1]
+    }
   } else {
     y.pred <- NULL
   }

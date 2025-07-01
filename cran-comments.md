@@ -791,3 +791,9 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 - We fixed the error in `estPhylo` and `plotPhyloTree` functions when drawing phylogenetic trees.
 - We fixed the error in `estNetwork` and `plotHaploNetwork` functions when drawing haplotype network.
 - We added new options for `EM3.cov` so that the user can determine initial weights for the genetic variance from outside.
+
+
+# July 01, 2025, RAINBOWR version 0.1.40
+## Major changes (new functions, etc...)
+- We fixed the error in `EM3.cov` function when outputting `y.pred` for the case where Z is not square matrix.
+- We fixed the error in `EM3.cov` functions when solving the final uni-kernel mixed-effects model.
