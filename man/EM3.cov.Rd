@@ -9,13 +9,14 @@ EM3.cov(
   X0 = NULL,
   ZETA,
   covList,
-  eigen.G = NULL,
-  eigen.SGS = NULL,
   tol = NULL,
   n.core = NA,
   optimizer = "optim",
   traceInside = 0,
+  optimizeWeights = TRUE,
+  parInitForWeights = NULL,
   nIterOptimization = NULL,
+  forceApproxK = FALSE,
   n.thres = 450,
   REML = TRUE,
   pred = TRUE,
@@ -38,6 +39,42 @@ If there are \eqn{L} random effects in the model, the list should contain \eqn{L
 Each \eqn{\{i, j\}} element of the list includes a matrix \eqn{K_{ij}} representing covariance structure between \eqn{i}-th and \eqn{j}-th random effects.
  See examples for details.}
 
+\item{tol}{The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
+Eigen vectors whose eigen values are less than "tol" argument will be omitted from results.
+If tol is NULL, top 'n' eigen values will be effective.}
+
+\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}
+
+\item{optimizer}{The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.}
+
+\item{traceInside}{Perform trace for the optimzation if traceInside >= 1, and this argument shows the frequency of reports.}
+
+\item{optimizeWeights}{Optimize weights for the genetic variance and correlation parameters simultaneously or not. Default is `optimizeWeights = TRUE`.
+If `optimizeWeights = FALSE`, fixed values set by `parInitForWeights` will be used for the weights.}
+
+\item{parInitForWeights}{Initial parameter for weights for the genetic variance.
+If `parInitForWeights = NULL`, `1/lz` where `lz` is the number of parameters will be assigned.}
+
+\item{nIterOptimization}{Maximum number of iterations allowed. Defaults are different depending on `optimizer`.}
+
+\item{forceApproxK}{Whether to approximate a weighted kernel with a semi-positive definite matrix when the original kernel is not semi-positive definite.}
+
+\item{n.thres}{If \eqn{n >= n.thres}, perform EMM1.cpp. Else perform EMM2.cpp.}
+
+\item{REML}{You can choose which method you will use, "REML" or "ML".
+If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".}
+
+\item{pred}{If TRUE, the fitting values of y is returned.}
+
+\item{return.u.always}{If TRUE, BLUP (`u`; \eqn{u}) will be returned.}
+
+\item{return.u.each}{If TRUE, the function also computes each BLUP corresponding
+to different kernels (when solving multi-kernel mixed-effects model). It takes
+additional time compared to the one with `return.u.each = FALSE`.}
+
+\item{return.Hinv}{If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}}
+will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.}
+
 \item{eigen.G}{A list with
 \describe{
 \item{$values}{Eigen values}
@@ -56,34 +93,6 @@ The result of the eigen decompsition of \eqn{SGS}, where \eqn{S = I - X(X'X)^{-1
 You can use "spectralG.cpp" function in RAINBOWR.
 If this argument is NULL, the eigen decomposition will be performed in this function.
 We recommend you assign the result of the eigen decomposition beforehand for time saving.}
-
-\item{tol}{The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
-Eigen vectors whose eigen values are less than "tol" argument will be omitted from results.
-If tol is NULL, top 'n' eigen values will be effective.}
-
-\item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.}
-
-\item{optimizer}{The function used in the optimization process. We offer "optim", "optimx", and "nlminb" functions.}
-
-\item{traceInside}{Perform trace for the optimzation if traceInside >= 1, and this argument shows the frequency of reports.}
-
-\item{nIterOptimization}{Maximum number of iterations allowed. Defaults are different depending on `optimizer`.}
-
-\item{n.thres}{If \eqn{n >= n.thres}, perform EMM1.cpp. Else perform EMM2.cpp.}
-
-\item{REML}{You can choose which method you will use, "REML" or "ML".
-If REML = TRUE, you will perform "REML", and if REML = FALSE, you will perform "ML".}
-
-\item{pred}{If TRUE, the fitting values of y is returned.}
-
-\item{return.u.always}{If TRUE, BLUP (`u`; \eqn{u}) will be returned.}
-
-\item{return.u.each}{If TRUE, the function also computes each BLUP corresponding
-to different kernels (when solving multi-kernel mixed-effects model). It takes
-additional time compared to the one with `return.u.each = FALSE`.}
-
-\item{return.Hinv}{If TRUE, \eqn{H ^ {-1} = (Var[y] / \sum _{l=1} ^ {L} \sigma _ {l} ^ 2) ^ {-1}}
-will be computed. It also returns \eqn{V ^ {-1} = (Var[y]) ^ {-1}}.}
 }
 \value{
 \describe{
