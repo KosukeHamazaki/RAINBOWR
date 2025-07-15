@@ -2091,6 +2091,7 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
 #' @param parInitForWeights Initial parameter for weights for the genetic variance.
 #' If `parInitForWeights = NULL`, `1/lz` where `lz` is the number of parameters will be assigned.
 #' @param nIterOptimization Maximum number of iterations allowed. Defaults are different depending on `optimizer`.
+#' @param forceApproxK Whether to approximate a weighted kernel with a semi-positive definite matrix when the original kernel is not semi-positive definite.
 #' @param n.thres If \eqn{n >= n.thres}, perform EMM1.cpp. Else perform EMM2.cpp.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' @param tol The tolerance for detecting linear dependencies in the columns of G = ZKZ'.
@@ -2135,8 +2136,8 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
 #'
 EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
                     n.core = NA, optimizer = "optim", traceInside = 0,
-                    optimizeWeights = TRUE, parInitForWeights = NULL,
-                    nIterOptimization = NULL, n.thres = 450, REML = TRUE, pred = TRUE,
+                    optimizeWeights = TRUE, parInitForWeights = NULL, nIterOptimization = NULL,
+                    forceApproxK = FALSE, n.thres = 450, REML = TRUE, pred = TRUE,
                     return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {
   n <- length(as.matrix(y))
   y <- matrix(y, n, 1)
@@ -2285,7 +2286,17 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
         }
       }
 
-      res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
+      if (forceApproxK) {
+        res <- try(EM3_kernel(y, X, ZKZt, S, spI, n, p), silent = FALSE)
+        if (class(res) %in% "try-error") {
+          ZKZt <- Matrix::nearPD(x = ZKZt)$mat
+          diag(ZKZt) <- diag(ZKZt) + 1e-06
+          res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
+        }
+      } else {
+        res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
+      }
+
       lambda <- res$lambda
       eta <- res$eta
       phi <- res$phi
@@ -2476,10 +2487,27 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
   return.Hinv.EMM <- return.Hinv | return.u.each | return.u.always
   if (lz >= 2) {
     ZETA.list <- list(A = list(Z = diag(n), K = ZKZt))
-    EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = NULL,
-                           eigen.SGS = NULL, n.core = n.core,
-                           traceInside = traceInside, optimizer = optimizer,
-                           tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
+    if (forceApproxK) {
+      EMM.cpp.res <- try(EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = NULL,
+                                 eigen.SGS = NULL, n.core = n.core,
+                                 traceInside = traceInside, optimizer = optimizer,
+                                 tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML),
+                         silent = FALSE)
+      if (class(EMM.cpp.res) %in% "try-error") {
+        ZKZt <- Matrix::nearPD(ZKZt)$mat
+        diag(ZKZt) <- diag(ZKZt) + 1e-06
+        ZETA.list <- list(A = list(Z = diag(n), K = ZKZt))
+        EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = NULL,
+                               eigen.SGS = NULL, n.core = n.core,
+                               traceInside = traceInside, optimizer = optimizer,
+                               tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
+      }
+    } else {
+      EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = NULL,
+                             eigen.SGS = NULL, n.core = n.core,
+                             traceInside = traceInside, optimizer = optimizer,
+                             tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
+    }
   } else {
     ZETA.list <- lapply(ZETA, function(x) list(Z = x$Z[not.NA, , drop = FALSE], K = x$K))
     EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list,

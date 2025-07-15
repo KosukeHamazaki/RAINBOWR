@@ -76,7 +76,7 @@ importFrom("utils", "menu", "packageVersion", "setTxtProgressBar",
 importFrom("grDevices", "jpeg", "pdf", "tiff")
 importFrom("stats", "as.dist", "chisq.test", "cutree",
            "hclust", "kmeans", "cmdscale")
-importFrom("Matrix", "sparseMatrix")
+importFrom("Matrix", "sparseMatrix", "nearPD")
 importFrom("MASS", "mvrnorm", "ginv")
 importFrom("pegas", "mst", "msn", "rmst")
 importFrom("cluster", "pam")
