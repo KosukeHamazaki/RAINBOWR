@@ -2289,7 +2289,8 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
       if (forceApproxK) {
         res <- try(EM3_kernel(y, X, ZKZt, S, spI, n, p), silent = FALSE)
         if (class(res) %in% "try-error") {
-          ZKZt <- Matrix::nearPD(x = ZKZt)$mat
+          warning("Since K is not positive semi-definite during the optimization of weights, it is approximated with the nearest nearest positive definite matrix.")
+          ZKZt <- as.matrix(Matrix::nearPD(x = ZKZt)$mat)
           diag(ZKZt) <- diag(ZKZt) + 1e-06
           res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
         }
@@ -2494,7 +2495,8 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
                                  tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML),
                          silent = FALSE)
       if (class(EMM.cpp.res) %in% "try-error") {
-        ZKZt <- Matrix::nearPD(ZKZt)$mat
+        warning("Since K is not positive semi-definite after the optimization of weights, it is approximated with the nearest nearest positive definite matrix.")
+        ZKZt <- as.matrix(Matrix::nearPD(ZKZt)$mat)
         diag(ZKZt) <- diag(ZKZt) + 1e-06
         ZETA.list <- list(A = list(Z = diag(n), K = ZKZt))
         EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = NULL,
