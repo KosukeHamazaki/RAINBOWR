@@ -824,7 +824,7 @@ EMM.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, n.thres
 #'
 EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = NULL, n.core = NA,
                     optimizer = "nlminb", traceInside = 0, n.thres = 450, REML = TRUE, pred = TRUE,
-                    return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {
+                    return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {source("R/RcppExports.R")
   n <- length(as.matrix(y))
   y <- matrix(y, n, 1)
 
@@ -1020,15 +1020,15 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
     EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list,
                            n.core = n.core, traceInside = traceInside, optimizer = optimizer, eigen.G = eigen.G,
                            eigen.SGS = eigen.SGS, tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
+    u <- as.matrix(EMM.cpp.res$u)
+    rownames(u) <- rownames(ZETA.list[[1]]$K)
   }
-
 
   Vu <- EMM.cpp.res$Vu
   Ve <- EMM.cpp.res$Ve
   beta <- EMM.cpp.res$beta
   LL <- EMM.cpp.res$LL
-  u <- as.matrix(EMM.cpp.res$u)
-  rownames(u) <- rownames(ZETA.list[[1]]$K)
+
 
   if (pred & (!return.u.always)) {
     return.u.always <- TRUE
@@ -1042,7 +1042,7 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
 
 
     if (return.u.always | return.u.each) {
-      if ((length(ZETA) >= 2) | (is.null(u))) {
+      if (length(ZETA) >= 2) {
         ZAll <- do.call(
           what = cbind,
           args = lapply(X = ZETA,
@@ -1060,9 +1060,7 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
         e <- y - X %*% beta
         u.each <- crossprod(ZKAll[not.NA, ], Hinv %*% e)
 
-        if (is.null(u)) {
-          u <- ZAll %*% u.each
-        }
+        u <- ZAll %*% u.each
       } else {
         u.each <- u
       }
@@ -1116,7 +1114,6 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
                   Vinv = Vinv,
                   Hinv = Hinv)
 
-  return(results)
 }
 
 
@@ -2515,6 +2512,8 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
     EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list,
                            n.core = n.core, traceInside = traceInside, optimizer = optimizer, eigen.G = NULL,
                            eigen.SGS = NULL, tol = tol, n.thres = n.thres, return.Hinv = return.Hinv.EMM, REML = REML)
+    u <- as.matrix(EMM.cpp.res$u)
+    rownames(u) <- rownames(ZETA.list[[1]]$K)
   }
 
 
@@ -2522,8 +2521,6 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
   Ve <- EMM.cpp.res$Ve
   beta <- EMM.cpp.res$beta
   LL <- EMM.cpp.res$LL
-  u <- as.matrix(EMM.cpp.res$u)
-  rownames(u) <- rownames(ZETA.list[[1]]$K)
 
 
 
@@ -2540,7 +2537,7 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
 
 
     if (return.u.always | return.u.each) {
-      if ((length(ZETA) >= 2) | (is.null(u))) {
+      if (length(ZETA) >= 2) {
         ZAll <- do.call(
           what = cbind,
           args = lapply(X = ZETA,
@@ -2558,9 +2555,7 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
         e <- y - X %*% beta
         u.each <- crossprod(ZKAll[not.NA, ], Hinv %*% e)
 
-        if (is.null(u)) {
-          u <- ZAll %*% u.each
-        }
+        u <- ZAll %*% u.each
       } else {
         u.each <- u
       }
