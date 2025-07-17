@@ -824,7 +824,7 @@ EMM.cpp <- function(y, X = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, n.thres
 #'
 EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = NULL, n.core = NA,
                     optimizer = "nlminb", traceInside = 0, n.thres = 450, REML = TRUE, pred = TRUE,
-                    return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {source("R/RcppExports.R")
+                    return.u.always = TRUE, return.u.each = TRUE, return.Hinv = TRUE) {
   n <- length(as.matrix(y))
   y <- matrix(y, n, 1)
 
