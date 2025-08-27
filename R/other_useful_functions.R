@@ -661,6 +661,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           mrkInBlock <- gene.set[gene.set[, 1] %in% blockName, 2]
 
           blockInterest <- M[, geno[, 1] %in% mrkInBlock]
+          indexRegion <- geno[, 1] %in% mrkInBlock
         } else {
           blockInterest <- NULL
           blockNames <- rep(NA, nTopRes)
@@ -676,6 +677,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
           }
           names(blockInterest) <- blockNames
         }
+      } else if (!is.null(blockName)) {
+        mrkInBlock <- gene.set[gene.set[, 1] %in% blockName, 2]
+        blockInterest <- M[, geno[, 1] %in% mrkInBlock]
+        indexRegion <- geno[, 1] %in% mrkInBlock
       } else if (!is.null(posRegion)) {
         if (is.null(chrInterest)) {
           stop("Please input the chromosome number of interest!")
@@ -685,8 +690,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
           indexRegion <- which(chrCondition & posCondition)
         }
+        blockInterest <- M[, indexRegion]
+      } else {
+        blockInterest <- M[, indexRegion]
       }
-      blockInterest <- M[, indexRegion]
     }
   } else {
     blockInterestCheck <- !is.null(blockInterest)
@@ -934,8 +941,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
         LL0 <- EMMRes0$LL
 
-        pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
-        minuslog10p <- - log10(pVal)
+        if (LL <= LL0) {
+          minuslog10p <- 0
+        } else {
+          pVal <- 0.5 * pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
+          minuslog10p <- - log10(pVal)
+        }
+
         if (EM3Res$weights[2] <= 1e-06) {
           warning("This block seems to have no effect on phenotype...")
           plotNode <- FALSE
@@ -1675,6 +1687,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           mrkInBlock <- gene.set[gene.set[, 1] %in% blockName, 2]
 
           blockInterest <- M[, geno[, 1] %in% mrkInBlock]
+          indexRegion <- geno[, 1] %in% mrkInBlock
         } else {
           blockInterest <- NULL
           blockNames <- rep(NA, nTopRes)
@@ -1690,6 +1703,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           }
           names(blockInterest) <- blockNames
         }
+      } else if (!is.null(blockName)) {
+        mrkInBlock <- gene.set[gene.set[, 1] %in% blockName, 2]
+        blockInterest <- M[, geno[, 1] %in% mrkInBlock]
+        indexRegion <- geno[, 1] %in% mrkInBlock
       } else if (!is.null(posRegion)) {
         if (is.null(chrInterest)) {
           stop("Please input the chromosome number of interest!")
@@ -1699,8 +1716,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
 
           indexRegion <- which(chrCondition & posCondition)
         }
+        blockInterest <- M[, indexRegion]
+      } else {
+        blockInterest <- M[, indexRegion]
       }
-      blockInterest <- M[, indexRegion]
     }
   } else {
     blockInterestCheck <- !is.null(blockInterest)
@@ -2144,8 +2163,12 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
         LL0 <- EMMRes0$LL
 
-        pVal <- pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
-        minuslog10p <- - log10(pVal)
+        if (LL <= LL0) {
+          minuslog10p <- 0
+        } else {
+          pVal <- 0.5 * pchisq(2 * (LL - LL0), df = 1, lower.tail = FALSE)
+          minuslog10p <- - log10(pVal)
+        }
 
 
         if ((EM3Res$weights[2] <= 1e-06)) {

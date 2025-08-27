@@ -2001,7 +2001,7 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
                       }))
       )
     } else {
-      u.each <- NULL
+      u <- u.each <- NULL
     }
 
 
@@ -2011,7 +2011,7 @@ EM3.op <- function(y, X0 = NULL, ZETA, eigen.G = NULL, package = "gaston",
       Hinv <- NULL
     }
   } else {
-    u.each <- Vinv <- Hinv <- NULL
+    u <- u.each <- Vinv <- Hinv <- NULL
   }
 
 
