@@ -13,6 +13,7 @@ calcGRM(
   probaa = NULL,
   probAa = NULL,
   batchSize = NULL,
+  checkGeno = TRUE,
   n.core = 1
 )
 }
@@ -42,6 +43,8 @@ If NULL (default), it will be calculated from genoMat.}
 \item{batchSize}{Split marker genotype data into subsets consisting of `batchSize` SNPs, and compute GRM.
 If NULL, all the markers will be used for the computation at a time.
 We recommend using this argument when the total number of markers is too large.}
+
+\item{checkGeno}{Check whether marker genotype is valid (scored with {-1, 0, 1} or {0, 1, 2}) or not.}
 
 \item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 This argument is only valid `batchSize` is not `NULL`.}

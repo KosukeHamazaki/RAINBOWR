@@ -798,3 +798,12 @@ The same results as [those of the previous version 0.1.9](https://github.com/Kos
 - We fixed the error in `EM3.cov` function when outputting `y.pred` for the case where Z is not square matrix.
 - We fixed the error in `EM3.cov` function when solving the final uni-kernel mixed-effects model.
 - We added `forceApproxK` argument in `EM3.cov` function to enable approximate a weighted kernel with a semi-positive definite matrix when the original kernel is not semi-positive definite.
+
+
+# September 5, 2025, RAINBOWR version 0.1.41
+## Major changes (new functions, etc...)
+- We added an argument `weighting` to `RGWAS.multisnp`, `RGWAS.multisnp.interaction`, `RGWAS.twostep`, `estPhylo`, and `estNetwork` functions.
+This argument determines whether weights for each marker is applied when computing kernel for local relationship matrix.
+- We added an argument `checkGeno` to `calcGRM` function, which determines whether checking marker genotype is skipped or not.
+- We added argument an `n.PC` to `estPhylo` and `estNetwork` functions so that they can consider the number of PCs.
+- Some results will be changed after the update, so please install the latest version!

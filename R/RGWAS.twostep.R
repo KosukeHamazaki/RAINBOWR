@@ -102,8 +102,9 @@
 #' The forth column contains the cumulative map position for each block, which can be computed by \code{\link{cumsumPos}} function.
 #' If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
 #' It will take some time, so you can reduce the computational time by assigning this argument beforehand.
-#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If weighting.center = FALSE, weights are not taken into account.
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param sig.level Significance level for the threshold. The default is 0.05.
@@ -195,7 +196,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                           kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE,
                           num.hap = NULL, test.effect.1 = "additive", test.effect.2 = "additive",
                           window.size.half = 5, window.slide = 1, chi0.mixture = 0.5, optimizer = "nlminb",
-                          gene.set = NULL, map.gene.set = NULL,
+                          gene.set = NULL, map.gene.set = NULL, weighting = TRUE,
                           weighting.center = TRUE, weighting.other = NULL,
                           sig.level = 0.05, method.thres = "BH", plot.qq.1 = TRUE, plot.Manhattan.1 = TRUE,
                           plot.qq.2 = TRUE, plot.Manhattan.2 = TRUE, plot.method = 1,
@@ -243,6 +244,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                        test.effect = test.effect.1, window.size.half = window.size.half,
                                        window.slide = window.slide, chi0.mixture = chi0.mixture,
                                        gene.set = gene.set, map.gene.set = map.gene.set,
+                                       weighting = weighting,
                                        weighting.center = weighting.center,
                                        weighting.other = weighting.other, sig.level = sig.level,
                                        method.thres = method.thres, plot.qq = FALSE,
@@ -379,6 +381,7 @@ RGWAS.twostep <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                            test.effect = test.effect.2, window.size.half = window.size.half,
                                            window.slide = window.slide, chi0.mixture = chi0.mixture,
                                            gene.set = gene.set.now, map.gene.set = NULL,
+                                           weighting = weighting,
                                            weighting.center = weighting.center,
                                            weighting.other = weighting.other, sig.level = sig.level,
                                            method.thres = method.thres, plot.qq = FALSE, plot.Manhattan = FALSE,

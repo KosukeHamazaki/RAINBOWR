@@ -30,6 +30,7 @@ RGWAS.multisnp.interaction(
   chi0.mixture = 0.5,
   gene.set = NULL,
   map.gene.set = NULL,
+  weighting = TRUE,
   weighting.center = TRUE,
   weighting.other = NULL,
   sig.level = 0.05,
@@ -172,8 +173,10 @@ The forth column contains the cumulative map position for each block, which can 
 If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
 It will take some time, so you can reduce the computational time by assigning this argument beforehand.}
 
-\item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-If weighting.center = FALSE, weights are not taken into account.}
+\item{weighting}{Whether or not the weights are applied when calculating kernel.}
+
+\item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+If `weighting.center = FALSE`, weights are not taken into account.}
 
 \item{weighting.other}{You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 For example, you can assign SNP effects from the information of gene annotation.}

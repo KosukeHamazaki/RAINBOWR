@@ -405,6 +405,7 @@ CalcThreshold <- function(input, sig.level = 0.05, method = "BH") {
 #' @param batchSize Split marker genotype data into subsets consisting of `batchSize` SNPs, and compute GRM.
 #' If NULL, all the markers will be used for the computation at a time.
 #' We recommend using this argument when the total number of markers is too large.
+#' @param checkGeno Check whether marker genotype is valid (scored with {-1, 0, 1} or {0, 1, 2}) or not.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is only valid `batchSize` is not `NULL`.
 #' @return genomic relationship matrix (GRM)
@@ -423,36 +424,38 @@ calcGRM <- function(genoMat,
                     probaa = NULL,
                     probAa = NULL,
                     batchSize = NULL,
+                    checkGeno = TRUE,
                     n.core = 1) {
   supportedMethods <- c("addNOIA", "domNOIA", "A.mat", "linear",
                         "gaussian", "exponential", "correlation")
   stopifnot(methodGRM %in% supportedMethods)
 
-  genoMatUniq <- sort(unique(c(genoMat)), decreasing = FALSE)
-  genoMatUniqLen <- length(genoMatUniq)
+  if (checkGeno) {
+    genoMatUniq <- sort(unique(c(genoMat)), decreasing = FALSE)
+    genoMatUniqLen <- length(genoMatUniq)
 
-  if (genoMatUniqLen == 2) {
-    isScoring1 <- all(genoMatUniq == c(-1, 1)) | all(genoMatUniq == c(-1, 0))
-    isScoring2 <- all(genoMatUniq == c(0, 2)) | all(genoMatUniq == c(0, 1))
-  } else {
-    if (genoMatUniqLen == 3) {
-      isScoring1 <- all(genoMatUniq == c(-1, 0, 1))
-      isScoring2 <- all(genoMatUniq == c(0, 1, 2))
+    if (genoMatUniqLen == 2) {
+      isScoring1 <- all(genoMatUniq == c(-1, 1)) | all(genoMatUniq == c(-1, 0))
+      isScoring2 <- all(genoMatUniq == c(0, 2)) | all(genoMatUniq == c(0, 1))
     } else {
-      stop("Something wrong with your genotype data!!")
+      if (genoMatUniqLen == 3) {
+        isScoring1 <- all(genoMatUniq == c(-1, 0, 1))
+        isScoring2 <- all(genoMatUniq == c(0, 1, 2))
+      } else {
+        stop("Something wrong with your genotype data!!")
+      }
+    }
+
+    if (isScoring1) {
+      genoMat <- genoMat
+    } else {
+      if (isScoring2) {
+        genoMat <- genoMat - 1
+      } else {
+        stop("Genotype data should be scored with (-1, 0, 1) or (0, 1, 2)!!")
+      }
     }
   }
-
-  if (isScoring1) {
-    genoMat <- genoMat
-  } else {
-    if (isScoring2) {
-      genoMat <- genoMat - 1
-    } else {
-      stop("Genotype data should be scored with (-1, 0, 1) or (0, 1, 2)!!")
-    }
-  }
-
   nInd <- nrow(genoMat)
   nMarkers <- ncol(genoMat)
   mrkNames <- colnames(genoMat)
@@ -1768,8 +1771,9 @@ make.full <- function(X) {
 #' @param chi0.mixture RAINBOWR assumes the deviance is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
 #' where r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
-#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If weighting.center = FALSE, weights are not taken into account.
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -1796,7 +1800,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
                           kernel.method = "linear", kernel.h = "tuned",
                           haplotype = TRUE, num.hap = NULL, test.effect = "additive",
                           window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
-                          weighting.center = TRUE, weighting.other = NULL,
+                          weighting = TRUE, weighting.center = TRUE, weighting.other = NULL,
                           gene.set = NULL, min.MAF = 0.02, count = TRUE) {
   n <- length(y)
 
@@ -1899,6 +1903,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -1970,20 +1975,19 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
         }
 
         if (window.size != 1) {
-          if (weighting.center) {
-            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+          if (weighting) {
+            if (weighting.center) {
+              weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            } else {
+              weight.Mis <- rep(1, window.size)
+            }
             weight.Mis <- weight.Mis / apply(Mis, 2, sd)
             if (!is.null(weighting.other)) {
               weight.Mis <- weight.Mis * weighting.other[Mis.range]
             }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+            weight.Mis <- sqrt(weight.Mis * window.size / sum(weight.Mis))
           } else {
             weight.Mis <- rep(1, window.size)
-            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-            if (!is.null(weighting.other)) {
-              weight.Mis <- weight.Mis * weighting.other[Mis.range]
-            }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
           weight.Mis <- 1
@@ -1992,20 +1996,19 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
         if (any(MAF.cut.D)) {
           if (window.size != 1) {
             if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              if (weighting.center) {
-                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+              if (weighting) {
+                if (weighting.center) {
+                  weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                } else {
+                  weight.Mis.D <- rep(1, window.size.D)
+                }
                 weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
                 if (!is.null(weighting.other)) {
                   weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
                 }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+                weight.Mis.D <- sqrt(weight.Mis.D * window.size.D / sum(weight.Mis.D))
               } else {
                 weight.Mis.D <- rep(1, window.size.D)
-                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-                if (!is.null(weighting.other)) {
-                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-                }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
               }
             }
           } else {
@@ -2023,6 +2026,7 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
           K.SNP <- calcGRM(genoMat = Mis.weighted,
                            methodGRM = kernel.method,
                            kernel.h = kernel.h,
+                           checkGeno = FALSE,
                            returnWMat = FALSE)
 
           # if (length(ZETA.now) == 1) {
@@ -2299,24 +2303,23 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
           } else {
             ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
             if ("A" %in% test.names) {
-              K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+              K.A.part <- crossprod(t(W.A) * weight.Mis)
               ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
             }
 
             if (any(MAF.cut.D)) {
               if ("D" %in% test.names) {
-                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                K.D.part <- crossprod(t(W.D) * weight.Mis.D)
                 ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
               }
 
               if ("AD" %in% test.names) {
-                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                K.A.part <- crossprod(t(W.A) * weight.Mis)
+                K.D.part <- crossprod(t(W.D) * weight.Mis.D)
                 ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
                                   list(part.D = list(Z = Z.part.D, K = K.D.part)))
               }
             }
-
 
             ZETA.now2.list <- list(
               A = ZETA.now2.A,
@@ -2536,8 +2539,9 @@ score.calc.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gaston",
 #' @param chi0.mixture RAINBOWR assumes the deviance is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
 #' where r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
-#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If weighting.center = FALSE, weights are not taken into account.
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -2566,7 +2570,8 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
                              haplotype = TRUE, num.hap = NULL,
                              test.effect = "additive", window.size.half = 5,
                              window.slide = 1, optimizer = "nlminb",
-                             chi0.mixture = 0.5, weighting.center = TRUE,
+                             chi0.mixture = 0.5,
+                             weighting = TRUE, weighting.center = TRUE,
                              weighting.other = NULL, gene.set = NULL,
                              min.MAF = 0.02, count = TRUE) {
   n <- length(y)
@@ -2649,6 +2654,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -2720,20 +2726,19 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
         }
 
         if (window.size != 1) {
-          if (weighting.center) {
-            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+          if (weighting) {
+            if (weighting.center) {
+              weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            } else {
+              weight.Mis <- rep(1, window.size)
+            }
             weight.Mis <- weight.Mis / apply(Mis, 2, sd)
             if (!is.null(weighting.other)) {
               weight.Mis <- weight.Mis * weighting.other[Mis.range]
             }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+            weight.Mis <- sqrt(weight.Mis * window.size / sum(weight.Mis))
           } else {
             weight.Mis <- rep(1, window.size)
-            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-            if (!is.null(weighting.other)) {
-              weight.Mis <- weight.Mis * weighting.other[Mis.range]
-            }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
           weight.Mis <- 1
@@ -2742,20 +2747,19 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
         if (any(MAF.cut.D)) {
           if (window.size != 1) {
             if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              if (weighting.center) {
-                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+              if (weighting) {
+                if (weighting.center) {
+                  weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                } else {
+                  weight.Mis.D <- rep(1, window.size.D)
+                }
                 weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
                 if (!is.null(weighting.other)) {
                   weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
                 }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+                weight.Mis.D <- sqrt(weight.Mis.D * window.size.D / sum(weight.Mis.D))
               } else {
                 weight.Mis.D <- rep(1, window.size.D)
-                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-                if (!is.null(weighting.other)) {
-                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-                }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
               }
             }
           } else {
@@ -2773,6 +2777,7 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
           K.SNP <- calcGRM(genoMat = Mis.weighted,
                            methodGRM = kernel.method,
                            kernel.h = kernel.h,
+                           checkGeno = FALSE,
                            returnWMat = FALSE)
 
 
@@ -3047,19 +3052,19 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
           } else {
             ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
             if ("A" %in% test.names) {
-              K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+              K.A.part <- crossprod(t(W.A) * weight.Mis)
               ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
             }
 
             if (any(MAF.cut.D)) {
               if ("D" %in% test.names) {
-                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                K.D.part <- crossprod(t(W.D) * weight.Mis.D)
                 ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
               }
 
               if ("AD" %in% test.names) {
-                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                K.A.part <- crossprod(t(W.A) * weight.Mis)
+                K.D.part <- crossprod(t(W.D) * weight.Mis.D)
                 ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
                                   list(part.D = list(Z = Z.part.D, K = K.D.part)))
               }
@@ -3277,8 +3282,9 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
 #' @param chi0.mixture RAINBOWR assumes the test statistic \eqn{l1' F l1} is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
 #' where l1 is the first derivative of the log-likelihood and F is the Fisher information. And r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
-#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If weighting.center = FALSE, weights are not taken into account.
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -3303,7 +3309,8 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
 score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
                              map, kernel.method = "linear", kernel.h = "tuned", haplotype = TRUE, num.hap = NULL,
                              test.effect = "additive", window.size.half = 5, window.slide = 1,
-                             chi0.mixture = 0.5, weighting.center = TRUE, weighting.other = NULL,
+                             chi0.mixture = 0.5, weighting = TRUE,
+                             weighting.center = TRUE, weighting.other = NULL,
                              gene.set = NULL, min.MAF = 0.02, count = TRUE) {
   chr <- map[, 2]
   chr.tab <- table(chr)
@@ -3401,6 +3408,7 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -3474,20 +3482,24 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
         }
 
         if (window.size != 1) {
-          if (weighting.center) {
-            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
-            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-            if (!is.null(weighting.other)) {
-              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+          if (weighting) {
+            if (weighting.center) {
+              weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+              weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+              if (!is.null(weighting.other)) {
+                weight.Mis <- weight.Mis * weighting.other[Mis.range]
+              }
+              weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+            } else {
+              weight.Mis <- rep(1, window.size)
+              weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+              if (!is.null(weighting.other)) {
+                weight.Mis <- weight.Mis * weighting.other[Mis.range]
+              }
+              weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
             }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           } else {
             weight.Mis <- rep(1, window.size)
-            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-            if (!is.null(weighting.other)) {
-              weight.Mis <- weight.Mis * weighting.other[Mis.range]
-            }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
           weight.Mis <- 1
@@ -3496,20 +3508,24 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
         if (any(MAF.cut.D)) {
           if (window.size != 1) {
             if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              if (weighting.center) {
-                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
-                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-                if (!is.null(weighting.other)) {
-                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+              if (weighting) {
+                if (weighting.center) {
+                  weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                  weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                  if (!is.null(weighting.other)) {
+                    weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                  }
+                  weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+                } else {
+                  weight.Mis.D <- rep(1, window.size.D)
+                  weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                  if (!is.null(weighting.other)) {
+                    weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                  }
+                  weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
                 }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
               } else {
                 weight.Mis.D <- rep(1, window.size.D)
-                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-                if (!is.null(weighting.other)) {
-                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-                }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
               }
             }
           } else {
@@ -3527,6 +3543,7 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
           K.SNP <- calcGRM(genoMat = Mis.weighted,
                            methodGRM = kernel.method,
                            kernel.h = kernel.h,
+                           checkGeno = FALSE,
                            returnWMat = FALSE)
 
           Ws <- list(W = Z.part)
@@ -3700,8 +3717,9 @@ score.calc.score <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
 #' @param chi0.mixture RAINBOWR assumes the test statistic \eqn{l1' F l1} is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
 #' where l1 is the first derivative of the log-likelihood and F is the Fisher information. And r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
-#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If weighting.center = FALSE, weights are not taken into account.
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -3729,7 +3747,7 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
                                 haplotype = TRUE, num.hap = NULL,
                                 test.effect = "additive", window.size.half = 5,
                                 window.slide = 1, chi0.mixture = 0.5,
-                                weighting.center = TRUE, weighting.other = NULL,
+                                weighting = TRUE, weighting.center = TRUE, weighting.other = NULL,
                                 gene.set = NULL, min.MAF = 0.02, count = TRUE) {
   chr <- map[, 2]
   chr.tab <- table(chr)
@@ -3808,6 +3826,7 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -3880,20 +3899,24 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
         }
 
         if (window.size != 1) {
-          if (weighting.center) {
-            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
-            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-            if (!is.null(weighting.other)) {
-              weight.Mis <- weight.Mis * weighting.other[Mis.range]
+          if (weighting) {
+            if (weighting.center) {
+              weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+              weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+              if (!is.null(weighting.other)) {
+                weight.Mis <- weight.Mis * weighting.other[Mis.range]
+              }
+              weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+            } else {
+              weight.Mis <- rep(1, window.size)
+              weight.Mis <- weight.Mis / apply(Mis, 2, sd)
+              if (!is.null(weighting.other)) {
+                weight.Mis <- weight.Mis * weighting.other[Mis.range]
+              }
+              weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
             }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           } else {
             weight.Mis <- rep(1, window.size)
-            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-            if (!is.null(weighting.other)) {
-              weight.Mis <- weight.Mis * weighting.other[Mis.range]
-            }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
           weight.Mis <- 1
@@ -3902,20 +3925,24 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
         if (any(MAF.cut.D)) {
           if (window.size != 1) {
             if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              if (weighting.center) {
-                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
-                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-                if (!is.null(weighting.other)) {
-                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+              if (weighting) {
+                if (weighting.center) {
+                  weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                  weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                  if (!is.null(weighting.other)) {
+                    weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                  }
+                  weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+                } else {
+                  weight.Mis.D <- rep(1, window.size.D)
+                  weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
+                  if (!is.null(weighting.other)) {
+                    weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
+                  }
+                  weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
                 }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
               } else {
                 weight.Mis.D <- rep(1, window.size.D)
-                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-                if (!is.null(weighting.other)) {
-                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-                }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
               }
             }
           } else {
@@ -3934,6 +3961,7 @@ score.calc.score.MC <- function(M.now, y, X.now, ZETA.now, LL0, Gu, Ge, P0,
           K.SNP <- calcGRM(genoMat = Mis.weighted,
                            methodGRM = kernel.method,
                            kernel.h = kernel.h,
+                           checkGeno = FALSE,
                            returnWMat = FALSE)
 
           Ws <- list(W = Z.part)
@@ -4233,6 +4261,7 @@ score.calc.epistasis.LR <- function(M.now, y, X.now, ZETA.now, package.MM = "gas
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -5040,6 +5069,7 @@ score.calc.epistasis.LR.MC <- function(M.now, y, X.now, ZETA.now, package.MM = "
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -5816,6 +5846,7 @@ score.calc.epistasis.score <- function(M.now, y, X.now, ZETA.now, Gu, Ge, P0,
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -6555,6 +6586,7 @@ score.calc.epistasis.score.MC <- function(M.now, y, X.now, ZETA.now,
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -7675,8 +7707,9 @@ score.calc.int.MC <- function(M.now, ZETA.now, y, X.now,
 #' @param chi0.mixture RAINBOWR assumes the deviance is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
 #' where r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
-#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If weighting.center = FALSE, weights are not taken into account.
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -7704,7 +7737,7 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
                               kernel.method = "linear", kernel.h = "tuned",
                               haplotype = TRUE, num.hap = NULL, test.effect = "additive",
                               window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
-                              weighting.center = TRUE, weighting.other = NULL,
+                              weighting = TRUE, weighting.center = TRUE, weighting.other = NULL,
                               gene.set = NULL, min.MAF = 0.02, count = TRUE) {
   n <- length(y)
 
@@ -7807,6 +7840,7 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -7878,20 +7912,19 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
         }
 
         if (window.size != 1) {
-          if (weighting.center) {
-            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+          if (weighting) {
+            if (weighting.center) {
+              weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            } else {
+              weight.Mis <- rep(1, window.size)
+            }
             weight.Mis <- weight.Mis / apply(Mis, 2, sd)
             if (!is.null(weighting.other)) {
               weight.Mis <- weight.Mis * weighting.other[Mis.range]
             }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+            weight.Mis <- sqrt(weight.Mis * window.size / sum(weight.Mis))
           } else {
             weight.Mis <- rep(1, window.size)
-            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-            if (!is.null(weighting.other)) {
-              weight.Mis <- weight.Mis * weighting.other[Mis.range]
-            }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
           weight.Mis <- 1
@@ -7900,20 +7933,19 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
         if (any(MAF.cut.D)) {
           if (window.size != 1) {
             if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              if (weighting.center) {
-                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+              if (weighting) {
+                if (weighting.center) {
+                  weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                } else {
+                  weight.Mis.D <- rep(1, window.size.D)
+                }
                 weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
                 if (!is.null(weighting.other)) {
                   weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
                 }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+                weight.Mis.D <- sqrt(weight.Mis.D * window.size.D / sum(weight.Mis.D))
               } else {
                 weight.Mis.D <- rep(1, window.size.D)
-                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-                if (!is.null(weighting.other)) {
-                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-                }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
               }
             }
           } else {
@@ -7931,6 +7963,7 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
           K.SNP <- calcGRM(genoMat = Mis.weighted,
                            methodGRM = kernel.method,
                            kernel.h = kernel.h,
+                           checkGeno = FALSE,
                            returnWMat = FALSE)
 
 
@@ -7995,7 +8028,7 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
           rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
 
           if ("A" %in% test.names) {
-            K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+            K.A.part <- crossprod(t(W.A) * weight.Mis)
             K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
 
             ZETA.now2.A <- c(ZETA.now,
@@ -8005,7 +8038,7 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
 
           if (any(MAF.cut.D)) {
             if ("D" %in% test.names) {
-              K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+              K.D.part <- crossprod(t(W.D) * weight.Mis.D)
               ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
               K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
 
@@ -8016,12 +8049,12 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
 
             if ("AD" %in% test.names) {
               if (!("A" %in% test.names)) {
-                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                K.A.part <- crossprod(t(W.A) * weight.Mis)
                 K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
               }
 
               if (!("D" %in% test.names)) {
-                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                K.D.part <- crossprod(t(W.D) * weight.Mis.D)
                 K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
               }
 
@@ -8218,8 +8251,9 @@ score.calc.LR.int <- function(M.now, y, X.now, ZETA.now,
 #' @param chi0.mixture RAINBOWR assumes the deviance is considered to follow a x chisq(df = 0) + (1 - a) x chisq(df = r).
 #' where r is the degree of freedom.
 #' The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.
-#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If weighting.center = FALSE, weights are not taken into account.
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param gene.set If you have information of gene, you can use it to perform kernel-based GWAS.
@@ -8249,7 +8283,8 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
                                  haplotype = TRUE, num.hap = NULL,
                                  test.effect = "additive", window.size.half = 5,
                                  window.slide = 1, optimizer = "nlminb",
-                                 chi0.mixture = 0.5, weighting.center = TRUE,
+                                 chi0.mixture = 0.5, weighting = TRUE,
+                                 weighting.center = TRUE,
                                  weighting.other = NULL, gene.set = NULL,
                                  min.MAF = 0.02, count = TRUE) {
   n <- length(y)
@@ -8333,6 +8368,7 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
       Mis.range.0 <- match(mark.name.now, map[, 1])
       Mis.range.0 <- Mis.range.0[!is.na(Mis.range.0)]
       Mis.range.02 <- 1:length(Mis.range.0)
+      weighting <- FALSE
       weighting.center <- FALSE
     }
 
@@ -8404,20 +8440,19 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
         }
 
         if (window.size != 1) {
-          if (weighting.center) {
-            weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+          if (weighting) {
+            if (weighting.center) {
+              weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2]
+            } else {
+              weight.Mis <- rep(1, window.size)
+            }
             weight.Mis <- weight.Mis / apply(Mis, 2, sd)
             if (!is.null(weighting.other)) {
               weight.Mis <- weight.Mis * weighting.other[Mis.range]
             }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
+            weight.Mis <- sqrt(weight.Mis * window.size / sum(weight.Mis))
           } else {
             weight.Mis <- rep(1, window.size)
-            weight.Mis <- weight.Mis / apply(Mis, 2, sd)
-            if (!is.null(weighting.other)) {
-              weight.Mis <- weight.Mis * weighting.other[Mis.range]
-            }
-            weight.Mis <- weight.Mis * window.size / sum(weight.Mis)
           }
         } else {
           weight.Mis <- 1
@@ -8426,20 +8461,19 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
         if (any(MAF.cut.D)) {
           if (window.size != 1) {
             if (any(test.effect %in% c("dominance", "additive+dominance"))) {
-              if (weighting.center) {
-                weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+              if (weighting) {
+                if (weighting.center) {
+                  weight.Mis.D <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)[Mis.range2.D]
+                } else {
+                  weight.Mis.D <- rep(1, window.size.D)
+                }
                 weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
                 if (!is.null(weighting.other)) {
                   weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
                 }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
+                weight.Mis.D <- sqrt(weight.Mis.D * window.size.D / sum(weight.Mis.D))
               } else {
                 weight.Mis.D <- rep(1, window.size.D)
-                weight.Mis.D <- weight.Mis.D / apply(Mis.D, 2, sd)
-                if (!is.null(weighting.other)) {
-                  weight.Mis.D <- weight.Mis.D * weighting.other[Mis.range.D]
-                }
-                weight.Mis.D <- weight.Mis.D * window.size.D / sum(weight.Mis.D)
               }
             }
           } else {
@@ -8457,6 +8491,7 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
           K.SNP <- calcGRM(genoMat = Mis.weighted,
                            methodGRM = kernel.method,
                            kernel.h = kernel.h,
+                           checkGeno = FALSE,
                            returnWMat = FALSE)
 
 
@@ -8521,7 +8556,7 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
           rownames(Z.int) <- colnames(Z.int) <- rownames(Z.part)
 
           if ("A" %in% test.names) {
-            K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+            K.A.part <- crossprod(t(W.A) * weight.Mis)
             K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
 
             ZETA.now2.A <- c(ZETA.now,
@@ -8531,7 +8566,7 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
 
           if (any(MAF.cut.D)) {
             if ("D" %in% test.names) {
-              K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+              K.D.part <- crossprod(t(W.D) * weight.Mis.D)
               ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
               K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
 
@@ -8542,12 +8577,12 @@ score.calc.LR.int.MC <- function(M.now, y, X.now, ZETA.now,
 
             if ("AD" %in% test.names) {
               if (!("A" %in% test.names)) {
-                K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                K.A.part <- crossprod(t(W.A) * weight.Mis)
                 K.A.part.int <- as.matrix(Z.part.sp %*% K.A.part %*% Z.part.t.sp) * interaction.kernel
               }
 
               if (!("D" %in% test.names)) {
-                K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                K.D.part <- crossprod(t(W.D) * weight.Mis.D)
                 K.D.part.int <- as.matrix(Z.part.sp %*% K.D.part %*% Z.part.t.sp) * interaction.kernel
               }
 

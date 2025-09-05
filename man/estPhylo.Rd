@@ -17,6 +17,7 @@ estPhylo(
   pheno = NULL,
   geno = NULL,
   ZETA = NULL,
+  n.PC = 0,
   chi2Test = TRUE,
   thresChi2Test = 0.05,
   plotTree = TRUE,
@@ -28,6 +29,9 @@ estPhylo(
   nGrp = 3,
   nIterClustering = 100,
   kernelTypes = "addNOIA",
+  weighting = FALSE,
+  weighting.center = FALSE,
+  weighting.other = NULL,
   n.core = parallel::detectCores() - 1,
   parallel.method = "mclapply",
   hOpt = "optimized",
@@ -93,6 +97,8 @@ ZETA = list(A = list(Z = Z.A, K = K.A), D = list(Z = Z.D, K = K.D))
 }
 For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.}
 
+\item{n.PC}{Number of principal components to include as fixed effects. Default is 0 (equals K model).}
+
 \item{chi2Test}{If TRUE, chi-square test for the relationship between haplotypes & subpopulations will be performed.}
 
 \item{thresChi2Test}{The threshold for the chi-square test.}
@@ -125,6 +131,14 @@ If this argument is `addNOIA` (or one of other options in `methodGRM` in `calcGR
 then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
 and if this argument is `phylo`, the gaussian kernel based on phylogenetic distance will be computed from phylogenetic tree.
 You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "phylo").}
+
+\item{weighting}{Whether or not the weights are applied when calculating kernel.}
+
+\item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+If `weighting.center = FALSE`, weights are not taken into account.}
+
+\item{weighting.other}{You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
+For example, you can assign SNP effects from the information of gene annotation.}
 
 \item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 This argument is not valid when `parallel.method = "furrr"`.}

@@ -452,6 +452,7 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
+#' @param n.PC Number of principal components to include as fixed effects. Default is 0 (equals K model).
 #' @param chi2Test If TRUE, chi-square test for the relationship between haplotypes & subpopulations will be performed.
 #' @param thresChi2Test The threshold for the chi-square test.
 #' @param plotTree If TRUE, the function will return the plot of phylogenetic tree.
@@ -474,6 +475,11 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #' then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
 #' and if this argument is `phylo`, the gaussian kernel based on phylogenetic distance will be computed from phylogenetic tree.
 #' You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "phylo").
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
+#' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
+#'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
 #' @param parallel.method Method for parallel computation in optimizing hyperparameters for estimating haplotype effects.
@@ -564,11 +570,12 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #'
 estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set = NULL,
                      indexRegion = 1:10, chrInterest = NULL, posRegion = NULL, blockName = NULL,
-                     nHaplo = NULL, pheno = NULL, geno = NULL, ZETA = NULL,
+                     nHaplo = NULL, pheno = NULL, geno = NULL, ZETA = NULL, n.PC = 0,
                      chi2Test = TRUE, thresChi2Test = 5e-2,  plotTree = TRUE,
                      distMat = NULL, distMethod = "manhattan", evolutionDist = FALSE,
                      subpopInfo = NULL, groupingMethod = "kmedoids",
                      nGrp = 3, nIterClustering = 100, kernelTypes = "addNOIA",
+                     weighting = FALSE, weighting.center = FALSE, weighting.other = NULL,
                      n.core = parallel::detectCores() - 1,
                      parallel.method = "mclapply", hOpt = "optimized",
                      hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
@@ -707,6 +714,18 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     }
   }
 
+  X <- NULL
+  if (n.PC > 0) {
+    eigen.K.A <- eigen(ZETA[[1]]$K)
+    eig.K.vec <- eigen.K.A$vectors
+
+    PC.part <- ZETA[[1]]$Z %*% eig.K.vec[, 1:n.PC]
+    colnames(PC.part) <- paste0("n.PC_", 1:n.PC)
+
+    X <- cbind(as.matrix(rep(1, nrow(PC.part))), PC.part)
+    X <- make.full(X)
+  }
+
   estPhyloEachBlock <- function(blockInterest,
                                 blockName = NULL) {
 
@@ -782,10 +801,39 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
 
     nMrkInBlock <- ncol(blockInterest)
+    window.size.half <- (nMrkInBlock - 1) / 2
+
+    if (nMrkInBlock != 1) {
+      if (weighting) {
+        if (weighting.center) {
+          weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)
+        } else {
+          weight.Mis <- rep(1, nMrkInBlock)
+        }
+        weight.Mis <- weight.Mis / apply(blockInterestUniqueSorted, 2, sd)
+        if (!is.null(weighting.other)) {
+          weight.Mis <- weight.Mis * weighting.other
+        }
+        weight.Mis <- sqrt(weight.Mis * nMrkInBlock / sum(weight.Mis))
+      } else {
+        weight.Mis <- rep(1, nMrkInBlock)
+      }
+
+      blockInterestWeighted <- t(apply(X = blockInterestUniqueSorted,
+                                       MARGIN = 1,
+                                       FUN = function(x) {
+                                         return(x * weight.Mis)
+                                       }))
+    } else {
+      blockInterestWeighted <- blockInterestUniqueSorted
+      weight.Mis <- 1
+    }
+
+
 
     if (is.null(distMat)) {
-      distMat <- Rfast::Dist(x = blockInterestUniqueSorted, method = distMethod)
-      rownames(distMat) <- colnames(distMat) <- rownames(blockInterestUniqueSorted)
+      distMat <- Rfast::Dist(x = blockInterestWeighted, method = distMethod)
+      rownames(distMat) <- colnames(distMat) <- rownames(blockInterestWeighted)
     }
 
     if (evolutionDist) {
@@ -843,9 +891,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
                 gKernelPart <- gKernel[1:nHaplo, 1:nHaplo]
               } else {
-                gKernelPart <- calcGRM(blockInterestUniqueSorted,
+                gKernelPart <- calcGRM(blockInterestWeighted,
                                        methodGRM = kernelType,
-                                       kernel.h = h)
+                                       kernel.h = h,
+                                       checkGeno = FALSE)
               }
 
               eigenGPart <- eigen(gKernelPart)
@@ -863,7 +912,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
               }
 
               ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-              EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow), silent = TRUE)
+              EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X), silent = TRUE)
               if (!("try-error" %in% class(EM3Res))) {
                 LL <- EM3Res$LL
               } else {
@@ -905,14 +954,23 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 
             gKernelPart <- gKernel[1:nHaplo, 1:nHaplo]
           } else {
-            gKernelPart <- calcGRM(blockInterestUniqueSorted,
+            gKernelPart <- calcGRM(blockInterestWeighted,
                                    methodGRM = kernelType,
-                                   kernel.h = hOpt)
+                                   kernel.h = hOpt,
+                                   checkGeno = FALSE)
           }
         } else {
           hOpt <- NA
-          gKernelPart <- calcGRM(blockInterestUniqueSorted,
-                                 methodGRM = kernelType)
+          if (kernelType == "linear") {
+            gKernelPart <- calcGRM(blockInterestWeighted,
+                                   methodGRM = kernelType,
+                                   checkGeno = FALSE)
+          } else {
+            wPart <- calcGRM(blockInterestUniqueSorted,
+                             methodGRM = kernelType,
+                             returnWMat = TRUE)
+            gKernelPart <- crossprod(t(wPart) * weight.Mis)
+          }
         }
 
 
@@ -935,10 +993,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         }
 
         ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
+        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X)
         LL <- EM3Res$LL
         gvEst <- EM3Res$u.each[(nLine + 1):(nLine + nHaplo), ]
-        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
+        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA, X = X)
         LL0 <- EMMRes0$LL
 
         if (LL <= LL0) {
@@ -1452,6 +1510,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' \item{K.A, K.D}{Different kernels which express some relationships between lines.}
 #' }
 #' For example, K.A is additive relationship matrix for the covariance between lines, and K.D is dominance relationship matrix.
+#' @param n.PC Number of principal components to include as fixed effects. Default is 0 (equals K model).
 #' @param chi2Test If TRUE, chi-square test for the relationship between haplotypes & subpopulations will be performed.
 #' @param thresChi2Test The threshold for the chi-square test.
 #' @param plotNetwork If TRUE, the function will return the plot of haplotype network.
@@ -1493,6 +1552,11 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #' then the `addNOIA` (or corresponding) option in the `calcGRM` function will be used,
 #' and if this argument is `diffusion`, the diffusion kernel based on Laplacian matrix will be computed from network.
 #' You can assign more than one kernelTypes for this argument; for example, kernelTypes = c("addNOIA", "diffusion").
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
+#' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
+#'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
 #' @param parallel.method Method for parallel computation in optimizing hyperparameters for estimating haplotype effects.
@@ -1589,13 +1653,14 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #'
 estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set = NULL,
                        indexRegion = 1:10, chrInterest = NULL, posRegion = NULL, blockName = NULL,
-                       nHaplo = NULL, pheno = NULL, geno = NULL, ZETA = NULL, chi2Test = TRUE,
-                       thresChi2Test = 5e-2,  plotNetwork = TRUE, distMat = NULL,
+                       nHaplo = NULL, pheno = NULL, geno = NULL, ZETA = NULL, n.PC = 0,
+                       chi2Test = TRUE, thresChi2Test = 5e-2,  plotNetwork = TRUE, distMat = NULL,
                        distMethod = "manhattan", evolutionDist = FALSE, complementHaplo = "phylo",
                        subpopInfo = NULL, groupingMethod = "kmedoids", nGrp = 3,
                        nIterClustering = 100, iterRmst = 100, networkMethod = "rmst",
                        autogamous = FALSE, probParsimony = 0.95, nMaxHaplo = 1000,
-                       kernelTypes = "addNOIA", n.core = parallel::detectCores() - 1,
+                       kernelTypes = "addNOIA", weighting = FALSE, weighting.center = FALSE,
+                       weighting.other = NULL, n.core = parallel::detectCores() - 1,
                        parallel.method = "mclapply", hOpt = "optimized", hOpt2 = "optimized", maxIter = 20,
                        rangeHStart = 10 ^ c(-1:1), saveName = NULL, saveStyle = "png",
                        plotWhichMDS = 1:2, colConnection = c("grey40", "grey60"),
@@ -1733,6 +1798,18 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     }
   }
 
+  X <- NULL
+  if (n.PC > 0) {
+    eigen.K.A <- eigen(ZETA[[1]]$K)
+    eig.K.vec <- eigen.K.A$vectors
+
+    PC.part <- ZETA[[1]]$Z %*% eig.K.vec[, 1:n.PC]
+    colnames(PC.part) <- paste0("n.PC_", 1:n.PC)
+
+    X <- cbind(as.matrix(rep(1, nrow(PC.part))), PC.part)
+    X <- make.full(X)
+  }
+
   estNetworkEachBlock <- function(blockInterest,
                                   blockName = NULL) {
     stringBlock <- apply(blockInterest, 1, function(x) paste0(x, collapse = ""))
@@ -1808,10 +1885,38 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
 
 
     nMrkInBlock <- ncol(blockInterest)
+    window.size.half <- (nMrkInBlock - 1) / 2
+
+    if (nMrkInBlock != 1) {
+      if (weighting) {
+        if (weighting.center) {
+          weight.Mis <- dnorm((-window.size.half):(window.size.half), 0, window.size.half / 2)
+        } else {
+          weight.Mis <- rep(1, nMrkInBlock)
+        }
+        weight.Mis <- weight.Mis / apply(blockInterestUniqueSorted, 2, sd)
+        if (!is.null(weighting.other)) {
+          weight.Mis <- weight.Mis * weighting.other
+        }
+        weight.Mis <- sqrt(weight.Mis * nMrkInBlock / sum(weight.Mis))
+      } else {
+        weight.Mis <- rep(1, nMrkInBlock)
+      }
+
+      blockInterestWeighted <- t(apply(X = blockInterestUniqueSorted,
+                                       MARGIN = 1,
+                                       FUN = function(x) {
+                                         return(x * weight.Mis)
+                                       }))
+    } else {
+      blockInterestWeighted <- blockInterestUniqueSorted
+      weight.Mis <- 1
+    }
+
 
     if (is.null(distMat)) {
-      distMat <- Rfast::Dist(x = blockInterestUniqueSorted, method = distMethod)
-      rownames(distMat) <- colnames(distMat) <- rownames(blockInterestUniqueSorted)
+      distMat <- Rfast::Dist(x = blockInterestWeighted, method = distMethod)
+      rownames(distMat) <- colnames(distMat) <- rownames(blockInterestWeighted)
     }
 
     if (networkMethod == "rmst") {
@@ -1901,8 +2006,18 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
 
       haplotypeInfo$haploBlockCompSorted <- blockInterestCompSorted
 
-      distMatComp <- Rfast::Dist(x = blockInterestCompSorted, method = distMethod)
-      rownames(distMatComp) <- colnames(distMatComp) <- rownames(blockInterestCompSorted)
+
+      if (nMrkInBlock != 1) {
+        blockInterestCompWeighted <- t(apply(X = blockInterestCompSorted,
+                                             MARGIN = 1,
+                                             FUN = function(x) {
+                                               return(x * weight.Mis)
+                                             }))
+      } else {
+        blockInterestCompWeighted <- blockInterestCompSorted
+      }
+      distMatComp <- Rfast::Dist(x = blockInterestCompWeighted, method = distMethod)
+      rownames(distMatComp) <- colnames(distMatComp) <- rownames(blockInterestCompWeighted)
     } else if (complementHaplo == "phylo") {
       haplotypeInfo$haploBlockCompSorted <- NULL
 
@@ -2094,13 +2209,14 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
 
                 gKernelPart <- gKernel[haploNames, haploNames]
               } else {
-                gKernelPart <- calcGRM(blockInterestUniqueSorted,
+                gKernelPart <- calcGRM(blockInterestWeighted,
                                        methodGRM = kernelType,
-                                       kernel.h = h)
+                                       kernel.h = h,
+                                       checkGeno = FALSE)
               }
 
               ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-              EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow), silent = TRUE)
+              EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X), silent = TRUE)
               if (!("try-error" %in% class(EM3Res))) {
                 LL <- EM3Res$LL
               } else {
@@ -2141,14 +2257,16 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
 
             gKernelPart <- gKernel[haploNames, haploNames]
           } else {
-            gKernelPart <- calcGRM(blockInterestUniqueSorted,
+            gKernelPart <- calcGRM(blockInterestWeighted,
                                    methodGRM = kernelType,
-                                   kernel.h = hOpt)
+                                   kernel.h = hOpt,
+                                   checkGeno = FALSE)
           }
         } else {
           hOpt <- NA
-          gKernelPart <- calcGRM(blockInterestUniqueSorted,
-                                 methodGRM = kernelType)
+          gKernelPart <- calcGRM(blockInterestWeighted,
+                                 methodGRM = kernelType,
+                                 checkGeno = FALSE)
         }
 
 
@@ -2157,10 +2275,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         }
 
         ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow)
+        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X)
         gvEst <- EM3Res$u.each[(nLine + 1):(nLine + nHaplo), ]
         LL <- EM3Res$LL
-        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA)
+        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA, X = X)
         LL0 <- EMMRes0$LL
 
         if (LL <= LL0) {

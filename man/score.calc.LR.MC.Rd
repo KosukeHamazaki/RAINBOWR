@@ -25,6 +25,7 @@ score.calc.LR.MC(
   window.slide = 1,
   optimizer = "nlminb",
   chi0.mixture = 0.5,
+  weighting = TRUE,
   weighting.center = TRUE,
   weighting.other = NULL,
   gene.set = NULL,
@@ -129,8 +130,10 @@ If you want to perform SNP set by bins, please set window.slide = 2 * window.siz
 where r is the degree of freedom.
 The argument chi0.mixture is a (0 <= a < 1), and default is 0.5.}
 
-\item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-If weighting.center = FALSE, weights are not taken into account.}
+\item{weighting}{Whether or not the weights are applied when calculating kernel.}
+
+\item{weighting.center}{In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+If `weighting.center = FALSE`, weights are not taken into account.}
 
 \item{weighting.other}{You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 For example, you can assign SNP effects from the information of gene annotation.}

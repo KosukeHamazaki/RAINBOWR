@@ -110,8 +110,9 @@
 #' The forth column contains the cumulative map position for each block, which can be computed by \code{\link{cumsumPos}} function.
 #' If this argument is NULL, the map will be constructed by \code{\link{genesetmap}} function after the SNP-set GWAS.
 #' It will take some time, so you can reduce the computational time by assigning this argument beforehand.
-#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if Rainbow = TRUE.
-#'           If weighting.center = FALSE, weights are not taken into account.
+#' @param weighting Whether or not the weights are applied when calculating kernel.
+#' @param weighting.center In kernel-based GWAS, weights according to the Gaussian distribution (centered on the tested SNP) are taken into account when calculating the kernel if `weighting.center = TRUE`.
+#'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
 #' @param sig.level Significance level for the threshold. The default is 0.05.
@@ -202,7 +203,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                            kernel.method = "linear", kernel.h = "tuned",
                            haplotype = TRUE, num.hap = NULL, test.effect = "additive",
                            window.size.half = 5, window.slide = 1, chi0.mixture = 0.5,
-                           gene.set = NULL, map.gene.set = NULL,
+                           gene.set = NULL, map.gene.set = NULL, weighting = TRUE,
                            weighting.center = TRUE, weighting.other = NULL,
                            sig.level = 0.05, method.thres = "BH", plot.qq = TRUE,
                            plot.Manhattan = TRUE, plot.method = 1,
@@ -490,7 +491,8 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                    haplotype = haplotype, num.hap = num.hap,
                                    test.effect = test.effect, window.size.half = window.size.half,
                                    window.slide = window.slide, chi0.mixture = chi0.mixture,
-                                   optimizer = optimizer, weighting.center = weighting.center,
+                                   optimizer = optimizer, weighting = weighting,
+                                   weighting.center = weighting.center,
                                    weighting.other = weighting.other, gene.set = gene.set,
                                    min.MAF = min.MAF, count = count)
       } else {
@@ -499,7 +501,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                       parallel.method = parallel.method, map = map,
                                       kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
                                       num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
-                                      window.slide = window.slide, chi0.mixture = chi0.mixture,
+                                      window.slide = window.slide, chi0.mixture = chi0.mixture, weighting = weighting,
                                       weighting.center = weighting.center, weighting.other = weighting.other,
                                       gene.set = gene.set, min.MAF = min.MAF, count = count)
       }
@@ -510,7 +512,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                 eigen.G = eigen.G, n.core = n.core, map = map, optimizer = optimizer,
                                 kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
                                 num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
-                                window.slide = window.slide, chi0.mixture = chi0.mixture,
+                                window.slide = window.slide, chi0.mixture = chi0.mixture, weighting = weighting,
                                 weighting.center = weighting.center, weighting.other = weighting.other,
                                 gene.set = gene.set, min.MAF = min.MAF, count = count)
       } else {
@@ -518,7 +520,7 @@ RGWAS.multisnp <- function(pheno, geno, ZETA = NULL, package.MM = "gaston",
                                    LL0 = LL0, Gu = Gu, Ge = Ge, P0 = P0, map = map,
                                    kernel.method = kernel.method, kernel.h = kernel.h, haplotype = haplotype,
                                    num.hap = num.hap, test.effect = test.effect, window.size.half = window.size.half,
-                                   window.slide = window.slide, chi0.mixture = chi0.mixture,
+                                   window.slide = window.slide, chi0.mixture = chi0.mixture, weighting = weighting,
                                    weighting.center = weighting.center, weighting.other = weighting.other,
                                    gene.set = gene.set, min.MAF = min.MAF, count = count)
       }
