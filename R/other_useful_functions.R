@@ -741,10 +741,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
     } else {
       kmedRes <- cluster::pam(blockInterest, k = nHaplo, pamonce = 5)
       blockInterestMed <- kmedRes$medoids
-      stringBlockMed <- apply(blockInterestMed, 1, function(x) paste0(x, collapse = ""))
-      haploClusterNow <- kmedRes$clustering
-
-      blockInterestUniqueSorted <- blockInterestMed[order(unique(stringBlockMed)), , drop = FALSE]
+      stringBlock <- apply(blockInterestMed, 1, function(x) paste0(x, collapse = ""))
+      haploClusterMed <- kmedRes$clustering
+      haploClusterNow <- match(haploClusterMed, order(unique(stringBlock)))
+      blockInterestUniqueSorted <- blockInterestMed[order(unique(stringBlock)), , drop = FALSE]
     }
 
 
@@ -759,7 +759,9 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                                j = haploClusterNow,
                                                x = rep(1, nrow(blockInterest)),
                                                dims = c(nrow(blockInterest),
-                                                        nrow(blockInterestUniqueSorted))))
+                                                        nrow(blockInterestUnique)),
+                                               dimnames = list(rownames(blockInterest),
+                                                               rownames(blockInterestUniqueSorted))))
     rownames(haploMat) <- rownames(blockInterest)
     colnames(haploMat) <- haploNames
 
@@ -868,11 +870,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         nTotal <- nrow(distNodes)
         nNode <- nTotal - nHaplo
 
-        ZgKernelPart <- as.matrix(Matrix::sparseMatrix(i = 1:nLine,
-                                                       j = haploClusterNow,
-                                                       x = rep(1, nLine),
-                                                       dims = c(nLine, nHaplo),
-                                                       dimnames = list(lineNames, haploNames)))
+        ZgKernelPart <- haploMat
 
         hInv <- median((distNodes ^ 2)[upper.tri(distNodes ^ 2)])
         h <- 1 / hInv
@@ -966,9 +964,13 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                    methodGRM = kernelType,
                                    checkGeno = FALSE)
           } else {
+            probaa <- apply(X = blockInterest == -1, MARGIN = 2, FUN = mean)
+            probAa <- apply(X = blockInterest == 0, MARGIN = 2, FUN = mean)
             wPart <- calcGRM(blockInterestUniqueSorted,
                              methodGRM = kernelType,
-                             returnWMat = TRUE)
+                             returnWMat = TRUE,
+                             probaa = probaa,
+                             probAa = probAa)
             gKernelPart <- crossprod(t(wPart) * weight.Mis)
           }
         }
@@ -1824,10 +1826,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
     } else {
       kmedRes <- cluster::pam(blockInterest, k = nHaplo, pamonce = 5)
       blockInterestMed <- kmedRes$medoids
-      stringBlockMed <- apply(blockInterestMed, 1, function(x) paste0(x, collapse = ""))
-      haploClusterNow <- kmedRes$clustering
-
-      blockInterestUniqueSorted <- blockInterestMed[order(unique(stringBlockMed)), , drop = FALSE]
+      stringBlock <- apply(blockInterestMed, 1, function(x) paste0(x, collapse = ""))
+      haploClusterMed <- kmedRes$clustering
+      haploClusterNow <- match(haploClusterMed, order(unique(stringBlock)))
+      blockInterestUniqueSorted <- blockInterestMed[order(unique(stringBlock)), , drop = FALSE]
     }
 
 
@@ -1842,7 +1844,9 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                                j = haploClusterNow,
                                                x = rep(1, nrow(blockInterest)),
                                                dims = c(nrow(blockInterest),
-                                                        nrow(blockInterestUniqueSorted))))
+                                                        nrow(blockInterestUnique)),
+                                               dimnames = list(rownames(blockInterest),
+                                                               rownames(blockInterestUniqueSorted))))
     rownames(haploMat) <- rownames(blockInterest)
     colnames(haploMat) <- haploNames
 
@@ -2187,11 +2191,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
 
 
       if (!is.null(pheno)) {
-        ZgKernelPart <- as.matrix(Matrix::sparseMatrix(i = 1:nLine,
-                                                       j = haploClusterNow,
-                                                       x = rep(1, nLine),
-                                                       dims = c(nLine, nHaplo),
-                                                       dimnames = list(lineNames, haploNames)))
+        ZgKernelPart <- haploMat
 
         h <- 1
         hStarts <- h * rangeHStart
@@ -2264,9 +2264,20 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
           }
         } else {
           hOpt <- NA
-          gKernelPart <- calcGRM(blockInterestWeighted,
-                                 methodGRM = kernelType,
-                                 checkGeno = FALSE)
+          if (kernelType == "linear") {
+            gKernelPart <- calcGRM(blockInterestWeighted,
+                                   methodGRM = kernelType,
+                                   checkGeno = FALSE)
+          } else {
+            probaa <- apply(X = blockInterest == -1, MARGIN = 2, FUN = mean)
+            probAa <- apply(X = blockInterest == 0, MARGIN = 2, FUN = mean)
+            wPart <- calcGRM(blockInterestUniqueSorted,
+                             methodGRM = kernelType,
+                             returnWMat = TRUE,
+                             probaa = probaa,
+                             probAa = probAa)
+            gKernelPart <- crossprod(t(wPart) * weight.Mis)
+          }
         }
 
 
