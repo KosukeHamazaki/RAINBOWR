@@ -2545,15 +2545,9 @@ EM3.cov <- function(y, X0 = NULL, ZETA, covList, tol = NULL,
                           x$Z
                         })
         )
-        KAll <- Matrix::.bdiag(lst = sapply(X = 1:length(ZETA),
-                                            FUN = function(x) {
-                                              ZETA[[x]]$K * weights[x]
-                                            },
-                                            simplify = FALSE))
-        ZKAll <- as.matrix(ZAll %*% KAll)
 
         e <- y - X %*% beta
-        u.each <- crossprod(ZKAll[not.NA, ], Hinv %*% e)
+        u.each <- crossprod(ZK, Hinv %*% e)
 
         u <- ZAll %*% u.each
       } else {

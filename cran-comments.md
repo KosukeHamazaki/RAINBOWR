@@ -807,3 +807,4 @@ This argument determines whether weights for each marker is applied when computi
 - We added an argument `checkGeno` to `calcGRM` function, which determines whether checking marker genotype is skipped or not.
 - We added argument an `n.PC` to `estPhylo` and `estNetwork` functions so that they can consider the number of PCs.
 - Some results will be changed after the update, so please install the latest version!
+- We fixed the error in `EM3.cov` function when computing random effects from the estimated variance components.
