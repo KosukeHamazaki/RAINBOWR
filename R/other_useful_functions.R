@@ -998,7 +998,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X)
         LL <- EM3Res$LL
         gvEst <- EM3Res$u.each[(nLine + 1):(nLine + nHaplo), ]
-        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA, X = X)
+        EMMRes0 <- EM3.cpp(y = pheno[, 2], ZETA = ZETA, X0 = X)
         LL0 <- EMMRes0$LL
 
         if (LL <= LL0) {
@@ -2289,7 +2289,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X)
         gvEst <- EM3Res$u.each[(nLine + 1):(nLine + nHaplo), ]
         LL <- EM3Res$LL
-        EMMRes0 <- EMM.cpp(y = pheno[, 2], ZETA = ZETA, X = X)
+        EMMRes0 <- EM3.cpp(y = pheno[, 2], ZETA = ZETA, X0 = X)
         LL0 <- EMMRes0$LL
 
         if (LL <= LL0) {
