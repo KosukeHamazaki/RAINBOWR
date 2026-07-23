@@ -3130,6 +3130,9 @@ plotPhyloTree <- function(estPhyloRes, traitName = NULL, blockName = NULL, plotT
 
 
     if (ggPlotTree) {
+      if (any(njRes$edge.length < 0)) {
+        njRes$edge.length[njRes$edge.length < 0] <- 0
+      }
       trPhylo41 <- as(njRes, 'phylo4')
 
       if (edgeColoring) {
