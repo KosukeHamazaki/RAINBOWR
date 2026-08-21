@@ -1379,6 +1379,18 @@ EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   eigen.G.all <- spectralG.all[[1]]
   eigen.SGS.all <- spectralG.all[[2]]
 
+  if (pred) {
+    if (!return.u.always) {
+      return.u.always <- TRUE
+      message("`return.u.always` is switched to TRUE because you require predicted values.")
+    }
+
+    if (!return.u.each) {
+      return.u.each <- TRUE
+      message("`return.u.each` is switched to TRUE because you require predicted values.")
+    }
+  }
+
   return.Hinv.EMM <- return.Hinv | return.u.each | return.u.always
   EMM.cpp.res <- EMM.cpp(y, X = X, ZETA = ZETA.list, eigen.G = eigen.G.all,
                          eigen.SGS = eigen.SGS.all, n.core = n.core,
@@ -1389,15 +1401,6 @@ EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   Ve <- EMM.cpp.res$Ve
   beta <- EMM.cpp.res$beta
   LL <- EMM.cpp.res$LL
-  u <- as.matrix(EMM.cpp.res$u)
-  rownames(u) <- rownames(ZETA.list[[1]]$K)
-
-
-
-  if (pred & (!return.u.always)) {
-    return.u.always <- TRUE
-    message("`return.u.always` is switched to TRUE because you require predicted values.")
-  }
 
 
   if (return.Hinv.EMM) {
@@ -1406,16 +1409,8 @@ EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
 
 
     if (return.u.always | return.u.each) {
-      if ((length(ZETA) >= 2) | (is.null(u))) {
-        e <- y - X %*% beta
-        u.each <- crossprod(ZK, Hinv %*% e)
-
-        if (is.null(u)) {
-          u <- Zs0.all %*% u.each
-        }
-      } else {
-        u.each <- u
-      }
+      e <- y - X %*% beta
+      u.each <- crossprod(ZK, Hinv %*% e)
 
       rownames(u.each) <- paste0(
         paste0("K_", rep(1:length(Klist),
@@ -1425,8 +1420,11 @@ EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
         unlist(lapply(X = Klist,
                       FUN = rownames))
       )
+
+      u <- Zs0.all %*% u.each
     } else {
       u.each <- NULL
+      u <- NULL
     }
 
     if (!return.Hinv) {
@@ -1434,20 +1432,15 @@ EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
       Hinv <- NULL
     }
   } else {
-    u.each <- Vinv <- Hinv <- NULL
+    u <- u.each <- Vinv <- Hinv <- NULL
   }
 
 
   if (pred) {
-    if ((length(ZETA) >= 2)) {
-      y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
-    } else {
-      y.pred <- (X0 %*% as.matrix(beta) + ZETA[[1]]$Z %*% u)[, 1]
-    }
+    y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
   } else {
     y.pred <- NULL
   }
-
 
 
   results <- list(y.pred = y.pred,
