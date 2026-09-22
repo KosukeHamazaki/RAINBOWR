@@ -990,7 +990,7 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
   }
   ZKZt <- (ZKZt + t(ZKZt)) / 2
   K <- Matrix::.bdiag(Klistweighted)
-  K <- (K + t(K)) / 2
+  K <- (K + Matrix::t(K)) / 2
   ZK <- as.matrix(Z %*% K)
 
 
@@ -1372,6 +1372,7 @@ EM3.linker.cpp <- function(y0, X0 = NULL, ZETA = NULL, Zs0 = NULL, Ws0,
   }
 
   K.all <- Matrix::.bdiag(Klistweighted)
+  K.all <- (K.all + Matrix::t(K.all)) / 2
   ZK <- as.matrix(Zs.all %*% K.all)
 
 
