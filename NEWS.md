@@ -277,7 +277,8 @@ This argument determines whether weights for each marker is applied when computi
 - We fixed the error in `EM3.cov` function when computing random effects from the estimated variance components.
 
 
-# August 17, 2026, RAINBOWR version 0.1.42
+# September 22, 2026, RAINBOWR version 0.1.42
 ## Major changes (new functions, etc...)
 - We implemented new functions `calcParamSE` and `calcParamSE.cov` to calculate approximate standard errors for variance and correlation parameter estimates obtained from `EMM.cpp`, `EM3.cpp`, and `EM3.cov` using the expected Fisher information matrix.
 - We fixed some errors regarding `EM3.linker.cpp` function.
+- We guaranteed symmetry for weighted variance-covariance matrices in `EM3.cpp` function.

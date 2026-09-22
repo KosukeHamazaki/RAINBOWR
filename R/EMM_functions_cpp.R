@@ -885,7 +885,7 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
           ZKZt <- ZKZt + weights[i] * tcrossprod(ZETA[[i]]$Z[not.NA, ] %*%
                                                    ZETA[[i]]$K, ZETA[[i]]$Z[not.NA, ])
         }
-
+        ZKZt <- (ZKZt + t(ZKZt)) / 2
 
         res <- EM3_kernel(y, X, ZKZt, S, spI, n, p)
         lambda <- res$lambda
@@ -988,7 +988,9 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
     ZKZt <- ZKZt + weights[i] *
       tcrossprod(as.matrix(ZETA[[i]]$Z[not.NA, ]) %*% ZETA[[i]]$K, ZETA[[i]]$Z[not.NA, ])
   }
+  ZKZt <- (ZKZt + t(ZKZt)) / 2
   K <- Matrix::.bdiag(Klistweighted)
+  K <- (K + t(K)) / 2
   ZK <- as.matrix(Z %*% K)
 
 
