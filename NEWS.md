@@ -282,3 +282,4 @@ This argument determines whether weights for each marker is applied when computi
 - We implemented new functions `calcParamSE` and `calcParamSE.cov` to calculate approximate standard errors for variance and correlation parameter estimates obtained from `EMM.cpp`, `EM3.cpp`, and `EM3.cov` using the expected Fisher information matrix.
 - We fixed some errors regarding `EM3.linker.cpp` function.
 - We guaranteed symmetry for weighted variance-covariance matrices in `EM3.cpp` function.
+- We fixed some mismatches in `estPhylo` and `estNetwork` functions.

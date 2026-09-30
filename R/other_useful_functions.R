@@ -480,6 +480,9 @@ convertBlockList <- function(fileNameBlocksDetPlink,
 #'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages:
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
 #' @param parallel.method Method for parallel computation in optimizing hyperparameters for estimating haplotype effects.
@@ -576,7 +579,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                      subpopInfo = NULL, groupingMethod = "kmedoids",
                      nGrp = 3, nIterClustering = 100, kernelTypes = "addNOIA",
                      weighting = FALSE, weighting.center = FALSE, weighting.other = NULL,
-                     n.core = parallel::detectCores() - 1,
+                     package.MM = "gaston", n.core = parallel::detectCores() - 1,
                      parallel.method = "mclapply", hOpt = "optimized",
                      hOpt2 = "optimized", maxIter = 20, rangeHStart = 10 ^ c(-1:1),
                      saveName = NULL, saveStyle = "png",
@@ -910,7 +913,7 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
               }
 
               ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-              EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X), silent = TRUE)
+              EM3Res <- try(EM3.general(y = pheno[, 2], ZETA = ZETANow, X0 = X, package = package.MM), silent = TRUE)
               if (!("try-error" %in% class(EM3Res))) {
                 LL <- EM3Res$LL
               } else {
@@ -995,10 +998,10 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
         }
 
         ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X)
+        EM3Res <- EM3.general(y = pheno[, 2], ZETA = ZETANow, X0 = X, package = package.MM)
         LL <- EM3Res$LL
         gvEst <- EM3Res$u.each[(nLine + 1):(nLine + nHaplo), ]
-        EMMRes0 <- EM3.cpp(y = pheno[, 2], ZETA = ZETA, X0 = X)
+        EMMRes0 <- EM3.general(y = pheno[, 2], ZETA = ZETA, X0 = X, package = package.MM)
         LL0 <- EMMRes0$LL
 
         if (LL <= LL0) {
@@ -1559,6 +1562,9 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
 #'           If `weighting.center = FALSE`, weights are not taken into account.
 #' @param weighting.other You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 #'           For example, you can assign SNP effects from the information of gene annotation.
+#' @param package.MM The package name to be used when solving mixed-effects model. We only offer the following three packages:
+#' "RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+#' See more details at \code{\link{EM3.general}}.
 #' @param n.core Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 #' This argument is not valid when `parallel.method = "furrr"`.
 #' @param parallel.method Method for parallel computation in optimizing hyperparameters for estimating haplotype effects.
@@ -1662,7 +1668,8 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                        nIterClustering = 100, iterRmst = 100, networkMethod = "rmst",
                        autogamous = FALSE, probParsimony = 0.95, nMaxHaplo = 1000,
                        kernelTypes = "addNOIA", weighting = FALSE, weighting.center = FALSE,
-                       weighting.other = NULL, n.core = parallel::detectCores() - 1,
+                       weighting.other = NULL, package.MM = "gaston",
+                       n.core = parallel::detectCores() - 1,
                        parallel.method = "mclapply", hOpt = "optimized", hOpt2 = "optimized", maxIter = 20,
                        rangeHStart = 10 ^ c(-1:1), saveName = NULL, saveStyle = "png",
                        plotWhichMDS = 1:2, colConnection = c("grey40", "grey60"),
@@ -2216,7 +2223,7 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
               }
 
               ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-              EM3Res <- try(EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X), silent = TRUE)
+              EM3Res <- try(EM3.general(y = pheno[, 2], ZETA = ZETANow, X0 = X, package = package.MM), silent = TRUE)
               if (!("try-error" %in% class(EM3Res))) {
                 LL <- EM3Res$LL
               } else {
@@ -2286,10 +2293,10 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
         }
 
         ZETANow <- c(ZETA, list(Part = list(Z = ZgKernelPart, K = gKernelPart)))
-        EM3Res <- EM3.cpp(y = pheno[, 2], ZETA = ZETANow, X0 = X)
+        EM3Res <- EM3.general(y = pheno[, 2], ZETA = ZETANow, X0 = X, package = package.MM)
         gvEst <- EM3Res$u.each[(nLine + 1):(nLine + nHaplo), ]
         LL <- EM3Res$LL
-        EMMRes0 <- EM3.cpp(y = pheno[, 2], ZETA = ZETA, X0 = X)
+        EMMRes0 <- EM3.general(y = pheno[, 2], ZETA = ZETA, X0 = X, package = package.MM)
         LL0 <- EMMRes0$LL
 
         if (LL <= LL0) {

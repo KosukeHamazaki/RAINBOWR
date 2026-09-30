@@ -32,6 +32,7 @@ estPhylo(
   weighting = FALSE,
   weighting.center = FALSE,
   weighting.other = NULL,
+  package.MM = "gaston",
   n.core = parallel::detectCores() - 1,
   parallel.method = "mclapply",
   hOpt = "optimized",
@@ -139,6 +140,10 @@ If `weighting.center = FALSE`, weights are not taken into account.}
 
 \item{weighting.other}{You can set other weights in addition to weighting.center. The length of this argument should be equal to the number of SNPs.
 For example, you can assign SNP effects from the information of gene annotation.}
+
+\item{package.MM}{The package name to be used when solving mixed-effects model. We only offer the following three packages:
+"RAINBOWR", "MM4LMM" and "gaston". Default package is `gaston`.
+See more details at \code{\link{EM3.general}}.}
 
 \item{n.core}{Setting n.core > 1 will enable parallel execution on a machine with multiple cores.
 This argument is not valid when `parallel.method = "furrr"`.}

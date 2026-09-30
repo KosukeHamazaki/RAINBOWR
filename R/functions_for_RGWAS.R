@@ -3116,18 +3116,18 @@ score.calc.LR.MC <- function(M.now, y, X.now, ZETA.now,
                                if (perform.general) {
                                  ZETA.now2.A <- ZETA.now2.D <- ZETA.now2.AD <- NULL
                                  if ("A" %in% test.name.now) {
-                                   K.A.part <- W.A %*% (t(W.A) * weight.Mis)
+                                   K.A.part <- crossprod(t(W.A) * weight.Mis)
                                    ZETA.now2.A <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)))
                                  }
 
                                  if ("D" %in% test.name.now) {
-                                   K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                   K.D.part <- crossprod(t(W.D) * weight.Mis.D)
                                    ZETA.now2.D <- c(ZETA.now, list(part.D = list(Z = Z.part.D, K = K.D.part)))
                                  }
 
                                  if ("AD" %in% test.name.now) {
-                                   K.A.part <- W.A %*% (t(W.A) * weight.Mis)
-                                   K.D.part <- W.D %*% (t(W.D) * weight.Mis.D)
+                                   K.A.part <- crossprod(t(W.A) * weight.Mis)
+                                   K.D.part <- crossprod(t(W.D) * weight.Mis.D)
                                    ZETA.now2.AD <- c(ZETA.now, list(part.A = list(Z = Z.part, K = K.A.part)),
                                                      list(part.D = list(Z = Z.part.D, K = K.D.part)))
                                  }
