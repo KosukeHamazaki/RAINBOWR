@@ -68,7 +68,7 @@ See <- function(data, fh = TRUE, fl = TRUE, rown = 6, coln = 6,
       class.each <- rep(NA, end.col - start.col + 1)
 
       for (i in 1:(end.col - start.col + 1)) {
-        class.each[i] <- class(data[, i])
+        class.each[i] <- class(data[, start.col + i - 1])
       }
       class.show <- paste0("<", class.each, ">")
       data.show <-
@@ -935,6 +935,21 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                            parallel.method = parallel.method,
                                            count = verbose)
               solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
+
+              if (length(solnNo) == 0) {
+                traceInside <- ifelse(verbose, 1, 0)
+
+                solnList <- rep(list(NULL), length(hStarts))
+
+                for (i in 1:length(hStarts)) {
+                  soln <- nlminb(start = hStarts[[i]], objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                  lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+                  solnList[[i]] <- soln
+                }
+
+                solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
+              }
+
               soln <- solnList[[solnNo]]
             } else {
               traceInside <- ifelse(verbose, 1, 0)
@@ -1081,6 +1096,21 @@ estPhylo <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.set
                                             count = verbose)
 
               solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
+
+              if (length(solnNo2) == 0) {
+                traceInside <- ifelse(verbose, 1, 0)
+
+                solnList2 <- rep(list(NULL), length(hStarts))
+
+                for (i in 1:length(hStarts)) {
+                  soln2 <- nlminb(start = hStarts[[i]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                  lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+                  solnList2[[i]] <- soln2
+                }
+
+                solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
+              }
+
               soln2 <- solnList2[[solnNo2]]
             } else {
               traceInside <- ifelse(verbose, 1, 0)
@@ -2246,6 +2276,21 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                            parallel.method = parallel.method,
                                            count = verbose)
               solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
+
+              if (length(solnNo) == 0) {
+                traceInside <- ifelse(verbose, 1, 0)
+
+                solnList <- rep(list(NULL), length(hStarts))
+
+                for (i in 1:length(hStarts)) {
+                  soln <- nlminb(start = hStarts[[i]], objective = maximizeFunc, gradient = NULL, hessian = NULL,
+                                 lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+                  solnList[[i]] <- soln
+                }
+
+                solnNo <- which.min(unlist(lapply(solnList, function(x) x$objective)))
+              }
+
               soln <- solnList[[solnNo]]
             } else {
               traceInside <- ifelse(verbose, 1, 0)
@@ -2370,6 +2415,21 @@ estNetwork <- function(blockInterest = NULL, gwasRes = NULL, nTopRes = 1, gene.s
                                               parallel.method = parallel.method,
                                               count = verbose)
                 solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
+
+                if (length(solnNo2) == 0) {
+                  traceInside <- ifelse(verbose, 1, 0)
+
+                  solnList2 <- rep(list(NULL), length(hStarts))
+
+                  for (i in 1:length(hStarts)) {
+                    soln2 <- nlminb(start = hStarts[[i]], objective = maximizeFunc2, gradient = NULL, hessian = NULL,
+                                    lower = 0, upper = 1e06, control = list(trace = traceInside, iter.max = maxIter))
+                    solnList2[[i]] <- soln2
+                  }
+
+                  solnNo2 <- which.min(unlist(lapply(solnList2, function(x) x$objective)))
+                }
+
                 soln2 <- solnList2[[solnNo2]]
               } else {
                 traceInside <- ifelse(verbose, 1, 0)
