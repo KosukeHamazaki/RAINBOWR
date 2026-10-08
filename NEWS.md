@@ -283,3 +283,4 @@ This argument determines whether weights for each marker is applied when computi
 - We fixed some errors regarding `EM3.linker.cpp` function.
 - We guaranteed symmetry for weighted variance-covariance matrices in `EM3.cpp` function.
 - We fixed some mismatches in `estPhylo` and `estNetwork` functions.
+- Update `Rice_Zhao_etal` to add `accInfo` (accession information).
