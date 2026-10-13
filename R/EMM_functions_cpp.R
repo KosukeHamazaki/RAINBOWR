@@ -1010,6 +1010,13 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
     eigen.SGS <- spectralG.res[[2]]
   }
 
+  if (pred & (!return.u.always)) {
+    return.u.always <- TRUE
+    message("`return.u.always` is switched to TRUE because you require predicted values.")
+  }
+
+  u <- NULL
+  u.each <- NULL
   return.Hinv.EMM <- return.Hinv | return.u.each | return.u.always
   if (lz >= 2) {
     ZETA.list <- list(A = list(Z = diag(n), K = ZKZt))
@@ -1032,19 +1039,13 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
   LL <- EMM.cpp.res$LL
 
 
-  if (pred & (!return.u.always)) {
-    return.u.always <- TRUE
-    message("`return.u.always` is switched to TRUE because you require predicted values.")
-  }
-
-
   if (return.Hinv.EMM) {
     Hinv <- EMM.cpp.res$Hinv
     Vinv <- (1 / Vu) * Hinv
 
 
     if (return.u.always | return.u.each) {
-      if (length(ZETA) >= 2) {
+      if (lz >= 2) {
         ZAll <- do.call(
           what = cbind,
           args = lapply(X = ZETA,
@@ -1052,7 +1053,7 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
                           x$Z
                         })
         )
-        KAll <- Matrix::.bdiag(lst = sapply(X = 1:length(ZETA),
+        KAll <- Matrix::.bdiag(lst = sapply(X = 1:lz,
                                             FUN = function(x) {
                                               ZETA[[x]]$K * weights[x]
                                             },
@@ -1068,7 +1069,7 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
       }
 
       rownames(u.each) <- paste0(
-        paste0("K_", rep(1:length(ZETA),
+        paste0("K_", rep(1:lz,
                          lapply(X = ZETA,
                                 FUN = function(x) {
                                   nrow(x$K)
@@ -1079,8 +1080,6 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
                         rownames(x$K)
                       }))
       )
-    } else {
-      u.each <- NULL
     }
 
 
@@ -1090,12 +1089,12 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
       Hinv <- NULL
     }
   } else {
-    u.each <- Vinv <- Hinv <- NULL
+    Vinv <- Hinv <- NULL
   }
 
 
   if (pred) {
-    if ((length(ZETA) >= 2)) {
+    if (lz >= 2) {
       y.pred <- (X0 %*% as.matrix(beta) + u)[, 1]
     } else {
       y.pred <- (X0 %*% as.matrix(beta) + ZETA[[1]]$Z %*% u)[, 1]
@@ -1117,6 +1116,8 @@ EM3.cpp <- function(y, X0 = NULL, ZETA, eigen.G = NULL, eigen.SGS = NULL, tol = 
                   Hinv = Hinv)
 
 }
+
+
 
 
 
